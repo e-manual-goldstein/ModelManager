@@ -1,0 +1,35 @@
+diff --git a/Code/DELIVERY/business4/Sdm.App/Sdm.Cluster.Claims.Impl/Repositories/ShortTermClaimRepository.cs b/Code/DELIVERY/business4/Sdm.App/Sdm.Cluster.Claims.Impl/Repositories/ShortTermClaimRepository.cs
+index f06bf56..959c2c8 100644
+--- a/Code/DELIVERY/business4/Sdm.App/Sdm.Cluster.Claims.Impl/Repositories/ShortTermClaimRepository.cs
++++ b/Code/DELIVERY/business4/Sdm.App/Sdm.Cluster.Claims.Impl/Repositories/ShortTermClaimRepository.cs
+@@ -304,8 +304,8 @@ namespace Sdm.Cluster.Claims.Impl.Repositories
+             var claimDtls = GetShortTermClaimsADO(ppsn).ToList();
+             var claimCats = FindAllClaimCatDtlsForCustomer(ppsn);
+             var shortTermClaims = Container.Instances<ShortTermClaim>().Where(stc => stc.ClaimantId == customer.Id).ToList();
+-            var custInPurge = CustomerServices.IsInPPSNPurgeProcess(ppsn);
+-            var custInUnPurge = CustomerServices.IsInPPSNUnpurgeProcess(ppsn);
++            //var custInPurge = CustomerServices.IsInPPSNPurgeProcess(ppsn);
++            //var custInUnPurge = CustomerServices.IsInPPSNUnpurgeProcess(ppsn);
+ 
+             foreach (ClaimDtl cd in claimDtls)
+             {
+@@ -316,8 +316,8 @@ namespace Sdm.Cluster.Claims.Impl.Repositories
+                     var scheme = SchemeProgrammaticServices.FindBySchemeCode(cd.ClmSchCode.TrimEx().ToUpperEx());
+                     if (scheme != null && scheme.Implementation == ImplementationType.ShortTermClaim.ToString())
+                     {
+-                        if (!custInPurge && !custInUnPurge)
+-                        {
++                       // if (!custInPurge && !custInUnPurge)
++                      //  {
+                             using (var ctx = new ClaimDBContext())
+                             {
+                                 Type claimType = TypeUtils.GetType(scheme.ClassName);
+@@ -331,7 +331,7 @@ namespace Sdm.Cluster.Claims.Impl.Repositories
+                                 ctx.Set<ShortTermClaim>().Add(newShortTermClaim);
+                                 ctx.SaveChanges();
+                             }
+-                        }
++                       // }
+                     }
+                 }
+             }

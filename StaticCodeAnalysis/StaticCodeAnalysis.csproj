@@ -1,0 +1,103 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{3BAA3B00-59F6-4F25-8789-64076AF7BEF6}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>StaticCodeAnalysis</RootNamespace>
+    <AssemblyName>StaticCodeAnalysis</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CodeCompareException.cs" />
+    <Compile Include="CodeComparer\AbstractComparer.cs" />
+    <Compile Include="CodeComparer\AttributeComparer.cs" />
+    <Compile Include="CodeComparer\CodeDifference.cs" />
+    <Compile Include="CodeComparer\CodeFileComparer.cs" />
+    <Compile Include="CodeComparer\ElementComparer.cs" />
+    <Compile Include="CodeComparer\FieldComparer.cs" />
+    <Compile Include="CodeComparer\MemberComparer.cs" />
+    <Compile Include="CodeComparer\MethodComparer.cs" />
+    <Compile Include="CodeComparer\NamespaceComparer.cs" />
+    <Compile Include="CodeComparer\ParameterComparer.cs" />
+    <Compile Include="CodeComparer\PropertyComparer.cs" />
+    <Compile Include="CodeComparer\TypeComparer.cs" />
+    <Compile Include="CodeFile.cs" />
+    <Compile Include="CodeParseException.cs" />
+    <Compile Include="CodeProjectFile.cs" />
+    <Compile Include="CodeProjectItem.cs" />
+    <Compile Include="CodeStructures\AttributeBlock.cs" />
+    <Compile Include="CodeStructures\CodeBlock.cs" />
+    <Compile Include="CodeStructures\CodeString.cs" />
+    <Compile Include="CodeStructures\GenericTypeBlock.cs" />
+    <Compile Include="CodeStructures\ICodeSymbol.cs" />
+    <Compile Include="CodeStructures\IterationBlock.cs" />
+    <Compile Include="CodeStructures\Operator.cs" />
+    <Compile Include="CodeStructures\ParenthesisBlock.cs" />
+    <Compile Include="CodeUtils.cs" />
+    <Compile Include="DefinedMethodType.cs" />
+    <Compile Include="ElementDefinitions\AbstractElementDefinition.cs" />
+    <Compile Include="ElementDefinitions\ClassDefinition.cs" />
+    <Compile Include="ElementDefinitions\DeclaredAttribute.cs" />
+    <Compile Include="ElementDefinitions\DeclaredParameter.cs" />
+    <Compile Include="ElementDefinitions\EnumDefinition.cs" />
+    <Compile Include="ElementDefinitions\FieldDefinition.cs" />
+    <Compile Include="ElementDefinitions\InterfaceDefinition.cs" />
+    <Compile Include="ElementDefinitions\MemberDefinition.cs" />
+    <Compile Include="ElementDefinitions\MethodDefinition.cs" />
+    <Compile Include="ElementDefinitions\NamespaceDefinition.cs" />
+    <Compile Include="ElementDefinitions\PropertyDefinition.cs" />
+    <Compile Include="ElementDefinitions\StructDefinition.cs" />
+    <Compile Include="ElementDefinitions\TypeDefinition.cs" />
+    <Compile Include="Interfaces\ICodeComparer.cs" />
+    <Compile Include="Interfaces\ICodeDifference.cs" />
+    <Compile Include="Interfaces\ICodeProjectElement.cs" />
+    <Compile Include="Interfaces\IComplexType.cs" />
+    <Compile Include="Interfaces\IHasAttributes.cs" />
+    <Compile Include="Interfaces\IHasDefinedTypes.cs" />
+    <Compile Include="Interfaces\IHasExtensions.cs" />
+    <Compile Include="Interfaces\IHasMemberModifiers.cs" />
+    <Compile Include="Interfaces\IHasModifiers.cs" />
+    <Compile Include="Interfaces\IHasParameters.cs" />
+    <Compile Include="Interfaces\IHasTypeModifiers.cs" />
+    <Compile Include="Interfaces\IStaticCodeElement.cs" />
+    <Compile Include="ModifierType.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

@@ -1,0 +1,11 @@
+**/bin
+*.vspscc
+**/obj
+**/packages
+**/.vs
+
+ModelManager/Local/*
+*.user
+UpgradeLog.htm
+UpgradeLog2.htm
+Local/*
