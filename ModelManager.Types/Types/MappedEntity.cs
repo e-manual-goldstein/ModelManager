@@ -26,7 +26,7 @@ namespace ModelManager.Types
 
 		public MappedEntity(object mapInstance)
 		{
-			EntityType = mapInstance.GetType().GetRuntimeProperties().First(c => c.Name == "ClrType").GetValue(mapInstance) as Type;
+			EntityType = mapInstance.GetType().GetProperties().First(c => c.Name == "ClrType").GetValue(mapInstance, null) as Type;
 			MapInstance = mapInstance;
 		}
 	}
