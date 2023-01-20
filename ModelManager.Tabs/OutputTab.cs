@@ -1,4 +1,5 @@
-﻿using ModelManager.Utils;
+﻿using ModelManager.Tabs.Outputs;
+using ModelManager.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -110,10 +111,10 @@ namespace ModelManager.Core
 			switch (outputType)
 			{
 				case OutputType.Single:
-					_outputControl = outputAsSingle(output, out success);
+					_outputControl = outputAsSingle(new SingleOutput((string) output), out success);
 					break;
 				case OutputType.List:
-					_outputControl = outputAsList(output, out success);
+					_outputControl = outputAsList(new ListOutput((List<string>) output), out success);
 					break;
 				case OutputType.Table:
 					_outputControl = outputAsTable(output, out success);
@@ -132,7 +133,40 @@ namespace ModelManager.Core
 			_executingTab = callingService;
 		}
 
-		private void selectOutputTab(object sender, RoutedEventArgs e)
+        public void DisplayOutput<T, TOutput>(AbstractServiceTab callingService, string callingAction, T output, params string[] extraInfo)
+			where T : AbstractOutput<TOutput>
+        {
+            var outputType = TypeUtils.DetermineOutputType(output);
+            addOutputHeader(callingAction, extraInfo);
+            addCopyOutputButton();
+            bool success = false;
+            switch (outputType)
+            {
+                case OutputType.Single:
+                    _outputControl = outputAsSingle(output as SingleOutput, out success);
+                    break;
+                case OutputType.List:
+                    _outputControl = outputAsList(output as ListOutput, out success);
+                    break;
+                case OutputType.Table:
+                    _outputControl = outputAsTable(output, out success);
+                    break;
+                default:
+                    _outputControl = new Control();
+                    break;
+            }
+            Canvas.SetTop(_outputControl, 50);
+            Canvas.SetLeft(_outputControl, CANVAS_MARGIN);
+            if (success)
+            {
+                _tabCanvas.Children.Add(_outputControl);
+                _disposableElements.Add(_outputControl);
+            }
+            _executingTab = callingService;
+        }
+
+
+        private void selectOutputTab(object sender, RoutedEventArgs e)
 		{
 			_tabManager.SelectOutputTab(this);
 		}
@@ -465,23 +499,22 @@ namespace ModelManager.Core
 
 		#region Output Processing
 
-		private TextBox outputAsSingle(object output, out bool success)
-		{
-			var textBox = new TextBox();
-			var tabItemControlWidth = double.IsNaN(_tabItemControl.Width) ? TAB_ITEM_WIDTH : _tabItemControl.Width;
-			textBox.Width = _tabControl.Width - tabItemControlWidth - (CANVAS_MARGIN * 2) - 10;
+		private TextBox outputAsSingle(SingleOutput output, out bool success)
+        {
+            var textBox = new TextBox();
+            var tabItemControlWidth = double.IsNaN(_tabItemControl.Width) ? TAB_ITEM_WIDTH : _tabItemControl.Width;
+            textBox.Width = _tabControl.Width - tabItemControlWidth - (CANVAS_MARGIN * 2) - 10;
             textBox.MaxHeight = _tabControl.Height - 100;
             textBox.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
-			textBox.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-			textBox.TextWrapping = TextWrapping.WrapWithOverflow;
-			var outputString = output.ToString();
-			textBox.AppendText(outputString);
-			_outputContent = outputString;
-			success = true;
-			return textBox;
-		}
+            textBox.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+            textBox.TextWrapping = TextWrapping.WrapWithOverflow;
+            textBox.AppendText(output.Content);
+            _outputContent = output.Content;
+            success = true;
+            return textBox;
+        }
 
-		private TextBox outputAsList(object output, out bool success)
+        private TextBox outputAsList(ListOutput output, out bool success)
 		{
 			var textBox = new TextBox();
 			var outputString = new StringBuilder();
@@ -489,9 +522,8 @@ namespace ModelManager.Core
 			textBox.Width = _tabControl.Width - tabItemControlWidth - (CANVAS_MARGIN * 2) - 10;
 			textBox.MaxHeight = _tabControl.Height - 100;
 			textBox.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
-			textBox.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-			var outputList = output as IEnumerable<string>;
-			foreach (var line in outputList)
+			textBox.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;			
+			foreach (var line in output.Content)
 			{
 				outputString.AppendLine(line);
 			}
@@ -501,7 +533,7 @@ namespace ModelManager.Core
 			return textBox;
 		}
 
-		private Control outputAsTable(object output, out bool success)
+		private Control outputAsTable(TableOutput output, out bool success)
 		{
 			success = false;
 			var listView = new ListView();
@@ -515,7 +547,7 @@ namespace ModelManager.Core
 			dynamic myItem;
 			IDictionary<string, object> myItemValues;
 
-			var columns = output as Dictionary<string, IEnumerable<string>>;
+			var columns = output.Content;
 			var rowCount = columns.First().Value.Count();
 			var columnNames = columns.Keys;
 
@@ -533,7 +565,7 @@ namespace ModelManager.Core
 				myItems.Add(myItem);
 			}
 			if (!myItems.Any())
-				return outputAsSingle("0 Rows Returned", out success);
+				return outputAsSingle(new SingleOutput("0 Rows Returned"), out success);
 			// Assuming that all objects have same columns - using first item to determine the columns
 			List<Column> gridColumns = new List<Column>();
 
