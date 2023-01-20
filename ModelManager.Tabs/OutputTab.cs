@@ -117,7 +117,7 @@ namespace ModelManager.Core
 					_outputControl = outputAsList(new ListOutput((List<string>) output), out success);
 					break;
 				case OutputType.Table:
-					_outputControl = outputAsTable(output, out success);
+					_outputControl = outputAsTable(new TableOutput((IDictionary<string, IEnumerable<string>>) output), out success);
 					break;
 				default:
 					_outputControl = new Control();
@@ -149,7 +149,7 @@ namespace ModelManager.Core
                     _outputControl = outputAsList(output as ListOutput, out success);
                     break;
                 case OutputType.Table:
-                    _outputControl = outputAsTable(output, out success);
+                    _outputControl = outputAsTable(output as TableOutput, out success);
                     break;
                 default:
                     _outputControl = new Control();
@@ -244,20 +244,20 @@ namespace ModelManager.Core
 				Clipboard.SetText(_outputContent);
 		}
 
-		private string clipboardReadyList(object outputContent)
+		private string clipboardReadyList(ListOutput outputContent)
 		{
 			var list = new StringBuilder();
-			foreach (var item in outputContent as List<string>)
+			foreach (var item in outputContent.Content)
 			{
 				list.Append(item + "\n");
 			}
 			return list.ToString().TrimEnd();
 		}
 
-		private string clipboardReadyTable(object outputContent)
+		private string clipboardReadyTable(TableOutput outputContent)
 		{
 			var table = new StringBuilder();
-			var tableContent = outputContent as Dictionary<string, IEnumerable<string>>;
+			var tableContent = outputContent.Content;
 			var tableLength = tableContent.Values.First().Count();
 			table.Append(tableContent.Keys.ElementAt(0));
 			for (int i = 1; i < tableContent.Count; i++)

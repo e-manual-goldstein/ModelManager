@@ -9,3 +9,4 @@ ModelManager/Local/*
 UpgradeLog.htm
 UpgradeLog2.htm
 Local/*
+/ModelManager/Tabs/HttpTab.cs
