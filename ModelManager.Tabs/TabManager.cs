@@ -1,4 +1,5 @@
-﻿using ModelManager.Types;
+﻿using ModelManager.Tabs.Outputs;
+using ModelManager.Types;
 using ModelManager.Utils;
 using System;
 using System.Collections;
@@ -52,7 +53,7 @@ namespace ModelManager.Core
 		{
 			var callingAction = outputTab.ExecutedAction ?? actionMethod;
 			outputTab.ClearInputElements();
-			outputTab.DisplayOutput(source, callingAction.Name, objectToDisplay ?? "No Output To Display");
+            outputTab.DisplayOutput(source, callingAction.Name, objectToDisplay ?? "No Output To Display");
             outputTab.Focus();
 		}
 

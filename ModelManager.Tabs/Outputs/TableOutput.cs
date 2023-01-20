@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ModelManager.Utils;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -15,6 +16,8 @@ namespace ModelManager.Tabs.Outputs
         {
 
         }
+
+        public override OutputType OutputType => OutputType.Table;
 
         public void AddColumn(string columnTitle, IEnumerable<string> entries)
         {

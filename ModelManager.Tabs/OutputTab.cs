@@ -104,57 +104,58 @@ namespace ModelManager.Core
 
 		public void DisplayOutput(AbstractServiceTab callingService, string callingAction, object output, params string[] extraInfo)
 		{
-			var outputType = TypeUtils.DetermineOutputType(output);
-			addOutputHeader(callingAction, extraInfo);
-			addCopyOutputButton();
-			bool success = false;
-			switch (outputType)
+			var typedOutput = output as IOutput;
+			if (typedOutput == null)
 			{
-				case OutputType.Single:
-					_outputControl = outputAsSingle(new SingleOutput((string) output), out success);
-					break;
-				case OutputType.List:
-					_outputControl = outputAsList(new ListOutput((List<string>) output), out success);
-					break;
-				case OutputType.Table:
-					_outputControl = outputAsTable(new TableOutput((IDictionary<string, IEnumerable<string>>) output), out success);
-					break;
-				default:
-					_outputControl = new Control();
-					break;
-			}
-			Canvas.SetTop(_outputControl, 50);
-			Canvas.SetLeft(_outputControl, CANVAS_MARGIN);
-			if (success)
-			{
-				_tabCanvas.Children.Add(_outputControl);
-				_disposableElements.Add(_outputControl);
-			}
-			_executingTab = callingService;
-		}
-
-        public void DisplayOutput<T, TOutput>(AbstractServiceTab callingService, string callingAction, T output, params string[] extraInfo)
-			where T : AbstractOutput<TOutput>
-        {
-            var outputType = TypeUtils.DetermineOutputType(output);
+                var outputType = TypeUtils.DetermineOutputType(output);
+                switch (outputType)
+                {
+                    case OutputType.Single:
+                        typedOutput = new SingleOutput((string)output);
+                        break;
+                    case OutputType.List:
+                        typedOutput = new ListOutput((List<string>)output);
+                        break;
+                    case OutputType.Table:
+                        typedOutput = new TableOutput((IDictionary<string, IEnumerable<string>>)output);
+                        break;
+                    default:
+                        break;
+                }
+            }
             addOutputHeader(callingAction, extraInfo);
             addCopyOutputButton();
             bool success = false;
-            switch (outputType)
+            _outputControl = typedOutput switch
             {
-                case OutputType.Single:
-                    _outputControl = outputAsSingle(output as SingleOutput, out success);
-                    break;
-                case OutputType.List:
-                    _outputControl = outputAsList(output as ListOutput, out success);
-                    break;
-                case OutputType.Table:
-                    _outputControl = outputAsTable(output as TableOutput, out success);
-                    break;
-                default:
-                    _outputControl = new Control();
-                    break;
+                SingleOutput single => outputAsSingle(single, out success),
+                ListOutput list => outputAsList(list, out success),
+                TableOutput table => outputAsTable(table, out success),
+                _ => new Control()
+            };
+            Canvas.SetTop(_outputControl, 50);
+            Canvas.SetLeft(_outputControl, CANVAS_MARGIN);
+            if (success)
+            {
+                _tabCanvas.Children.Add(_outputControl);
+                _disposableElements.Add(_outputControl);
             }
+            _executingTab = callingService;
+        }
+
+        public void DisplayOutput<T>(AbstractServiceTab callingService, string callingAction, T output, params string[] extraInfo)
+			where T : IOutput
+        {
+            addOutputHeader(callingAction, extraInfo);
+            addCopyOutputButton();
+            bool success = false;
+            _outputControl = output switch
+			{
+				SingleOutput single => outputAsSingle(single, out success),
+				ListOutput list => outputAsList(list, out success),
+				TableOutput table => outputAsTable(table, out success),
+				_ => new Control()
+			};            
             Canvas.SetTop(_outputControl, 50);
             Canvas.SetLeft(_outputControl, CANVAS_MARGIN);
             if (success)
