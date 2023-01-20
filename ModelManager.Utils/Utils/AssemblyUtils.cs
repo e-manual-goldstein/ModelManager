@@ -1,9 +1,11 @@
-﻿using ModelManager.Types;
+﻿using Microsoft.EntityFrameworkCore;
+using ModelManager.Types;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data.Entity;
-using System.Data.Entity.ModelConfiguration;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -16,10 +18,133 @@ namespace ModelManager.Utils
 {
 	public static class AssemblyUtils
 	{
-		public static Assembly LoadAssembly(string assemblyPath)
+		static AssemblyName[] _myAssemblies;
+
+		static string _version;
+
+		static AssemblyUtils()
+		{
+			_myAssemblies = Assembly.GetExecutingAssembly().GetReferencedAssemblies().ToArray();
+			//_version = AppDomain.CurrentDomain.SetupInformation.TargetFrameworkName;
+            
+        }
+
+        public static void RedirectAssembly(string shortName, Version targetVersion, string publicKeyToken)
+        {
+            ResolveEventHandler handler = null;
+
+            handler = (sender, args) => {
+				try
+				{
+
+					// Use latest strong name & version when trying to load SDK assemblies
+					var requestedAssembly = new AssemblyName(args.Name);
+					if (requestedAssembly.Name != shortName)
+						return null;
+
+					Debug.WriteLine("Redirecting assembly load of " + args.Name
+								  + ",\tloaded by " + (args.RequestingAssembly == null ? "(unknown)" : args.RequestingAssembly.FullName));
+
+					requestedAssembly.Version = targetVersion;
+					requestedAssembly.SetPublicKeyToken(new AssemblyName("x, PublicKeyToken=" + publicKeyToken).GetPublicKeyToken());
+					requestedAssembly.CultureInfo = CultureInfo.InvariantCulture;
+					AppDomain.CurrentDomain.AssemblyResolve -= handler;
+					return Assembly.Load(requestedAssembly);
+				}
+				finally
+				{
+                    AppDomain.CurrentDomain.AssemblyResolve -= handler;
+                }
+            };
+            AppDomain.CurrentDomain.AssemblyResolve += handler;
+        }
+
+		public static void AutoRedirect(string fileName, Assembly assembly)
+		{
+            var info = fileName.Split(',');
+			var assemblyName = info[0].Trim();
+			var newAssembly = assembly.GetReferencedAssemblies().Last(a => a.Name == assemblyName);
+			var publicKeyToken = info[3].Trim().Split('=')[1];
+            var version = newAssembly.Version;
+            RedirectAssembly(info[0].Trim(), newAssembly.Version, publicKeyToken);
+        }
+
+        public static Assembly LoadAssembly(string assemblyPath)
 		{
 			return Assembly.LoadFrom(assemblyPath);
 		}
+
+		public static List<Type> LoadTypes(this Assembly assembly)
+		{
+			Type[] types;
+			try
+			{
+				types = assembly.GetTypes();
+			}
+			catch (ReflectionTypeLoadException e)
+			{
+				types = e.Types;
+			}
+			return types.Where(t => t != null).ToList();
+		}
+
+		public static Assembly LoadFullAssembly(this string assemblyPath, List<string> checkedNames, Dictionary<string, Assembly> cache = null)
+		{
+			var directory = Path.GetDirectoryName(assemblyPath);
+			Assembly assembly = null;
+			try
+			{
+				if (File.Exists(assemblyPath))
+				{
+					assembly = Assembly.LoadFrom(assemblyPath);
+				}
+				else
+				{
+					assembly = Assembly.Load(assemblyPath);
+				}
+				if (cache == null)
+				{
+					cache = new Dictionary<string, Assembly>();
+				}
+				foreach (var reference in assembly.GetReferencedAssemblies())
+				{
+					if (_myAssemblies.Any(a => a.FullName == reference.FullName))
+					{
+						continue;
+					}
+					var target = LocateAssembly(directory, reference);
+					if (!checkedNames.Contains(target))
+					{
+						checkedNames.Add(target);
+						var referencedAssembly = LoadFullAssembly(target, checkedNames, cache);
+						cache[target] = referencedAssembly;
+					}
+				}
+			}
+			catch
+			{
+
+			}
+			return assembly;
+		}
+
+		private static string LocateAssembly(string directory, AssemblyName reference)
+		{
+			var assemblyFileName = $"{reference.Name}.dll";
+
+            var target = Path.Combine(directory, assemblyFileName);
+			if (File.Exists(target))
+			{
+				return target;
+			}
+			var files =  Directory.EnumerateFiles("C:\\Windows\\Microsoft.NET\\", "*.dll", SearchOption.AllDirectories).Where(t => Path.GetFileName(t) == assemblyFileName);
+			return reference.FullName;
+        }
+
+		//public static List<Assembly> RGetReferencedAssemblies(this Assembly assembly)
+		//{
+		//	return assembly.GetReferencedAssemblies().SelectMany(a => a)
+		//}
 
 		public static IEnumerable<TypeInfo> GetPublicTypesFromAssembly(Assembly assembly, bool includeNested)
 		{
@@ -43,25 +168,25 @@ namespace ModelManager.Utils
 				var type0 = type;
 				while (type0.BaseType != null)
 				{
-					if (type0.BaseType.Name == "DbContext")
-					{
-						var dbContext = Activator.CreateInstance(type) as DbContext;
-						var modelBuilder = new DbModelBuilder();
-						var modelCreateAction = dbContext.GetType().GetRuntimeMethods().First(c => c.Name == "OnModelCreating");
-						modelCreateAction.Invoke(dbContext, new[] { modelBuilder });
-						var modelConfiguration = modelBuilder.Configurations.GetType().GetRuntimeFields().First()
-							.GetValue(modelBuilder.Configurations);
-						var entityTypes = modelConfiguration.GetType().GetRuntimeProperties().First(c => c.Name == "ActiveEntityConfigurations")
-							.GetValue(modelConfiguration) as ICollection;
-						foreach (var entityType in entityTypes)
-						{
-							var clrType = entityType.GetType().GetRuntimeProperties().First(c => c.Name == "ClrType").GetValue(entityType) as Type;
-							var ignoredProperties = entityType.GetType().GetRuntimeProperties().First(c => c.Name == "IgnoredProperties").GetValue(entityType) as IEnumerable<PropertyInfo>;
-							typeDictionary.Add(clrType, ignoredProperties);
-						}
+					//if (type0.BaseType.Name == "DbContext")
+					//{
+					//	var dbContext = Activator.CreateInstance(type) as DbContext;
+					//	var modelBuilder = new DbModelBuilder();
+					//	var modelCreateAction = dbContext.GetType().GetRuntimeMethods().First(c => c.Name == "OnModelCreating");
+					//	modelCreateAction.Invoke(dbContext, new[] { modelBuilder });
+					//	var modelConfiguration = modelBuilder.Configurations.GetType().GetRuntimeFields().First()
+					//		.GetValue(modelBuilder.Configurations);
+					//	var entityTypes = modelConfiguration.GetType().GetRuntimeProperties().First(c => c.Name == "ActiveEntityConfigurations")
+					//		.GetValue(modelConfiguration) as ICollection;
+					//	foreach (var entityType in entityTypes)
+					//	{
+					//		var clrType = entityType.GetType().GetRuntimeProperties().First(c => c.Name == "ClrType").GetValue(entityType) as Type;
+					//		var ignoredProperties = entityType.GetType().GetRuntimeProperties().First(c => c.Name == "IgnoredProperties").GetValue(entityType) as IEnumerable<PropertyInfo>;
+					//		typeDictionary.Add(clrType, ignoredProperties);
+					//	}
 						
-						break;
-					}
+					//	break;
+					//}
 					type0 = type0.BaseType;
 				}
 			}
@@ -80,34 +205,34 @@ namespace ModelManager.Utils
 				{
 					if (type0.BaseType.Name == "DbContext" && !type.IsAbstract && type.GetConstructors().Any(cc => !cc.GetParameters().Any()))
 					{
-						try
-						{
-							var dbContext = Activator.CreateInstance(type) as DbContext;
+						//try
+						//{
+						//	var dbContext = Activator.CreateInstance(type) as DbContext;
 
 
-							var contextName = type.FullName;
-							var connectionString = dbContext.GetType().GetRuntimeProperty("ConnectionString").GetValue(dbContext);
+						//	var contextName = type.FullName;
+						//	var connectionString = dbContext.GetType().GetRuntimeProperty("ConnectionString").GetValue(dbContext);
 
-							var modelBuilder = new DbModelBuilder();
-							var modelCreateAction = dbContext.GetType().GetRuntimeMethods().First(c => c.Name == "OnModelCreating");
-							modelCreateAction.Invoke(dbContext, new[] { modelBuilder });
-							var modelConfiguration = modelBuilder.Configurations.GetType().GetRuntimeFields().First()
-								.GetValue(modelBuilder.Configurations);
-							var mappingInstances = modelConfiguration.GetType().GetRuntimeProperties().First(c => c.Name == "ActiveEntityConfigurations")
-								.GetValue(modelConfiguration) as ICollection;
+						//	var modelBuilder = new DbModelBuilder();
+						//	var modelCreateAction = dbContext.GetType().GetRuntimeMethods().First(c => c.Name == "OnModelCreating");
+						//	modelCreateAction.Invoke(dbContext, new[] { modelBuilder });
+						//	var modelConfiguration = modelBuilder.Configurations.GetType().GetRuntimeFields().First()
+						//		.GetValue(modelBuilder.Configurations);
+						//	var mappingInstances = modelConfiguration.GetType().GetRuntimeProperties().First(c => c.Name == "ActiveEntityConfigurations")
+						//		.GetValue(modelConfiguration) as ICollection;
 
-							foreach (var mappingInstance in mappingInstances)
-							{
-								var mappedType = new MappedEntity(mappingInstance);
-								GetMappingInfoForType(mappedType, connectionString.ToString());
-								if (applyFilter(mappedType, namespaceFilter, objectNameFilter, database, inheritsFromType, implementsInterface))
-									mappedTypes.Add(mappedType);
-							}
-						}
-						catch
-						{
+						//	foreach (var mappingInstance in mappingInstances)
+						//	{
+						//		var mappedType = new MappedEntity(mappingInstance);
+						//		GetMappingInfoForType(mappedType, connectionString.ToString());
+						//		if (applyFilter(mappedType, namespaceFilter, objectNameFilter, database, inheritsFromType, implementsInterface))
+						//			mappedTypes.Add(mappedType);
+						//	}
+						//}
+						//catch
+						//{
 
-						}
+						//}
 						break;
 					}
 					type0 = type0.BaseType;
@@ -125,7 +250,7 @@ namespace ModelManager.Utils
 				return false;
 			if (database != null && !mappedType.DatabaseName.Contains(database))
 				return false;
-			if (!string.IsNullOrEmpty(implementsInterface) && !mappedType.EntityType.ImplementsInterface(implementsInterface))
+			if (!string.IsNullOrEmpty(implementsInterface) && !mappedType.EntityType.HasInterface(implementsInterface))
 				return false;
 			if (!string.IsNullOrEmpty(inheritsFromType) && !mappedType.EntityType.InheritsFrom(inheritsFromType))
 				return false;
@@ -140,22 +265,22 @@ namespace ModelManager.Utils
 
 		public static void GetTableAndSchemaNameByReflection(MappedEntity entity)
 		{
-			var configMember = entity.MapInstance.GetType().GetRuntimeProperties().FirstOrDefault(c => c.Name == "Configuration");
-			var tableNameProp = entity.MapInstance.GetType().GetProperty("TableName").GetValue(entity.MapInstance);
+			var configMember = entity.MapInstance.GetType().GetProperties().FirstOrDefault(c => c.Name == "Configuration");
+			var tableNameProp = entity.MapInstance.GetType().GetProperty("TableName").GetValue(entity.MapInstance, null);
 			if (tableNameProp != null)
 				entity.TableName = tableNameProp.ToString();
 			else if (configMember != null)
 			{
-				var config = configMember.GetValue(entity.MapInstance);
-				var tableProp = config.GetType().GetProperty("TableName").GetValue(config);
+				var config = configMember.GetValue(entity.MapInstance, null);
+				var tableProp = config.GetType().GetProperty("TableName").GetValue(config, null);
 				if (tableProp != null)
 					entity.TableName = tableProp.ToString();
 			}
-			var schemaProp = entity.MapInstance.GetType().GetProperty("SchemaName").GetValue(entity.MapInstance);
+			var schemaProp = entity.MapInstance.GetType().GetProperty("SchemaName").GetValue(entity.MapInstance, null);
 			if (schemaProp == null && configMember != null)
 			{
-				var config = configMember.GetValue(entity.MapInstance);
-				schemaProp = config.GetType().GetProperty("SchemaName").GetValue(config);
+				var config = configMember.GetValue(entity.MapInstance, null);
+				schemaProp = config.GetType().GetProperty("SchemaName").GetValue(config, null);
 			}
 			entity.Schema = schemaProp != null ? schemaProp.ToString() : "dbo";
 		}

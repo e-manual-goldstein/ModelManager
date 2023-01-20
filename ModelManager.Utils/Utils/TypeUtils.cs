@@ -1,8 +1,8 @@
-﻿using ModelManager.Types;
+﻿using Microsoft.EntityFrameworkCore;
+using ModelManager.Types;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data.Entity.ModelConfiguration;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -18,7 +18,7 @@ namespace ModelManager.Utils
 			var typeDefinition = baseTypeDefinition;
 			while (typeDefinition.BaseType != null)
 			{
-				if (typeDefinition.BaseType.IsGenericType && typeDefinition.BaseType.GetGenericTypeDefinition() == typeof(EntityTypeConfiguration<>))
+				if (typeDefinition.BaseType.IsGenericType && typeDefinition.BaseType.GetGenericTypeDefinition() == typeof(IEntityTypeConfiguration<>))
 				{
 					return true;
 				}
@@ -51,11 +51,21 @@ namespace ModelManager.Utils
 			return false;
 		}
 
-		public static bool ImplementsInterface(this Type type, string interfaceName, bool exactMatch = true)
+		public static bool HasInterface(this Type type, string interfaceName)
 		{
-			if (exactMatch)
-				return type.GetInterfaces().Any(i => i.Name == interfaceName);
-			return type.GetInterfaces().Any(i => i.Name.Contains(interfaceName));
+			return type.GetInterfaces().Any(i => i.Name == interfaceName);			
+		}
+
+		public static bool ImplementsGenericInterface(this Type type, Type implemented)
+		{
+			var genericInterfaces = type.GetInterfaces().Where(i => i.IsGenericType);
+			if (!genericInterfaces.Any())
+				return false;
+			return genericInterfaces.Any(i => 
+				i.IsGenericType && 
+				i.Name.Equals(implemented.Name) &&
+				i.Assembly.Equals(implemented.Assembly) &&
+				i.Namespace.Equals(implemented.Namespace));
 		}
 
 		public static void ToOutput(this List<dynamic> objectList)
@@ -65,7 +75,7 @@ namespace ModelManager.Utils
 
 		public static OutputType DetermineOutputType(object outputObject)
 		{
-			if ((outputObject is string))
+			if (outputObject is string)
 				return OutputType.Single;
 			var objectList = outputObject as IEnumerable;
             var objectTable = outputObject as IDictionary;
@@ -86,7 +96,7 @@ namespace ModelManager.Utils
 
 		public static bool IsOverrideable(this MethodInfo methodInfo)
 		{
-			return methodInfo.IsVirtual && !methodInfo.IsFinal;
+			return (methodInfo.IsVirtual || methodInfo.IsAbstract) && !methodInfo.IsFinal;
 		}
 
 		public static string RegexTypeValidationLookup(Type typeToValidate)
