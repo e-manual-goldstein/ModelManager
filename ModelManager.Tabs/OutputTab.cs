@@ -66,7 +66,7 @@ namespace ModelManager.Core
 		}
 
 		#endregion
-
+		
 		#region Tab Management
 
 		public int TabId { get; private set; }
@@ -297,14 +297,14 @@ namespace ModelManager.Core
 			{
 				DisplayExecutingMessage();
 				object[] parameters = getInputParameters();
-				if (parameters.Any())
-				{
-					//_tabManager.CloseTab(this);
-					var task = Task.Run(() => _executingTab.InvokeAction(this, _executedAction, parameters));
-					await task;
-					_tabManager.DisplayOutput(this, task.Result, _executingTab, _executedAction);
-				}
-			}
+                if (parameters.Any())
+                {
+                    //_tabManager.CloseTab(this);
+                    var task = Task.Run(() => _executingTab.InvokeAction(this, _executedAction, parameters));
+                    await task;
+                    _tabManager.DisplayOutput(this, task.Result, _executingTab, _executedAction);
+                }
+            }
 			catch (Exception ex)
 			{
 				_tabManager.DisplayError(ex, _executingTab, this);

@@ -7,8 +7,6 @@
     
   </PropertyGroup>
 
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-
   <ItemGroup>
     <Reference Include="System.Configuration" />
   </ItemGroup>
