@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace ModelManager.Core
@@ -19,10 +20,17 @@ namespace ModelManager.Core
             _windowManager = windowManager;
             loadServiceTabs();
 			initialiseOutputCanvas();
-            //loadBranchControl();
-        }
-
-        private void loadServiceTabs()
+			//CreateNewWindow();
+			//loadBranchControl();
+		}
+		//public void CreateNewWindow()
+		//{
+		//	var newWindow = new Window();
+		//	newWindow.Height = 500;
+		//	newWindow.Width = 600;
+		//	newWindow.Show();
+		//}
+		private void loadServiceTabs()
         {
             _windowManager.AddToWindow(_tabManager.ServiceTabControl);
             _tabManager.FitServiceTabsToWindow(_windowManager.WindowHeight, _windowManager.WindowWidth - 8);

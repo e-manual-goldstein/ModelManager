@@ -94,14 +94,14 @@ namespace StaticCodeAnalysis
 			throw new NotImplementedException();
 		}
 
-		public static List<string> GetAllCodeFilesForProject(string projectFilePath)
+		public static List<string> GetAllCodeFilesForProject(string projectFilePath, string codeFileExt = "cs")
 		{
 			var folderPath = Path.GetDirectoryName(projectFilePath);
 			var filePaths = new List<string>();
 			if (!File.Exists(projectFilePath))
 				throw new FileNotFoundException("File not found");
 			var csprojFile = File.ReadAllText(projectFilePath).ToString();
-			var fileMatches = Regex.Matches(csprojFile, @"\<Compile Include=""(.*\.cs)""") as ICollection;
+			var fileMatches = Regex.Matches(csprojFile, @"\<Compile Include=""(.*\." + codeFileExt + @")""") as ICollection;
 			foreach (Match item in fileMatches)
 			{
 				filePaths.Add(Path.Combine(folderPath, item.Groups[1].Value));
@@ -125,14 +125,14 @@ namespace StaticCodeAnalysis
             return projectFilePaths;
         }
 
-		public static List<string> GetAllCodeFilesForSolution(string solutionFilePath)
+		public static List<string> GetAllCodeFilesForSolution(string solutionFilePath, string projectExt = "csproj")
 		{
 			var folderPath = Path.GetDirectoryName(solutionFilePath);
 			var filePaths = new List<string>();
 			if (!File.Exists(solutionFilePath))
 				throw new FileNotFoundException("File not found");
 			var slnFile = File.ReadAllText(solutionFilePath).ToString();
-			var projFileMatches = Regex.Matches(slnFile, @"""(?'ProjectFilePath'[^""]*?\.csproj)""") as ICollection;
+			var projFileMatches = Regex.Matches(slnFile, @"""(?'ProjectFilePath'[^""]*?\." + projectExt + @")""") as ICollection;
 			foreach (Match projectFilePath in projFileMatches)
 			{
 				var fullFilePath = Path.Combine(folderPath, projectFilePath.Groups["ProjectFilePath"].Value);
@@ -148,6 +148,39 @@ namespace StaticCodeAnalysis
 			var extendedCommentPattern = @"/\*.*?\*/";
 			newCodeBlock = Regex.Replace(newCodeBlock, extendedCommentPattern, "", RegexOptions.Singleline);
 			return newCodeBlock;
+		}
+
+		public static List<string> ExtractComments(string codeBlock)
+		{
+			var commentList = new List<string>();
+			var lineCommentPattern = @"//.*[\r\n]";
+			var extendedCommentPattern = @"/\*.*?\*/";
+			var lineComments = Regex.Matches(codeBlock, lineCommentPattern) as ICollection;
+			var extendedComments = Regex.Matches(codeBlock, extendedCommentPattern, RegexOptions.Singleline) as ICollection;
+			foreach (Match line in lineComments)
+			{
+				commentList.Add(line.Value);
+			}
+			foreach (Match block in extendedComments)
+			{
+				commentList.AddRange(block.Value.Split('\n'));
+			}
+			return commentList;
+		}
+
+		public static int CountCommentLines(string codeBlock)
+		{
+			var commentCount = 0;
+			var lineCommentPattern = @"//.*[\r\n]";
+			var extendedCommentPattern = @"/\*.*?\*/";
+			var lineComments = Regex.Matches(codeBlock, lineCommentPattern) as ICollection;
+			commentCount += lineComments.Count;
+			var extendedComments = Regex.Matches(codeBlock, extendedCommentPattern, RegexOptions.Singleline) as ICollection;
+			foreach (Match match in extendedComments)
+			{
+				commentCount += match.Value.Split('\n').Count();
+			}
+			return commentCount;
 		}
 
 		public static void GetExtensions(this IHasExtensions extendingType, string extensions)
@@ -367,6 +400,44 @@ namespace StaticCodeAnalysis
 			return codeFile;
 		}
 
+		public static List<string> ReadCodeFileComments(string filePath)
+		{
+			if (!File.Exists(filePath))
+				throw new FileNotFoundException("File not found");
+			var codeFile = new CodeFile();
+			codeFile.Name = filePath;
+			var contents = File.ReadAllText(filePath);
+			codeFile.Content = contents;
+			var newContent = contents;
+			if (codeFile.HasPreprocessing())
+			{
+				codeFile.OmittedFromAnalysis = true;
+				return new List<string>();
+			}
+			newContent = codeFile.HandlePreProcessing(newContent);
+			newContent = codeFile.ClearDeclaredStrings(new List<CodeString>(), newContent);
+			return ExtractComments(newContent);
+		}
+
+		public static int CountCommentedLines(string filePath)
+		{
+			if (!File.Exists(filePath))
+				throw new FileNotFoundException("File not found");
+			var codeFile = new CodeFile();
+			codeFile.Name = filePath;
+			var contents = File.ReadAllText(filePath);
+			codeFile.Content = contents;
+			var newContent = contents;
+			if (codeFile.HasPreprocessing())
+			{
+				codeFile.OmittedFromAnalysis = true;
+				return 0;
+			}
+			newContent = codeFile.HandlePreProcessing(newContent);
+			newContent = codeFile.ClearDeclaredStrings(new List<CodeString>(), newContent);
+			return CountCommentLines(newContent);
+		}
+
 		public static CodeFile CreateCodeFileFromContents(string fileContents, string fileVersion, string filePath)
 		{
 			var codeFile = new CodeFile();
@@ -443,6 +514,12 @@ namespace StaticCodeAnalysis
 				stringList.Append(list[i]);
 			}
 			return stringList.ToString().Trim();
+		}
+
+		public static string ResolveFilePath(this string filePath)
+		{
+			var replacement = Regex.Replace(filePath, @"\\[^\\]+\\\.\.", "");
+			return replacement;
 		}
 	}
 }

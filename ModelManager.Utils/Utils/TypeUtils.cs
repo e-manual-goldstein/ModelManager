@@ -53,7 +53,7 @@ namespace ModelManager.Utils
 
 		public static bool HasInterface(this Type type, string interfaceName)
 		{
-			return type.GetInterfaces().Any(i => i.Name == interfaceName);			
+			return type.GetInterfaces().Any(i => i.FullName == interfaceName);			
 		}
 
 		public static bool ImplementsGenericInterface(this Type type, Type implemented)

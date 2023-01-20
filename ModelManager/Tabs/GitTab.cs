@@ -1,5 +1,4 @@
 ﻿using ModelManager.Core;
-using ModelManager.GitInteg;
 using ModelManager.Types;
 using System;
 using System.Collections.Generic;
@@ -48,9 +47,24 @@ namespace ModelManager.Tabs
 			return commits;
 		}
 
+		public Dictionary<string, IEnumerable<string>> FindCommitsByUser(string username)
+		{
+			return GitUtils.FindCommitsByUser(username);
+		}
+
+		public Dictionary<string, IEnumerable<string>> GetPullRequestReport()
+		{
+			return GitUtils.GetPullRequestReport();
+		}
+
 		public List<string> ListBranches(string filter, bool useRegex)
 		{
 			return GitUtils.ListBranches(filter, useRegex);
+		}
+
+		public void GetFileHistory(string filePath)
+		{
+			GitUtils.GetFileHistory(filePath);
 		}
 	}
 }

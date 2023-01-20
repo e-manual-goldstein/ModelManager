@@ -43,7 +43,7 @@ namespace StaticCodeAnalysis.CodeStructures
 		{
 			var genericTypePattern = @"\s*<(?'GType'[,\w\.\s\?]+?)>\s*";
 			var newContent = Operator.ExpandContent(content);
-			while (Regex.Match(newContent, @"[\<\>]").Success)
+			while (Regex.Match(newContent, genericTypePattern).Success)
 			{
 				var matches = Regex.Matches(newContent, genericTypePattern);
 				foreach (Match match in matches)
