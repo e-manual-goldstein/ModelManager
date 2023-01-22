@@ -63,10 +63,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ModelManager.Replicator\ModelManager.Replicator.csproj">
-      <Project>{7c3f3bd7-42c7-47f9-95e2-201d9c6c52b9}</Project>
-      <Name>ModelManager.Replicator</Name>
-    </ProjectReference>
     <ProjectReference Include="..\ModelManager.Types\ModelManager.Types.csproj">
       <Project>{c7874fce-606f-479a-967b-31429cea70c3}</Project>
       <Name>ModelManager.Types</Name>
