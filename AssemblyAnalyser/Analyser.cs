@@ -10,6 +10,15 @@ namespace AssemblyAnalyser
 {
     public class Analyser
     {
+        readonly string _workingDirectory;
+        readonly Dictionary<string, string> _workingFiles;
+
+        public Analyser(string workingDirectory) 
+        {
+            _workingDirectory = workingDirectory;
+            _workingFiles = Directory.EnumerateFiles(_workingDirectory, "*.dll").ToDictionary(d => Path.GetFileNameWithoutExtension(d), e => e);
+        }
+
         #region Assembly Specs
         object _lock = new object();
         ConcurrentDictionary<string, AssemblySpec> _assemblySpecs = new ConcurrentDictionary<string, AssemblySpec>();
@@ -54,8 +63,11 @@ namespace AssemblyAnalyser
             assembly = null;
             try
             {
-                assembly = Assembly.Load(assemblyName);
-                return true;
+                if (_workingFiles.TryGetValue(assemblyName.Name, out string filePath))
+                {
+                    assembly = Assembly.LoadFrom(filePath);
+                    return true;
+                }                
             }
             catch (FileNotFoundException)
             {

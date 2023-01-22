@@ -35,7 +35,10 @@ namespace AssemblyAnalyser
             {
                 _referencedAssemblies = analyser.LoadAssemblySpecs(_assembly.GetReferencedAssemblies().ToArray());
                 _typeSpecs = LoadTypeSpecs(analyser);
-                await Task.WhenAll(_typeSpecs.Select(t => t.AnalyseAsync(analyser)).ToArray());
+                var typeTasks = _typeSpecs.Select(t => t.AnalyseAsync(analyser)).ToArray();
+                var assemblyTasks = _referencedAssemblies.Select(a => a.AnalyseAsync(analyser)).ToArray();
+
+                await Task.WhenAll(typeTasks.Concat(assemblyTasks));
             }
         }
 
