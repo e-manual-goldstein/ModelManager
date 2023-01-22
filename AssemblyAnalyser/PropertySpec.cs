@@ -22,5 +22,10 @@ namespace AssemblyAnalyser
         {
             return new[] { _getter, _setter };
         }
+
+        public override string ToString()
+        {
+            return _propertyInfo.Name;
+        }
     }
 }

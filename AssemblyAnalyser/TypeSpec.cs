@@ -43,5 +43,10 @@ namespace AssemblyAnalyser
         public MethodSpec[] Methods { get; private set; }
 
         public PropertySpec[] Properties { get; set; }
+
+        public override string ToString()
+        {
+            return _type.FullName;
+        }
     }
 }

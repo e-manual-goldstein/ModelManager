@@ -13,5 +13,10 @@ namespace AssemblyAnalyser
         {
             _methodInfo = methodInfo;
         }
+
+        public override string ToString()
+        {
+            return _methodInfo.Name;
+        }
     }
 }
