@@ -42,10 +42,10 @@ namespace AssemblyAnalyser
 
         public AssemblySpec LoadAssemblySpec(Assembly assembly)
         {
-            AssemblySpec assemblySpec = null;
+            AssemblySpec assemblySpec;
             if (assembly == null)
             {
-                return null;
+                return AssemblySpec.NullSpec;
             }
             if (!_assemblySpecs.TryGetValue(assembly.FullName, out assemblySpec))
             {
@@ -59,12 +59,12 @@ namespace AssemblyAnalyser
                 }
                 Console.WriteLine($"Unlocking for {assembly.FullName}");
             }
-            return assemblySpec;
+            return assemblySpec ?? AssemblySpec.NullSpec;
         }
 
         public AssemblySpec LoadAssemblySpec(AssemblyName assemblyName)
         {
-            AssemblySpec assemblySpec = null;
+            AssemblySpec assemblySpec;
             if (!_assemblySpecs.TryGetValue(assemblyName.FullName, out assemblySpec))
             {
                 Console.WriteLine($"Locking for {assemblyName}");
@@ -84,7 +84,7 @@ namespace AssemblyAnalyser
                 }
                 Console.WriteLine($"Unlocking for {assemblyName}");
             }
-            return assemblySpec;
+            return assemblySpec ?? AssemblySpec.NullSpec;
         }
 
         private bool TryLoadAssembly(AssemblyName assemblyName, out Assembly assembly)
@@ -151,28 +151,33 @@ namespace AssemblyAnalyser
 
         private AssemblySpec CreatePartialAssemblySpec(string assemblyName)
         {
-            return new AssemblySpec(assemblyName);
+            var spec = new AssemblySpec(assemblyName);
+            spec.InclusionRules.AddRange(_assemblyInclusions);
+            spec.ExclusionRules.AddRange(_assemblyExclusions);
+            return spec;
         }
 
         #endregion
 
         #region Type Specs
 
+        List<ExclusionRule<TypeSpec>> _typeExclusions = new List<ExclusionRule<TypeSpec>>();
+        List<InclusionRule<TypeSpec>> _typeInclusions = new List<InclusionRule<TypeSpec>>();
+
         ConcurrentDictionary<string, TypeSpec> _typeSpecs = new ConcurrentDictionary<string, TypeSpec>();
 
         private TypeSpec LoadTypeSpec(Type type)
         {
-            TypeSpec typeSpec = null;
             if (type == null)
             {
-                return typeSpec;
+                return TypeSpec.NullSpec;
             }
             return LoadFullTypeSpec(type);
         }
 
         private TypeSpec LoadFullTypeSpec(Type type)
         {
-            TypeSpec typeSpec = null;
+            TypeSpec typeSpec = TypeSpec.NullSpec;
             if (!string.IsNullOrEmpty(type.FullName))
             {
                 if (!_typeSpecs.TryGetValue(type.FullName, out typeSpec))
@@ -182,7 +187,7 @@ namespace AssemblyAnalyser
                     {
                         if (!_typeSpecs.TryGetValue(type.FullName, out typeSpec))
                         {
-                            _typeSpecs[type.FullName] = typeSpec = new TypeSpec(type);
+                            _typeSpecs[type.FullName] = typeSpec = CreateFullTypeSpec(type);
                         }
                     }
                     Console.WriteLine($"Unlocking for {type.FullName}");
@@ -191,9 +196,17 @@ namespace AssemblyAnalyser
             return typeSpec;
         }
 
+        private TypeSpec CreateFullTypeSpec(Type type)
+        {
+            var spec = new TypeSpec(type);
+            spec.InclusionRules.AddRange(_typeInclusions);
+            spec.ExclusionRules.AddRange(_typeExclusions);
+            return spec;
+        }
+
         private TypeSpec LoadPartialTypeSpec(string typeName)
         {
-            TypeSpec typeSpec = null;
+            TypeSpec typeSpec = TypeSpec.NullSpec;
             if (!_typeSpecs.TryGetValue(typeName, out typeSpec))
             {
                 Console.WriteLine($"Locking for {typeName}");
@@ -201,12 +214,20 @@ namespace AssemblyAnalyser
                 {
                     if (!_typeSpecs.TryGetValue(typeName, out typeSpec))
                     {
-                        _typeSpecs[typeName] = typeSpec = new TypeSpec(typeName);
+                        _typeSpecs[typeName] = typeSpec = CreatePartialTypeSpec(typeName);
                     }
                 }
                 Console.WriteLine($"Unlocking for {typeName}");
             }
             return typeSpec;
+        }
+
+        private TypeSpec CreatePartialTypeSpec(string typeName)
+        {
+            var spec = new TypeSpec(typeName);
+            spec.InclusionRules.AddRange(_typeInclusions);
+            spec.ExclusionRules.AddRange(_typeExclusions);
+            return spec;
         }
 
         public TypeSpec TryLoadTypeSpec(Func<Type> propertyTypeFunc)
@@ -372,29 +393,43 @@ namespace AssemblyAnalyser
 
         #endregion
 
-        public void ExcludeAssembly(string assemblyName)
+        public void AddAssemblyRule(ExclusionRule<AssemblySpec> rule)
         {
-            _assemblyExclusions.Add(new ExclusionRule<AssemblySpec>(spec =>
-            {
-                return spec.AssemblyName == assemblyName;
-            }));
+            _assemblyExclusions.Add(rule);
         }
 
-        public void IncludeAssembly(string assemblyName)
+        public void AddAssemblyRule(InclusionRule<AssemblySpec> rule)
         {
-            _assemblyInclusions.Add(new InclusionRule<AssemblySpec>(spec =>
-            {
-                return spec.AssemblyName == assemblyName;
-            }));
+            _assemblyInclusions.Add(rule);
+        }
+
+        public void AddTypeRule(ExclusionRule<TypeSpec> rule)
+        {
+            _typeExclusions.Add(rule);
+        }
+
+        public void AddTypeRule(InclusionRule<TypeSpec> rule)
+        {
+            _typeInclusions.Add(rule);
+        }
+
+        public void AddPropertyRule(ExclusionRule<AssemblySpec> rule)
+        {
+            _assemblyExclusions.Add(rule);
+        }
+
+        public void AddPropertyRule(InclusionRule<AssemblySpec> rule)
+        {
+            _assemblyInclusions.Add(rule);
         }
 
         public string Report()
         {
-            return $"Assemblies: {_assemblySpecs.Count}\n" +
-                $"Types: {_typeSpecs.Count}\n" +
-                $"Properties {_propertySpecs.Count}\n" +
-                $"Methods {_methodSpecs.Count}\n" +
-                $"Fields {_fieldSpecs.Count}";
+            return $"Assemblies: {_assemblySpecs.Where(key => !key.Value.Excluded() && key.Value.Included()).Count()}\n" +
+                $"Types: {_typeSpecs.Where(key => !key.Value.Excluded() && key.Value.Included()).Count()}\n" +
+                $"Properties {_propertySpecs.Where(key => !key.Value.Excluded() && key.Value.Included()).Count()}\n" +
+                $"Methods {_methodSpecs.Where(key => !key.Value.Excluded() && key.Value.Included()).Count()}\n" +
+                $"Fields {_fieldSpecs.Where(key => !key.Value.Excluded() && key.Value.Included()).Count()}";
         }
 
     }

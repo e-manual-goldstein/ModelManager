@@ -19,6 +19,8 @@ namespace AssemblyAnalyser
         public FieldSpec(FieldInfo fieldInfo)
         {
             _fieldInfo = fieldInfo;
+            InclusionRules = new List<InclusionRule<FieldSpec>>();
+            ExclusionRules = new List<ExclusionRule<FieldSpec>>();
         }
 
         public TypeSpec FieldType { get; private set; }

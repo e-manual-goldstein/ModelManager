@@ -17,6 +17,8 @@ namespace AssemblyAnalyser
         public MethodSpec(MethodInfo methodInfo)
         {
             _methodInfo = methodInfo;
+            InclusionRules = new List<InclusionRule<MethodSpec>>();
+            ExclusionRules = new List<ExclusionRule<MethodSpec>>();
         }
 
         public TypeSpec ReturnType { get; private set; }

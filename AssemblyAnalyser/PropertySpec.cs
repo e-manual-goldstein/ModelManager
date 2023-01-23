@@ -21,6 +21,8 @@ namespace AssemblyAnalyser
             _propertyInfo = propertyInfo;
             _getter = propertyInfo.GetGetMethod();
             _setter = propertyInfo.GetSetMethod();
+            InclusionRules = new List<InclusionRule<PropertySpec>>();
+            ExclusionRules = new List<ExclusionRule<PropertySpec>>();
         }
 
         public MethodSpec Getter { get; private set; }

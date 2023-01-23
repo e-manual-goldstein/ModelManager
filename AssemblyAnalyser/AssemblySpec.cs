@@ -9,6 +9,15 @@ namespace AssemblyAnalyser
 {
     public class AssemblySpec : ISpec
     {
+        public static AssemblySpec NullSpec = CreateNullSpec();
+
+        private static AssemblySpec CreateNullSpec()
+        {
+            var spec = new AssemblySpec("null");
+            //spec.ExclusionRules.Add(new ExclusionRule<TypeSpec>(spec => true));
+            return spec;
+        }
+
         Assembly _assembly;
         private bool _analysing;
         private bool _analysed;
@@ -17,18 +26,20 @@ namespace AssemblyAnalyser
         public AssemblySpec(Assembly assembly) : this(assembly.FullName)
         {
             _assembly = assembly;
+            AssemblyShortName = _assembly.GetName().Name;
             _analysable = true;
         }
 
         public AssemblySpec(string fullName)
         {
-            AssemblyName = fullName;
+            AssemblyFullName = fullName;
             ExclusionRules = new List<ExclusionRule<AssemblySpec>>();
             InclusionRules = new List<InclusionRule<AssemblySpec>>();
         }
 
 
-        public string AssemblyName { get; }
+        public string AssemblyFullName { get; }
+        public string AssemblyShortName { get; }
 
         TypeSpec[] _typeSpecs;
         public TypeSpec[] TypeSpecs => _typeSpecs;
@@ -82,7 +93,7 @@ namespace AssemblyAnalyser
 
         public override string ToString()
         {
-            return AssemblyName;
+            return AssemblyFullName;
         }
 
         public bool Excluded()

@@ -20,6 +20,8 @@ namespace AssemblyAnalyser
         public ParameterSpec(ParameterInfo parameterInfo)
         {
             _parameterInfo = parameterInfo;
+            InclusionRules = new List<InclusionRule<ParameterSpec>>();
+            ExclusionRules = new List<ExclusionRule<ParameterSpec>>();
         }
 
         public async Task AnalyseAsync(Analyser analyser)

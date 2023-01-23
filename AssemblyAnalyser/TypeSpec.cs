@@ -9,6 +9,19 @@ namespace AssemblyAnalyser
 {
     public class TypeSpec : ISpec
     {
+        #region Null Spec
+
+        public static TypeSpec NullSpec = CreateNullSpec();
+
+        private static TypeSpec CreateNullSpec()
+        {
+            var spec = new TypeSpec("null");
+            //spec.ExclusionRules.Add(new ExclusionRule<TypeSpec>(spec => true));
+            return spec;
+        }
+
+        #endregion
+
         private Type _type;
         private string _typeName;
         private bool _analysing;
@@ -26,6 +39,7 @@ namespace AssemblyAnalyser
         {
             _typeName = typeName;
             ExclusionRules = new List<ExclusionRule<TypeSpec>>();
+            InclusionRules = new List<InclusionRule<TypeSpec>>();
         }
 
         public async Task AnalyseAsync(Analyser analyser)
@@ -79,7 +93,21 @@ namespace AssemblyAnalyser
             return Task.WhenAll(Fields.Select(f => f.AnalyseAsync(analyser)));
         }
         
-        public AssemblySpec Assembly { get; private set; }
+        AssemblySpec _assembly;
+        public AssemblySpec Assembly 
+        {   
+            get
+            {
+                return _assembly;
+            }
+            set
+            {
+                if (value == null)
+                {
+                }
+                    _assembly = value;
+            }
+        }
 
         public TypeSpec[] Interfaces { get; private set; }
 
