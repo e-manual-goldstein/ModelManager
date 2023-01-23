@@ -72,5 +72,10 @@ namespace AssemblyAnalyser
         public PropertySpec[] Properties { get; set; }
         
         public FieldSpec[] Fields { get; set; }
+
+        public override string ToString()
+        {
+            return _type.FullName;
+        }
     }
 }

@@ -6,23 +6,37 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace ModelManager.Core
 {
     public class AppManager
     {
         private TabManager _tabManager;
-        private WindowManager _windowManager;
+        private MainWindow _mainWindow;
+        private Canvas _baseCanvas;
+        private Canvas _toolbarCanvas;
+        public const double TOOLBAR_HEIGHT = 30;
+        double _defaultWindowHeight = SystemParameters.PrimaryScreenHeight * 0.8;
+        double _defaultWindowWidth = SystemParameters.PrimaryScreenWidth * 0.8;
+        double _defaultTopMargin = SystemParameters.PrimaryScreenHeight * 0.1;
+        double _defaultLeftMargin = SystemParameters.PrimaryScreenWidth * 0.1;
 
-		public AppManager(TabManager tabManager, WindowManager windowManager)
+        public AppManager(TabManager tabManager, MainWindow mainWindow)
         {
             _tabManager = tabManager;
-            _windowManager = windowManager;
+            _mainWindow = mainWindow;
+            setWindowLayout();
+            _baseCanvas = new Canvas();
+            _baseCanvas.Background = new SolidColorBrush(Color.FromRgb(212, 208, 200));
+            _mainWindow.Content = _baseCanvas;
+            createToolbar();
+            _mainWindow.SizeChanged += refitComponentsToWindow;
             loadServiceTabs();
 			initialiseOutputCanvas();
-			//CreateNewWindow();
-			//loadBranchControl();
-		}
+            _mainWindow.Show();
+            //loadBranchControl();
+        }
 		//public void CreateNewWindow()
 		//{
 		//	var newWindow = new Window();
@@ -32,8 +46,8 @@ namespace ModelManager.Core
 		//}
 		private void loadServiceTabs()
         {
-            _windowManager.AddToWindow(_tabManager.ServiceTabControl);
-            _tabManager.FitServiceTabsToWindow(_windowManager.WindowHeight, _windowManager.WindowWidth - 8);
+            AddToWindow(_tabManager.ServiceTabControl);
+            _tabManager.FitServiceTabsToWindow(_mainWindow.Height, _mainWindow.Width - 8);
 			foreach (var tabService in _tabManager.ServiceTabs)
 			{
 				tabService.LoadActionButtons();
@@ -42,20 +56,37 @@ namespace ModelManager.Core
 
 		private void initialiseOutputCanvas()
 		{
-			_windowManager.AddToWindow(_tabManager.OutputTabControl);
+			AddToWindow(_tabManager.OutputTabControl);
             Canvas.SetRight(_tabManager.OutputTabControl, 0);
             Canvas.SetTop(_tabManager.OutputTabControl, 28);
-			_windowManager.FitOutputControlToWindow(_windowManager.WindowHeight, WindowManager.WindowWidth);
+			FitOutputControlToWindow(_mainWindow.Height, _mainWindow.Width);
 		}
 
-        //private void loadBranchControl()
-        //{
-        //    //getLocalBranches();
-        //    BranchSelector = new ComboBox();
-        //    BranchSelector.Width = 100;
-        //    BranchSelector.Items.Add("TestBranch");
-        //    WindowManager.AddToWindow(BranchSelector, 5, WindowManager.WindowWidth * 2 / 5);
-        //}
+        private void refitComponentsToWindow(object sender, SizeChangedEventArgs e)
+        {
+            var newHeight = e.NewSize.Height;
+            var newWidth = e.NewSize.Width;
+            _toolbarCanvas.Width = newWidth;
+            FitOutputControlToWindow(newHeight, newWidth);
+
+            _tabManager.FitServiceTabsToWindow(newHeight, newWidth);
+        }
+        private void createToolbar()
+        {
+            _toolbarCanvas = new Canvas();
+            _toolbarCanvas.Width = _mainWindow.Width;
+            _toolbarCanvas.Height = TOOLBAR_HEIGHT;
+            //_toolbarCanvas.Background = new SolidColorBrush(Colors.BurlyWood);
+            _baseCanvas.Children.Add(_toolbarCanvas);
+        }
+        public void FitOutputControlToWindow(double windowHeight, double windowWidth)
+        {
+            var toolbarHeight = TOOLBAR_HEIGHT;
+            var workingWidth = windowWidth - 10;
+            var workingHeight = windowHeight - toolbarHeight - 24;
+            _tabManager.ResizeOutputControl(workingHeight, workingWidth * 3 / 5);
+        }
+
 
         public string WorkingBranch { get; set; }
 
@@ -63,26 +94,28 @@ namespace ModelManager.Core
 
         //private Dictionary<string, string> localBranches;
 
-        private void getLocalBranches(bool forceReload = false)
+
+        private void setWindowLayout()
         {
-            //if (AppUtils.IsFirstRun() || forceReload)
-            //    TFUtils.LookupBranchesOnline();
+            useDefaultLayout();            
         }
 
-        public TabManager TabManager
-		{
-			get
-			{
-				return _tabManager;
-			}
-		}
+        private void useDefaultLayout()
+        {
+            _mainWindow.Height = _defaultWindowHeight;
+            _mainWindow.Width = _defaultWindowWidth;
+            _mainWindow.Top = _defaultTopMargin;
+            _mainWindow.Left = _defaultLeftMargin;
+        }
 
-		public WindowManager WindowManager
-		{
-			get
-			{
-				return _windowManager;
-			}
-		}
+        public void AddToWindow(UIElement element, double top = 0, double left = 0)
+        {
+            if (top != 0)
+                Canvas.SetTop(element, top);
+            if (left != 0)
+                Canvas.SetLeft(element, left);
+            _baseCanvas.Children.Add(element);
+        }
+
     }
 }

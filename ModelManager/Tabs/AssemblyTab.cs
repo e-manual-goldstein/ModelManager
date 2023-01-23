@@ -25,10 +25,10 @@ namespace ModelManager.Tabs
 
         public void AnalyseAssembly()
         {
-            var assemblyPath = @"";
+            var assemblyPath = @"D:\Goldstein\Cosmos\Cosmos.Server\bin\Debug\netcoreapp3.1\Cosmos.Server.dll";
             var interfaces = new List<Type>();
-            var analyser = new Analyser();
-            var assemblySpec = new AssemblySpec(Assembly.LoadFrom(assemblyPath));
+            var analyser = new Analyser(@"D:\Goldstein\Cosmos\Cosmos.Server\bin\Debug\netcoreapp3.1\");
+            var assemblySpec = analyser.LoadAssemblySpec(Assembly.LoadFrom(assemblyPath));
             assemblySpec.AnalyseAsync(analyser);
             var types = analyser.Types();
         }

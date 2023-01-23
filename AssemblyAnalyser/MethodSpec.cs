@@ -40,5 +40,10 @@ namespace AssemblyAnalyser
             await Task.WhenAll(returnType, parameterTypes);
             _analysed = true;
         }
+
+        public override string ToString()
+        {
+            return _methodInfo.Name;
+        }
     }
 }

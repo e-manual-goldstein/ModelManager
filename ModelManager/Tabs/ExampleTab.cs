@@ -65,11 +65,11 @@ namespace ModelManager.Tabs
 
 		private void updateMargin(Thickness newMargin)
 		{
-			var tabs = App.Manager.TabManager.OutputTabs;
-			foreach (var tab in tabs)
-			{
-				tab.TabItemControl.Padding = newMargin;
-			}
+			//var tabs = App.Manager.TabManager.OutputTabs;
+			//foreach (var tab in tabs)
+			//{
+			//	tab.TabItemControl.Padding = newMargin;
+			//}
 		}
 
         private Random random = new Random();

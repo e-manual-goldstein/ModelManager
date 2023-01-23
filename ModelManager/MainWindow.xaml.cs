@@ -26,8 +26,7 @@ namespace ModelManager
 		
 		public MainWindow()
 		{
-			InitializeComponent();
-			App.Manager = new AppManager(new TabManager(), new WindowManager(this));
+			InitializeComponent();			
 		}
 	}
 }

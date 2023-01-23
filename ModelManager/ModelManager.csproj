@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Tabs\CodebaseTab.cs" />
     <Compile Remove="Tabs\GitTab.cs" />
   </ItemGroup>
 
@@ -19,9 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\AssemblyAnalyser\AssemblyAnalyser.csproj" />
     <ProjectReference Include="..\ModelManager.Tabs\ModelManager.Tabs.csproj" />
-    <ProjectReference Include="..\ModelManager.Types\ModelManager.Types.csproj" />
     <ProjectReference Include="..\ModelManager.Utils\ModelManager.Utils.csproj" />
-    <ProjectReference Include="..\StaticCodeAnalysis\StaticCodeAnalysis.csproj" />
   </ItemGroup>
 
 </Project>

@@ -15,16 +15,31 @@ namespace AssemblyAnalyser
             AssemblyName = assembly.FullName;
         }
 
+        public AssemblySpec(string fullName)
+        {
+            AssemblyName = fullName;
+        }
+
 
         public string AssemblyName { get; }
 
         TypeSpec[] _typeSpecs;
         public TypeSpec[] TypeSpecs => _typeSpecs;
 
+        AssemblySpec[] _referencedAssemblies;
+        public AssemblySpec[] ReferencedAssemblies => _referencedAssemblies;
+
         public async Task AnalyseAsync(Analyser analyser)
         {
-            _typeSpecs = LoadTypeSpecs(analyser);
-            await Task.WhenAll(_typeSpecs.Select(t => t.AnalyseAsync(analyser)).ToArray());
+            if (_assembly != null)
+            {
+                _referencedAssemblies = analyser.LoadAssemblySpecs(_assembly.GetReferencedAssemblies().ToArray());
+                _typeSpecs = LoadTypeSpecs(analyser);
+                var typeTasks = _typeSpecs.Select(t => t.AnalyseAsync(analyser)).ToArray();
+                var assemblyTasks = _referencedAssemblies.Select(a => a.AnalyseAsync(analyser)).ToArray();
+
+                await Task.WhenAll(typeTasks.Concat(assemblyTasks));
+            }
         }
 
         private TypeSpec[] LoadTypeSpecs(Analyser analyser)
@@ -39,6 +54,11 @@ namespace AssemblyAnalyser
                 types = ex.Types.Where(t => t != null).ToArray();
             }
             return types.Select(t => analyser.LoadTypeSpec(t)).ToArray();
+        }
+
+        public override string ToString()
+        {
+            return AssemblyName;
         }
     }
 }

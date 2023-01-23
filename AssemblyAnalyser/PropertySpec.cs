@@ -51,5 +51,10 @@ namespace AssemblyAnalyser
             await Task.WhenAll(getter, setter, propertyType);
             _analysed = true;
         }
+
+        public override string ToString()
+        {
+            return _propertyInfo.Name;
+        }
     }
 }

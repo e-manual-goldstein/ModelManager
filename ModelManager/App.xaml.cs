@@ -1,4 +1,5 @@
-﻿using ModelManager.Core;
+﻿using Microsoft.Extensions.DependencyInjection;
+using ModelManager.Core;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -14,7 +15,24 @@ namespace ModelManager
 	/// </summary>
 	public partial class App : Application
 	{
-		public static AppManager Manager { get; set; }
+        private readonly ServiceProvider _serviceProvider;
+        private AppManager _appManager;
 
-	}
+        public App()
+        {
+            _serviceProvider =
+                new ServiceCollection()
+                .AddSingleton<AppManager>()
+                .AddSingleton<TabManager>()
+                .AddSingleton<MainWindow>()
+                .BuildServiceProvider();
+            
+        }
+
+        private void Application_Startup(object sender, StartupEventArgs e)
+        {
+            _appManager = _serviceProvider.GetService<AppManager>();
+
+        }
+    }
 }
