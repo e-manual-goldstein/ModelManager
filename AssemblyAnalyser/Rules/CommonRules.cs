@@ -30,15 +30,51 @@ namespace AssemblyAnalyser
                 return spec switch
                 {
                     AssemblySpec assemblySpec => assemblySpec.MatchesName(assemblyName),
-                    TypeSpec typeSpec => typeSpec.Assembly?.MatchesName(assemblyName) ?? false,
-                    MethodSpec methodSpec => methodSpec.DeclaringType?.Assembly?.MatchesName(assemblyName) ?? false,
-                    ParameterSpec parameterSpec => parameterSpec.Method?.DeclaringType.Assembly?.MatchesName(assemblyName) ?? false,
-                    PropertySpec propertySpec => propertySpec.PropertyType?.Assembly?.MatchesName(assemblyName) ?? false,
-                    FieldSpec fieldSpec => fieldSpec.FieldType?.Assembly?.MatchesName(assemblyName) ?? false,
+                    TypeSpec typeSpec => TypeMatchAssembly(typeSpec, assemblyName),
+                    MethodSpec methodSpec => MethodMatchAssembly(methodSpec, assemblyName),
+                    ParameterSpec parameterSpec => ParameterMatchAssembly(parameterSpec, assemblyName),
+                    PropertySpec propertySpec => PropertyMatchAssembly(propertySpec, assemblyName),
+                    FieldSpec fieldSpec => FieldMatchAssembly(fieldSpec, assemblyName),
                     _ => false
                 };
             });
         }
+
+        private static bool FieldMatchAssembly(FieldSpec fieldSpec, string assemblyName)
+        {
+            return fieldSpec.FieldType?.Assembly?.MatchesName(assemblyName) ?? false;
+        }
+
+        private static bool PropertyMatchAssembly(PropertySpec propertySpec, string assemblyName)
+        {
+            var declaringType = propertySpec.DeclaringType;
+            if (declaringType != null)
+            {
+                var assembly = declaringType.Assembly;
+                if (assembly != null)
+                {
+                    return assembly.MatchesName(assemblyName);
+                }                
+            }
+            return false;
+        }
+
+        private static bool ParameterMatchAssembly(ParameterSpec parameterSpec, string assemblyName)
+        {
+            return parameterSpec.Method?.DeclaringType.Assembly?.MatchesName(assemblyName) ?? false;
+        }
+
+        private static bool MethodMatchAssembly(MethodSpec methodSpec, string assemblyName)
+        {
+            return methodSpec.DeclaringType?.Assembly?.MatchesName(assemblyName) ?? false;
+        }
+
+        private static bool TypeMatchAssembly(TypeSpec typeSpec, string assemblyName)
+        {
+            return typeSpec.Assembly?.MatchesName(assemblyName) ?? false;
+        }
+
+        #region Unused
 
         public static InclusionRule<AssemblySpec> IncludeAssemblyByFullName(string assemblyName)
         {
@@ -98,6 +134,7 @@ namespace AssemblyAnalyser
         public static ExclusionRule<PropertySpec> ExcludePropertyByType()
         {
             return new ExclusionRule<PropertySpec>(spec => spec.PropertyType.IsExcluded());
-        }
+        } 
+        #endregion
     }
 }
