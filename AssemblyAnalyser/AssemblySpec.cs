@@ -7,34 +7,29 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
-    public class AssemblySpec : ISpec
+    public class AssemblySpec : AbstractSpec
     {
         public static AssemblySpec NullSpec = CreateNullSpec();
 
         private static AssemblySpec CreateNullSpec()
         {
-            var spec = new AssemblySpec("null");
-            //spec.ExclusionRules.Add(new ExclusionRule<TypeSpec>(spec => true));
+            var spec = new AssemblySpec("null", new List<IRule>());
+            spec.Exclude();
+            spec.SkipProcessing();
             return spec;
         }
 
         Assembly _assembly;
-        private bool _analysing;
-        private bool _analysed;
-        private bool _analysable;
 
-        public AssemblySpec(Assembly assembly) : this(assembly.FullName)
+        public AssemblySpec(Assembly assembly, List<IRule> rules) : this(assembly.FullName, rules)
         {
             _assembly = assembly;
             AssemblyShortName = _assembly.GetName().Name;
-            _analysable = true;
         }
 
-        public AssemblySpec(string fullName)
+        public AssemblySpec(string fullName, List<IRule> rules) : base(rules)
         {
-            AssemblyFullName = fullName;
-            ExclusionRules = new List<ExclusionRule<AssemblySpec>>();
-            InclusionRules = new List<InclusionRule<AssemblySpec>>();
+            AssemblyFullName = fullName;            
         }
 
 
@@ -47,30 +42,20 @@ namespace AssemblyAnalyser
         AssemblySpec[] _referencedAssemblies;
         public AssemblySpec[] ReferencedAssemblies => _referencedAssemblies;
 
-        public async Task AnalyseAsync(Analyser analyser)
+        protected override void BeginProcessing(Analyser analyser)
         {
             if (_assembly != null)
             {
-                if (_analysable && !_analysing && !_analysed)
-                {
-                    _analysing = true;
-                    _referencedAssemblies = analyser.LoadAssemblySpecs(_assembly.GetReferencedAssemblies().ToArray());
-                    _typeSpecs = LoadTypeSpecs(analyser);
-                    await BeginAnalysis(analyser);
-                }
+                _referencedAssemblies = analyser.LoadAssemblySpecs(_assembly.GetReferencedAssemblies().ToArray());
+                _typeSpecs = LoadTypeSpecs(analyser);
             }
         }
 
-        private async Task BeginAnalysis(Analyser analyser)
+        protected override async Task BeginAnalysis(Analyser analyser)
         {
-            if (Included() && !Excluded())
-            {
-                var typeTasks = Task.WhenAll(_typeSpecs.Select(t => t.AnalyseAsync(analyser)));
-                var assemblyTasks = Task.WhenAll(_referencedAssemblies.Select(a => a.AnalyseAsync(analyser)));
-
-                await Task.WhenAll(typeTasks, assemblyTasks);
-            }
-            _analysed = true;
+            var typeTasks = Task.WhenAll(_typeSpecs.Select(t => t.AnalyseAsync(analyser)));
+            var assemblyTasks = Task.WhenAll(_referencedAssemblies.Select(a => a.AnalyseAsync(analyser)));
+            await Task.WhenAll(typeTasks, assemblyTasks);                        
         }
 
         private TypeSpec[] LoadTypeSpecs(Analyser analyser)
@@ -96,17 +81,11 @@ namespace AssemblyAnalyser
             return AssemblyFullName;
         }
 
-        public bool Excluded()
+        public bool MatchesName(string assemblyName)
         {
-            return ExclusionRules.Any(r => r.Exclude(this));
+            return AssemblyShortName == assemblyName || AssemblyFullName == assemblyName;
         }
 
-        public bool Included()
-        {
-            return InclusionRules.All(r => r.Include(this));
-        }
-
-        public List<ExclusionRule<AssemblySpec>> ExclusionRules { get; private set; }
-        public List<InclusionRule<AssemblySpec>> InclusionRules { get; private set; }
+        
     }
 }

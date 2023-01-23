@@ -8,56 +8,32 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
-    public class FieldSpec : ISpec
+    public class FieldSpec : AbstractSpec
     {
         private FieldInfo _fieldInfo;
 
-        private bool _analysing;
-        private bool _analysed;
-        private bool _analysable;
-
-        public FieldSpec(FieldInfo fieldInfo)
+        public FieldSpec(FieldInfo fieldInfo, List<IRule> rules) : base(rules)
         {
             _fieldInfo = fieldInfo;
-            InclusionRules = new List<InclusionRule<FieldSpec>>();
-            ExclusionRules = new List<ExclusionRule<FieldSpec>>();
         }
 
         public TypeSpec FieldType { get; private set; }
 
-        public async Task AnalyseAsync(Analyser analyser)
+
+        protected override void BeginProcessing(Analyser analyser)
         {
-            if (!_analysed && !_analysing)
-            {
-                _analysing = true;
-                FieldType = analyser.TryLoadTypeSpec(() => _fieldInfo.FieldType);
-                await BeginAnalysis(analyser);
-            }
+            FieldType = analyser.TryLoadTypeSpec(() => _fieldInfo.FieldType);            
         }
 
-        private async Task BeginAnalysis(Analyser analyser)
+        protected override async Task BeginAnalysis(Analyser analyser)
         {
             Task fieldType = FieldType?.AnalyseAsync(analyser) ?? Task.CompletedTask;
-            await Task.WhenAll(fieldType);            
-            _analysed = true;
+            await Task.WhenAll(fieldType);
         }
 
         public override string ToString()
         {
             return _fieldInfo.Name;
         }
-
-        public bool Excluded()
-        {
-            return ExclusionRules.Any(r => r.Exclude(this));
-        }
-
-        public bool Included()
-        {
-            return InclusionRules.All(r => r.Include(this));
-        }
-
-        public List<ExclusionRule<FieldSpec>> ExclusionRules { get; private set; }
-        public List<InclusionRule<FieldSpec>> InclusionRules { get; private set; }
     }
 }

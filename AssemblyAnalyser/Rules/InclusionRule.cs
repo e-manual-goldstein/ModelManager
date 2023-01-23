@@ -18,4 +18,19 @@ namespace AssemblyAnalyser
             return _includeFunc(spec);
         }
     }
+
+    public class InclusionRule : IRule
+    {
+        Func<ISpec, bool> _includeFunc;
+
+        public InclusionRule(Func<ISpec, bool> includeFunc)
+        {
+            _includeFunc = includeFunc;
+        }
+
+        public bool Include(ISpec spec)
+        {
+            return _includeFunc(spec);
+        }
+    }
 }

@@ -33,6 +33,12 @@ namespace AssemblyAnalyser
             await Task.WhenAll(taskList);
         }
 
+        #region Rules
+
+        public List<IRule> SpecRules { get; set; } = new List<IRule>();
+
+        #endregion
+
         #region Assembly Specs
 
         List<ExclusionRule<AssemblySpec>> _assemblyExclusions = new List<ExclusionRule<AssemblySpec>>();
@@ -143,17 +149,14 @@ namespace AssemblyAnalyser
 
         private AssemblySpec CreateFullAssemblySpec(Assembly assembly)
         {
-            var spec = new AssemblySpec(assembly);
-            spec.ExclusionRules.AddRange(_assemblyExclusions);
-            spec.InclusionRules.AddRange(_assemblyInclusions);
+            var spec = new AssemblySpec(assembly, SpecRules);
             return spec;
         }
 
         private AssemblySpec CreatePartialAssemblySpec(string assemblyName)
         {
-            var spec = new AssemblySpec(assemblyName);
-            spec.InclusionRules.AddRange(_assemblyInclusions);
-            spec.ExclusionRules.AddRange(_assemblyExclusions);
+            var spec = new AssemblySpec(assemblyName, SpecRules);
+            spec.Exclude();
             return spec;
         }
 
@@ -198,9 +201,7 @@ namespace AssemblyAnalyser
 
         private TypeSpec CreateFullTypeSpec(Type type)
         {
-            var spec = new TypeSpec(type);
-            spec.InclusionRules.AddRange(_typeInclusions);
-            spec.ExclusionRules.AddRange(_typeExclusions);
+            var spec = new TypeSpec(type, SpecRules);            
             return spec;
         }
 
@@ -224,9 +225,8 @@ namespace AssemblyAnalyser
 
         private TypeSpec CreatePartialTypeSpec(string typeName)
         {
-            var spec = new TypeSpec(typeName);
-            spec.InclusionRules.AddRange(_typeInclusions);
-            spec.ExclusionRules.AddRange(_typeExclusions);
+            var spec = new TypeSpec(typeName, SpecRules);
+            spec.Exclude();
             return spec;
         }
 
@@ -269,7 +269,7 @@ namespace AssemblyAnalyser
                 {
                     if (!_methodSpecs.TryGetValue(method, out methodSpec))
                     {
-                        _methodSpecs[method] = methodSpec = new MethodSpec(method);
+                        _methodSpecs[method] = methodSpec = new MethodSpec(method, SpecRules);
                     }
                 }
                 Console.WriteLine($"Unlocking for {method.Name}");
@@ -298,7 +298,7 @@ namespace AssemblyAnalyser
                 {
                     if (!_propertySpecs.TryGetValue(propertyInfo, out propertySpec))
                     {
-                        _propertySpecs[propertyInfo] = propertySpec = new PropertySpec(propertyInfo);
+                        _propertySpecs[propertyInfo] = propertySpec = new PropertySpec(propertyInfo, SpecRules);
                     }
                 }
             }
@@ -334,7 +334,7 @@ namespace AssemblyAnalyser
                 {
                     if (!_parameterSpecs.TryGetValue(parameterInfo, out parameterSpec))
                     {
-                        _parameterSpecs[parameterInfo] = parameterSpec = new ParameterSpec(parameterInfo);
+                        _parameterSpecs[parameterInfo] = parameterSpec = new ParameterSpec(parameterInfo, SpecRules);
                     }
                 }
                 Console.WriteLine($"Unlocking for {parameterInfo.Name}");
@@ -378,7 +378,7 @@ namespace AssemblyAnalyser
                 {
                     if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
                     {
-                        _fieldSpecs[fieldInfo] = fieldSpec = new FieldSpec(fieldInfo);
+                        _fieldSpecs[fieldInfo] = fieldSpec = new FieldSpec(fieldInfo, SpecRules);
                     }
                 }
                 Console.WriteLine($"Unlocking for {fieldInfo.Name}");
@@ -425,11 +425,11 @@ namespace AssemblyAnalyser
 
         public string Report()
         {
-            return $"Assemblies: {_assemblySpecs.Where(key => !key.Value.Excluded() && key.Value.Included()).Count()}\n" +
-                $"Types: {_typeSpecs.Where(key => !key.Value.Excluded() && key.Value.Included()).Count()}\n" +
-                $"Properties {_propertySpecs.Where(key => !key.Value.Excluded() && key.Value.Included()).Count()}\n" +
-                $"Methods {_methodSpecs.Where(key => !key.Value.Excluded() && key.Value.Included()).Count()}\n" +
-                $"Fields {_fieldSpecs.Where(key => !key.Value.Excluded() && key.Value.Included()).Count()}";
+            return $"Assemblies: {_assemblySpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
+                $"Types: {_typeSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
+                $"Properties {_propertySpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
+                $"Methods {_methodSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
+                $"Fields {_fieldSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}";
         }
 
     }

@@ -28,9 +28,8 @@ namespace ModelManager.Tabs
             //var assemblyPath = @"D:\Goldstein\Cosmos\Cosmos.Server\bin\Debug\netcoreapp3.1\Cosmos.Server.dll";
             //var interfaces = new List<Type>();
             var analyser = new Analyser(@"D:\Goldstein\Cosmos\Cosmos.Server\bin\Debug\netcoreapp3.1\");
-            
-            analyser.AddAssemblyRule(CommonRules.IncludeAssemblyByShortName("Cosmos.Model"));
-            analyser.AddTypeRule(CommonRules.IncludeTypesByAssembly());
+
+            analyser.SpecRules.Add(CommonRules.IncludeByAssemblyName("Cosmos.Server"));
             analyser.BeginAsync();
             //var assemblySpec = analyser.LoadAssemblySpec(Assembly.LoadFrom(assemblyPath));
             //assemblySpec.AnalyseAsync(analyser);

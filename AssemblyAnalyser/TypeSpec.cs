@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
-    public class TypeSpec : ISpec
+    public class TypeSpec : AbstractSpec
     {
         #region Null Spec
 
@@ -15,8 +15,9 @@ namespace AssemblyAnalyser
 
         private static TypeSpec CreateNullSpec()
         {
-            var spec = new TypeSpec("null");
-            //spec.ExclusionRules.Add(new ExclusionRule<TypeSpec>(spec => true));
+            var spec = new TypeSpec("null", new List<IRule>());
+            spec.Exclude();
+            spec.SkipProcessing();
             return spec;
         }
 
@@ -24,48 +25,35 @@ namespace AssemblyAnalyser
 
         private Type _type;
         private string _typeName;
-        private bool _analysing;
-
-
-        private bool _analysed;
-        private bool _analysable;
-        public TypeSpec(Type type) : this(type.FullName)
+        
+        public TypeSpec(Type type, List<IRule> rules) : this(type.FullName, rules)
         {
             _type = type;
-            _analysable = true;
         }
 
-        public TypeSpec(string typeName)
+        public TypeSpec(string typeName, List<IRule> rules) : base(rules)
         {
             _typeName = typeName;
-            ExclusionRules = new List<ExclusionRule<TypeSpec>>();
-            InclusionRules = new List<InclusionRule<TypeSpec>>();
         }
 
-        public async Task AnalyseAsync(Analyser analyser)
+        protected override void BeginProcessing(Analyser analyser)
         {
-            if (_analysable && !_analysed && !_analysing)
-            {
-                _analysing = true;
-                Assembly = analyser.LoadAssemblySpec(_type.Assembly);
-                Interfaces = analyser.LoadTypeSpecs(_type.GetInterfaces());
-                BaseSpec = analyser.TryLoadTypeSpec(() => _type.BaseType);
-                Properties = analyser.LoadPropertySpecs(_type.GetProperties());
-                Methods = analyser.LoadMethodSpecs(_type.GetMethods().Except(Properties.SelectMany(p => p.InnerMethods())).ToArray());
-                Fields = analyser.LoadFieldSpecs(_type.GetFields()).ToArray();
-                await BeginAnalysis(analyser);
-            }
+            Assembly = analyser.LoadAssemblySpec(_type.Assembly);
+            Interfaces = analyser.LoadTypeSpecs(_type.GetInterfaces());
+            BaseSpec = analyser.TryLoadTypeSpec(() => _type.BaseType);
+            Properties = analyser.LoadPropertySpecs(_type.GetProperties());
+            Methods = analyser.LoadMethodSpecs(_type.GetMethods().Except(Properties.SelectMany(p => p.InnerMethods())).ToArray());
+            Fields = analyser.LoadFieldSpecs(_type.GetFields()).ToArray();            
         }
 
-        private async Task BeginAnalysis(Analyser analyser)
+        protected override async Task BeginAnalysis(Analyser analyser)
         {
             Task baseSpec = AnalyseBaseSpec(analyser);
             Task interfaces = AnalyseInterfaces(analyser);
             Task properties = AnalyseProperties(analyser);
             Task methods = AnalyseMethods(analyser);
             Task fields = AnalyseFields(analyser);
-            await Task.WhenAll(baseSpec, interfaces, properties, methods, fields);
-            _analysed = true;
+            await Task.WhenAll(baseSpec, interfaces, properties, methods, fields);            
         }
 
         private Task AnalyseBaseSpec(Analyser analyser)
@@ -93,21 +81,7 @@ namespace AssemblyAnalyser
             return Task.WhenAll(Fields.Select(f => f.AnalyseAsync(analyser)));
         }
         
-        AssemblySpec _assembly;
-        public AssemblySpec Assembly 
-        {   
-            get
-            {
-                return _assembly;
-            }
-            set
-            {
-                if (value == null)
-                {
-                }
-                    _assembly = value;
-            }
-        }
+        public AssemblySpec Assembly { get; set; } 
 
         public TypeSpec[] Interfaces { get; private set; }
 
@@ -123,18 +97,5 @@ namespace AssemblyAnalyser
         {
             return _typeName;
         }
-
-        public bool Excluded()
-        {
-            return ExclusionRules.Any(r => r.Exclude(this));
-        }
-
-        public bool Included()
-        {
-            return InclusionRules.All(r => r.Include(this));
-        }
-
-        public List<ExclusionRule<TypeSpec>> ExclusionRules { get; private set; }
-        public List<InclusionRule<TypeSpec>> InclusionRules { get; private set; }
     }
 }

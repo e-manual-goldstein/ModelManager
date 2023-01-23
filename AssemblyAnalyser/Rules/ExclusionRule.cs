@@ -18,4 +18,19 @@ namespace AssemblyAnalyser
             return _excludeFunc(spec);
         }
     }
+
+    public class ExclusionRule
+    {
+        Func<ISpec, bool> _excludeFunc;
+
+        public ExclusionRule(Func<ISpec, bool> excludeFunc)
+        {
+            _excludeFunc = excludeFunc;
+        }
+
+        public bool Exclude(ISpec spec)
+        {
+            return _excludeFunc(spec);
+        }
+    }
 }

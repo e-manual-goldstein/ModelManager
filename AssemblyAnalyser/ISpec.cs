@@ -6,8 +6,8 @@ namespace AssemblyAnalyser
     {
         Task AnalyseAsync(Analyser analyser);
 
-        bool Excluded();
+        bool IsExcluded();
 
-        bool Included();
+        bool IsIncluded();
     }
 }
