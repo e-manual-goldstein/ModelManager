@@ -174,7 +174,7 @@ namespace AssemblyAnalyser
 
         private ParameterSpec LoadParameterSpec(ParameterInfo parameterInfo)
         {
-            lock (_parameterSpecs)
+            lock (_lock)
             {
                 if (!_parameterSpecs.TryGetValue(parameterInfo, out ParameterSpec parameterSpec))
                 {
@@ -197,7 +197,7 @@ namespace AssemblyAnalyser
 
         private FieldSpec LoadFieldSpec(FieldInfo fieldInfo)
         {
-            lock (_fieldSpecs)
+            lock (_lock)
             {
                 if (!_fieldSpecs.TryGetValue(fieldInfo, out FieldSpec fieldSpec))
                 {
