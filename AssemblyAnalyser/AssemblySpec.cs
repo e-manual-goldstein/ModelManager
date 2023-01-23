@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -22,6 +23,8 @@ namespace AssemblyAnalyser
         public AssemblySpec(string fullName)
         {
             AssemblyName = fullName;
+            ExclusionRules = new List<ExclusionRule<AssemblySpec>>();
+            InclusionRules = new List<InclusionRule<AssemblySpec>>();
         }
 
 
@@ -49,10 +52,13 @@ namespace AssemblyAnalyser
 
         private async Task BeginAnalysis(Analyser analyser)
         {
-            var typeTasks = Task.WhenAll(_typeSpecs.Select(t => t.AnalyseAsync(analyser)));
-            var assemblyTasks = Task.WhenAll(_referencedAssemblies.Select(a => a.AnalyseAsync(analyser)));
+            if (Included() && !Excluded())
+            {
+                var typeTasks = Task.WhenAll(_typeSpecs.Select(t => t.AnalyseAsync(analyser)));
+                var assemblyTasks = Task.WhenAll(_referencedAssemblies.Select(a => a.AnalyseAsync(analyser)));
 
-            await Task.WhenAll(typeTasks, assemblyTasks);
+                await Task.WhenAll(typeTasks, assemblyTasks);
+            }
             _analysed = true;
         }
 
@@ -71,12 +77,25 @@ namespace AssemblyAnalyser
             {
                 types = Array.Empty<Type>();
             }
-            return types.Select(t => analyser.LoadTypeSpec(t)).ToArray();
+            return types.Select(t => analyser.TryLoadTypeSpec(() => t)).ToArray();
         }
 
         public override string ToString()
         {
             return AssemblyName;
         }
+
+        public bool Excluded()
+        {
+            return ExclusionRules.Any(r => r.Exclude(this));
+        }
+
+        public bool Included()
+        {
+            return InclusionRules.All(r => r.Include(this));
+        }
+
+        public List<ExclusionRule<AssemblySpec>> ExclusionRules { get; private set; }
+        public List<InclusionRule<AssemblySpec>> InclusionRules { get; private set; }
     }
 }

@@ -45,5 +45,18 @@ namespace AssemblyAnalyser
         {
             return _methodInfo.Name;
         }
+
+        public bool Excluded()
+        {
+            return ExclusionRules.Any(r => r.Exclude(this));
+        }
+
+        public bool Included()
+        {
+            return InclusionRules.All(r => r.Include(this));
+        }
+
+        public List<ExclusionRule<MethodSpec>> ExclusionRules { get; private set; }
+        public List<InclusionRule<MethodSpec>> InclusionRules { get; private set; }
     }
 }

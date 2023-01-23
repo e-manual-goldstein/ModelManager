@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -56,5 +57,18 @@ namespace AssemblyAnalyser
         {
             return _propertyInfo.Name;
         }
+
+        public bool Excluded()
+        {
+            return ExclusionRules.Any(r => r.Exclude(this));
+        }
+
+        public bool Included()
+        {
+            return InclusionRules.All(r => r.Include(this));
+        }
+
+        public List<ExclusionRule<PropertySpec>> ExclusionRules { get; private set; }
+        public List<InclusionRule<PropertySpec>> InclusionRules { get; private set; }
     }
 }

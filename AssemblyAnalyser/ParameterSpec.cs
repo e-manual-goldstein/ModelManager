@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -26,16 +27,29 @@ namespace AssemblyAnalyser
             if (!_analysed && !_analysing)
             {
                 _analysing = true;
-                ParameterType = analyser.LoadTypeSpec(_parameterInfo.ParameterType);
+                ParameterType = analyser.TryLoadTypeSpec(() => _parameterInfo.ParameterType);
                 await BeginAnalysis(analyser);
             }
         }
 
         private async Task BeginAnalysis(Analyser analyser)
         {
-            Task parameterType = ParameterType.AnalyseAsync(analyser);
+            Task parameterType = ParameterType?.AnalyseAsync(analyser) ?? Task.CompletedTask;
             await Task.WhenAll(parameterType);
             _analysed = true;
         }
+
+        public bool Excluded()
+        {
+            return ExclusionRules.Any(r => r.Exclude(this));
+        }
+
+        public bool Included()
+        {
+            return InclusionRules.All(r => r.Include(this));
+        }
+
+        public List<ExclusionRule<ParameterSpec>> ExclusionRules { get; private set; }
+        public List<InclusionRule<ParameterSpec>> InclusionRules { get; private set; }
     }
 }

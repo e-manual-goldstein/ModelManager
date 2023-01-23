@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
@@ -19,8 +20,24 @@ namespace AssemblyAnalyser
             _workingFiles = Directory.EnumerateFiles(_workingDirectory, "*.dll").ToDictionary(d => Path.GetFileNameWithoutExtension(d), e => e);
         }
 
-        #region Assembly Specs
         object _lock = new object();
+
+        public async Task BeginAsync()
+        {
+            var taskList = new List<Task>();
+            foreach (var (_, filePath) in _workingFiles)
+            {
+                var assemblySpec = LoadAssemblySpec(Assembly.LoadFrom(filePath));
+                taskList.Add(assemblySpec.AnalyseAsync(this));
+            }
+            await Task.WhenAll(taskList);
+        }
+
+        #region Assembly Specs
+
+        List<ExclusionRule<AssemblySpec>> _assemblyExclusions = new List<ExclusionRule<AssemblySpec>>();
+        List<InclusionRule<AssemblySpec>> _assemblyInclusions = new List<InclusionRule<AssemblySpec>>();
+
         ConcurrentDictionary<string, AssemblySpec> _assemblySpecs = new ConcurrentDictionary<string, AssemblySpec>();
 
         public AssemblySpec LoadAssemblySpec(Assembly assembly)
@@ -37,7 +54,7 @@ namespace AssemblyAnalyser
                 {
                     if (!_assemblySpecs.TryGetValue(assembly.FullName, out assemblySpec))
                     {
-                        _assemblySpecs[assembly.FullName] = assemblySpec = new AssemblySpec(assembly);
+                        _assemblySpecs[assembly.FullName] = assemblySpec = CreateFullAssemblySpec(assembly);
                     }
                 }
                 Console.WriteLine($"Unlocking for {assembly.FullName}");
@@ -57,11 +74,11 @@ namespace AssemblyAnalyser
                     {
                         if (TryLoadAssembly(assemblyName, out Assembly assembly))
                         {
-                            _assemblySpecs[assemblyName.FullName] = assemblySpec = new AssemblySpec(assembly);
+                            _assemblySpecs[assemblyName.FullName] = assemblySpec = CreateFullAssemblySpec(assembly);
                         }
                         else
                         {
-                            _assemblySpecs[assemblyName.FullName] = assemblySpec = new AssemblySpec(assemblyName.FullName);
+                            _assemblySpecs[assemblyName.FullName] = assemblySpec = CreatePartialAssemblySpec(assemblyName.FullName);
                         }
                     }
                 }
@@ -96,6 +113,24 @@ namespace AssemblyAnalyser
             return false;
         }
 
+        private bool TryLoadAssembly(string assemblyName, out Assembly assembly)
+        {
+            assembly = null;
+            try
+            {
+                if (_workingFiles.TryGetValue(assemblyName, out string filePath))
+                {                    
+                    assembly = Assembly.LoadFrom(filePath);
+                    return true;                    
+                }
+            }
+            catch (FileNotFoundException)
+            {
+
+            }
+            return false;
+        }
+
         public AssemblySpec[] LoadAssemblySpecs(Assembly[] types)
         {
             return types.Select(t => LoadAssemblySpec(t)).ToArray();
@@ -106,23 +141,57 @@ namespace AssemblyAnalyser
             return assemblyNames.Select(a => LoadAssemblySpec(a)).ToArray();
         }
 
+        private AssemblySpec CreateFullAssemblySpec(Assembly assembly)
+        {
+            var spec = new AssemblySpec(assembly);
+            spec.ExclusionRules.AddRange(_assemblyExclusions);
+            spec.InclusionRules.AddRange(_assemblyInclusions);
+            return spec;
+        }
+
+        private AssemblySpec CreatePartialAssemblySpec(string assemblyName)
+        {
+            return new AssemblySpec(assemblyName);
+        }
+
         #endregion
 
         #region Type Specs
 
         ConcurrentDictionary<string, TypeSpec> _typeSpecs = new ConcurrentDictionary<string, TypeSpec>();
 
-        public TypeSpec LoadTypeSpec(Type type)
+        private TypeSpec LoadTypeSpec(Type type)
         {
             TypeSpec typeSpec = null;
             if (type == null)
             {
                 return typeSpec;
             }
-            return LoadTypeSpec(type.FullName);
+            return LoadFullTypeSpec(type);
         }
 
-        public TypeSpec LoadTypeSpec(string typeName)
+        private TypeSpec LoadFullTypeSpec(Type type)
+        {
+            TypeSpec typeSpec = null;
+            if (!string.IsNullOrEmpty(type.FullName))
+            {
+                if (!_typeSpecs.TryGetValue(type.FullName, out typeSpec))
+                {
+                    Console.WriteLine($"Locking for {type.FullName}");
+                    lock (_lock)
+                    {
+                        if (!_typeSpecs.TryGetValue(type.FullName, out typeSpec))
+                        {
+                            _typeSpecs[type.FullName] = typeSpec = new TypeSpec(type);
+                        }
+                    }
+                    Console.WriteLine($"Unlocking for {type.FullName}");
+                }
+            }
+            return typeSpec;
+        }
+
+        private TypeSpec LoadPartialTypeSpec(string typeName)
         {
             TypeSpec typeSpec = null;
             if (!_typeSpecs.TryGetValue(typeName, out typeSpec))
@@ -140,7 +209,7 @@ namespace AssemblyAnalyser
             return typeSpec;
         }
 
-        internal TypeSpec TryLoadTypeSpec(Func<Type> propertyTypeFunc)
+        public TypeSpec TryLoadTypeSpec(Func<Type> propertyTypeFunc)
         {
             Type type = null;
             try
@@ -149,7 +218,7 @@ namespace AssemblyAnalyser
             }
             catch (TypeLoadException ex)
             {
-                return LoadTypeSpec(ex.TypeName);
+                return LoadPartialTypeSpec(ex.TypeName);
             }
             return LoadTypeSpec(type);
         }
@@ -277,6 +346,7 @@ namespace AssemblyAnalyser
 
         ConcurrentDictionary<FieldInfo, FieldSpec> _fieldSpecs = new ConcurrentDictionary<FieldInfo, FieldSpec>();
 
+
         private FieldSpec LoadFieldSpec(FieldInfo fieldInfo)
         {
             FieldSpec fieldSpec = null;
@@ -300,11 +370,32 @@ namespace AssemblyAnalyser
             return fieldInfos.Select(f => LoadFieldSpec(f)).ToArray();
         }
 
+        #endregion
+
         public void ExcludeAssembly(string assemblyName)
         {
-            _assemblySpecs[assemblyName] = new AssemblySpec(assemblyName);
+            _assemblyExclusions.Add(new ExclusionRule<AssemblySpec>(spec =>
+            {
+                return spec.AssemblyName == assemblyName;
+            }));
         }
-        #endregion
+
+        public void IncludeAssembly(string assemblyName)
+        {
+            _assemblyInclusions.Add(new InclusionRule<AssemblySpec>(spec =>
+            {
+                return spec.AssemblyName == assemblyName;
+            }));
+        }
+
+        public string Report()
+        {
+            return $"Assemblies: {_assemblySpecs.Count}\n" +
+                $"Types: {_typeSpecs.Count}\n" +
+                $"Properties {_propertySpecs.Count}\n" +
+                $"Methods {_methodSpecs.Count}\n" +
+                $"Fields {_fieldSpecs.Count}";
+        }
 
     }
 }
