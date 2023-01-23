@@ -27,16 +27,16 @@ namespace AssemblyAnalyser
             if (!_analysed && !_analysing)
             {
                 _analysing = true;
-                ReturnType = analyser.LoadTypeSpec(_methodInfo.ReturnType);
-                ParameterTypes = analyser.LoadParameterSpecs(_methodInfo.GetParameters());
+                ReturnType = analyser.TryLoadTypeSpec(() => _methodInfo.ReturnType);
+                ParameterTypes = analyser.TryLoadParameterSpecs(() => _methodInfo.GetParameters());
                 await BeginAnalysis(analyser);
             }
         }
 
         private async Task BeginAnalysis(Analyser analyser)
         {
-            Task returnType = ReturnType.AnalyseAsync(analyser);
-            Task parameterTypes = Task.WhenAll(ParameterTypes.Select(p => p.AnalyseAsync(analyser)));
+            Task returnType = ReturnType?.AnalyseAsync(analyser) ?? Task.CompletedTask;
+            Task parameterTypes = Task.WhenAll(ParameterTypes?.Select(p => p.AnalyseAsync(analyser)) ?? Enumerable.Empty<Task>());
             await Task.WhenAll(returnType, parameterTypes);
             _analysed = true;
         }

@@ -10,16 +10,24 @@ namespace AssemblyAnalyser
     public class TypeSpec : ISpec
     {
         private Type _type;
+        private string _typeName;
         private bool _analysing;
         private bool _analysed;
-        public TypeSpec(Type type)
+        private bool _analysable;
+        public TypeSpec(Type type) : this(type.FullName)
         {
             _type = type;
+            _analysable = true;
+        }
+
+        public TypeSpec(string typeName)
+        {
+            _typeName = typeName;
         }
 
         public async Task AnalyseAsync(Analyser analyser)
         {
-            if (!_analysed && !_analysing)
+            if (_analysable && !_analysed && !_analysing)
             {
                 _analysing = true;
                 Interfaces = analyser.LoadTypeSpecs(_type.GetInterfaces());
@@ -43,8 +51,7 @@ namespace AssemblyAnalyser
 
         private Task AnalyseBaseSpec(Analyser analyser)
         {
-            return Task.Run(() => BaseSpec.AnalyseAsync(analyser));
-
+            return Task.Run(() => (BaseSpec != null) ? BaseSpec.AnalyseAsync(analyser) : Task.CompletedTask);
         }
 
         private Task AnalyseInterfaces(Analyser analyser)
@@ -75,7 +82,7 @@ namespace AssemblyAnalyser
 
         public override string ToString()
         {
-            return _type.FullName;
+            return _typeName;
         }
     }
 }

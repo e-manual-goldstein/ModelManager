@@ -38,16 +38,16 @@ namespace AssemblyAnalyser
                 _analysing = true;
                 Getter = analyser.LoadMethodSpec(_getter);
                 Setter = analyser.LoadMethodSpec(_setter);
-                PropertyType = analyser.LoadTypeSpec(_propertyInfo.PropertyType);
+                PropertyType = analyser.TryLoadTypeSpec(() => _propertyInfo.PropertyType);
                 await BeginAnalysis(analyser);
             }
         }
 
         private async Task BeginAnalysis(Analyser analyser)
         {
-            Task getter = Getter.AnalyseAsync(analyser);
-            Task setter = Setter.AnalyseAsync(analyser);
-            Task propertyType = PropertyType.AnalyseAsync(analyser);
+            Task getter = Getter?.AnalyseAsync(analyser) ?? Task.CompletedTask;
+            Task setter = Setter?.AnalyseAsync(analyser) ?? Task.CompletedTask;
+            Task propertyType = PropertyType?.AnalyseAsync(analyser) ?? Task.CompletedTask;
             await Task.WhenAll(getter, setter, propertyType);
             _analysed = true;
         }
