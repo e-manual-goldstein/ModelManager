@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
-    public class AssemblySpec
+    public class AssemblySpec : ISpec
     {
         Assembly _assembly;
 

@@ -89,5 +89,50 @@ namespace AssemblyAnalyser
 
         #endregion
 
+        #region Parameter Specs
+
+        ConcurrentDictionary<ParameterInfo, ParameterSpec> _parameterSpecs = new ConcurrentDictionary<ParameterInfo, ParameterSpec>();
+
+        private ParameterSpec LoadParameterSpec(ParameterInfo parameterInfo)
+        {
+            lock (_parameterSpecs)
+            {
+                if (!_parameterSpecs.TryGetValue(parameterInfo, out ParameterSpec parameterSpec))
+                {
+                    _parameterSpecs[parameterInfo] = parameterSpec = new ParameterSpec(parameterInfo);
+                }
+                return parameterSpec;
+            }
+        }
+
+        public ParameterSpec[] LoadParameterSpecs(ParameterInfo[] parameterInfos)
+        {
+            return parameterInfos.Select(p => LoadParameterSpec(p)).ToArray();
+        }
+
+        #endregion
+
+        #region Field Specs
+
+        ConcurrentDictionary<FieldInfo, FieldSpec> _fieldSpecs = new ConcurrentDictionary<FieldInfo, FieldSpec>();
+
+        private FieldSpec LoadFieldSpec(FieldInfo fieldInfo)
+        {
+            lock (_fieldSpecs)
+            {
+                if (!_fieldSpecs.TryGetValue(fieldInfo, out FieldSpec fieldSpec))
+                {
+                    _fieldSpecs[fieldInfo] = fieldSpec = new FieldSpec(fieldInfo);
+                }
+                return fieldSpec;
+            }
+        }
+
+        internal FieldSpec[] LoadFieldSpecs(FieldInfo[] fieldInfos)
+        {
+            return fieldInfos.Select(f => LoadFieldSpec(f)).ToArray();
+        }
+        #endregion
+
     }
 }
