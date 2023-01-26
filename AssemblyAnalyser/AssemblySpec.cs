@@ -19,12 +19,18 @@ namespace AssemblyAnalyser
             return spec;
         }
 
+        protected override void Log(string message)
+        {
+            Console.WriteLine($"Assembly {this}: {message}");
+        }
+
         Assembly _assembly;
 
         public AssemblySpec(Assembly assembly, List<IRule> rules) : this(assembly.FullName, rules)
         {
             _assembly = assembly;
             AssemblyShortName = _assembly.GetName().Name;
+            var version = _assembly.GetName().Version;
         }
 
         public AssemblySpec(string fullName, List<IRule> rules) : base(rules)
@@ -63,7 +69,10 @@ namespace AssemblyAnalyser
             Type[] types = Array.Empty<Type>();
             try
             {
-                types = _assembly.GetTypes();
+                if (analyser.CanAnalyse(_assembly))
+                {
+                    types = _assembly.GetTypes();
+                }
             }
             catch (ReflectionTypeLoadException ex)
             {
@@ -72,6 +81,10 @@ namespace AssemblyAnalyser
             catch (FileNotFoundException)
             {
                 types = Array.Empty<Type>();
+            }
+            catch
+            {
+
             }
             return types.Select(t => analyser.TryLoadTypeSpec(() => t)).ToArray();
         }

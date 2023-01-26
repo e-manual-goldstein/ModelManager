@@ -55,7 +55,7 @@ namespace AssemblyAnalyser
             }
             if (!_assemblySpecs.TryGetValue(assembly.FullName, out assemblySpec))
             {
-                Console.WriteLine($"Locking for {assembly.FullName}");
+                //Console.WriteLine($"Locking for {assembly.FullName}");
                 lock (_lock)
                 {
                     if (!_assemblySpecs.TryGetValue(assembly.FullName, out assemblySpec))
@@ -63,7 +63,7 @@ namespace AssemblyAnalyser
                         _assemblySpecs[assembly.FullName] = assemblySpec = CreateFullAssemblySpec(assembly);
                     }
                 }
-                Console.WriteLine($"Unlocking for {assembly.FullName}");
+                //Console.WriteLine($"Unlocking for {assembly.FullName}");
             }
             return assemblySpec ?? AssemblySpec.NullSpec;
         }
@@ -73,7 +73,7 @@ namespace AssemblyAnalyser
             AssemblySpec assemblySpec;
             if (!_assemblySpecs.TryGetValue(assemblyName.FullName, out assemblySpec))
             {
-                Console.WriteLine($"Locking for {assemblyName}");
+                //Console.WriteLine($"Locking for {assemblyName}");
                 lock (_lock)
                 {
                     if (!_assemblySpecs.TryGetValue(assemblyName.FullName, out assemblySpec))
@@ -88,7 +88,7 @@ namespace AssemblyAnalyser
                         }
                     }
                 }
-                Console.WriteLine($"Unlocking for {assemblyName}");
+                //Console.WriteLine($"Unlocking for {assemblyName}");
             }
             return assemblySpec ?? AssemblySpec.NullSpec;
         }
@@ -110,13 +110,34 @@ namespace AssemblyAnalyser
                     {
                         Console.WriteLine("Incorrect Assembly Version");
                     }
-                }                
+                }  
+                else if (TryLoadSystemAssembly(assemblyName.Name, out assembly))
+                {
+                    return true;
+                }
             }
             catch (FileNotFoundException)
             {
                 
             }
             return false;
+        }
+
+        private bool TryLoadSystemAssembly(string assmemblyName, out Assembly assembly)
+        {
+            var systemFolder = Environment.GetFolderPath(Environment.SpecialFolder.System);
+            var version = IntPtr.Size == 8 ? "64" : string.Empty;
+            var dotnetv2Path = Path.Combine(systemFolder, $@"..\Microsoft.NET\Framework{version}\v2.0.50727\{assmemblyName}.dll");
+            bool exists;
+            if (exists = File.Exists(dotnetv2Path))
+            {
+                assembly = Assembly.LoadFrom(dotnetv2Path);
+            }
+            else 
+            { 
+                assembly = null; 
+            }
+            return exists;
         }
 
         private bool TryLoadAssembly(string assemblyName, out Assembly assembly)
@@ -159,6 +180,11 @@ namespace AssemblyAnalyser
             spec.Exclude();
             return spec;
         }
+        
+        public bool CanAnalyse(Assembly assembly)
+        {
+            return _assemblySpecs.ContainsKey(assembly.FullName) || assembly.GetReferencedAssemblies().All(r => _workingFiles.Keys.Contains(r.Name));
+        }
 
         #endregion
 
@@ -185,7 +211,7 @@ namespace AssemblyAnalyser
             {
                 if (!_typeSpecs.TryGetValue(type.FullName, out typeSpec))
                 {
-                    Console.WriteLine($"Locking for {type.FullName}");
+                    //Console.WriteLine($"Locking for {type.FullName}");
                     lock (_lock)
                     {
                         if (!_typeSpecs.TryGetValue(type.FullName, out typeSpec))
@@ -193,7 +219,7 @@ namespace AssemblyAnalyser
                             _typeSpecs[type.FullName] = typeSpec = CreateFullTypeSpec(type);
                         }
                     }
-                    Console.WriteLine($"Unlocking for {type.FullName}");
+                    //Console.WriteLine($"Unlocking for {type.FullName}");
                 }
             }
             return typeSpec;
@@ -210,7 +236,7 @@ namespace AssemblyAnalyser
             TypeSpec typeSpec = TypeSpec.NullSpec;
             if (!_typeSpecs.TryGetValue(typeName, out typeSpec))
             {
-                Console.WriteLine($"Locking for {typeName}");
+                //Console.WriteLine($"Locking for {typeName}");
                 lock (_lock)
                 {
                     if (!_typeSpecs.TryGetValue(typeName, out typeSpec))
@@ -218,7 +244,7 @@ namespace AssemblyAnalyser
                         _typeSpecs[typeName] = typeSpec = CreatePartialTypeSpec(typeName);
                     }
                 }
-                Console.WriteLine($"Unlocking for {typeName}");
+                //Console.WriteLine($"Unlocking for {typeName}");
             }
             return typeSpec;
         }
@@ -227,6 +253,7 @@ namespace AssemblyAnalyser
         {
             var spec = new TypeSpec(typeName, SpecRules);
             spec.Exclude();
+            spec.SkipProcessing();
             return spec;
         }
 
@@ -242,6 +269,25 @@ namespace AssemblyAnalyser
                 return LoadPartialTypeSpec(ex.TypeName);
             }
             return LoadTypeSpec(type);
+        }
+
+
+        public TypeSpec[] TryLoadTypeSpecs(Func<Type[]> getTypes)
+        {
+            Type[] types;
+            try
+            {
+                types = getTypes();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                foreach (var loaderException in ex.LoaderExceptions)
+                {
+                    Console.WriteLine(loaderException.Message);
+                }
+                types = ex.Types.ToArray();                
+            }
+            return LoadTypeSpecs(types);
         }
 
         public TypeSpec[] LoadTypeSpecs(Type[] types)
@@ -264,7 +310,7 @@ namespace AssemblyAnalyser
             }
             if (!_methodSpecs.TryGetValue(method, out methodSpec))
             {
-                Console.WriteLine($"Locking for {method.Name}");
+                //Console.WriteLine($"Locking for {method.Name}");
                 lock (_lock)
                 {
                     if (!_methodSpecs.TryGetValue(method, out methodSpec))
@@ -272,7 +318,7 @@ namespace AssemblyAnalyser
                         _methodSpecs[method] = methodSpec = new MethodSpec(method, SpecRules);
                     }
                 }
-                Console.WriteLine($"Unlocking for {method.Name}");
+                //Console.WriteLine($"Unlocking for {method.Name}");
             }
             return methodSpec;
         }
@@ -290,10 +336,10 @@ namespace AssemblyAnalyser
 
         private PropertySpec LoadPropertySpec(PropertyInfo propertyInfo)
         {
-            PropertySpec propertySpec = null;
+            PropertySpec propertySpec;
             if (!_propertySpecs.TryGetValue(propertyInfo, out propertySpec))
             {
-                Console.WriteLine($"Locking for {propertyInfo.Name}");
+                //Console.WriteLine($"Locking for {propertyInfo.Name}");
                 lock (_lock)
                 {
                     if (!_propertySpecs.TryGetValue(propertyInfo, out propertySpec))
@@ -301,8 +347,8 @@ namespace AssemblyAnalyser
                         _propertySpecs[propertyInfo] = propertySpec = new PropertySpec(propertyInfo, SpecRules);
                     }
                 }
+                //Console.WriteLine($"Unlocking for {propertyInfo.Name}");
             }
-            Console.WriteLine($"Unlocking for {propertyInfo.Name}");
             return propertySpec;
         }
 
@@ -329,7 +375,7 @@ namespace AssemblyAnalyser
             ParameterSpec parameterSpec = null;
             if (!_parameterSpecs.TryGetValue(parameterInfo, out parameterSpec))
             {
-                Console.WriteLine($"Locking for {parameterInfo.Name}");
+                //Console.WriteLine($"Locking for {parameterInfo.Name}");
                 lock (_lock)
                 {
                     if (!_parameterSpecs.TryGetValue(parameterInfo, out parameterSpec))
@@ -337,7 +383,7 @@ namespace AssemblyAnalyser
                         _parameterSpecs[parameterInfo] = parameterSpec = new ParameterSpec(parameterInfo, SpecRules);
                     }
                 }
-                Console.WriteLine($"Unlocking for {parameterInfo.Name}");
+                //Console.WriteLine($"Unlocking for {parameterInfo.Name}");
             }
             return parameterSpec;
         }
@@ -373,7 +419,7 @@ namespace AssemblyAnalyser
             FieldSpec fieldSpec = null;
             if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
             {
-                Console.WriteLine($"Locking for {fieldInfo.Name}");
+                //Console.WriteLine($"Locking for {fieldInfo.Name}");
                 lock (_lock)
                 {
                     if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
@@ -381,7 +427,7 @@ namespace AssemblyAnalyser
                         _fieldSpecs[fieldInfo] = fieldSpec = new FieldSpec(fieldInfo, SpecRules);
                     }
                 }
-                Console.WriteLine($"Unlocking for {fieldInfo.Name}");
+                //Console.WriteLine($"Unlocking for {fieldInfo.Name}");
             }            
             return fieldSpec;
         }

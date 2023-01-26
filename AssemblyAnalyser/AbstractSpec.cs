@@ -38,9 +38,16 @@ namespace AssemblyAnalyser
             {
                 _analysing = true;
                 await BeginAnalysis(analyser);
+                Log("AnalysisComplete");
                 _analysed = true;
             }
         }
+
+        protected virtual void Log(string message)
+        {
+            
+        }
+
         protected abstract void BeginProcessing(Analyser analyser);
         protected void BeginProcessingBase(Analyser analyser)
         {

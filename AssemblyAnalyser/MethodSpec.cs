@@ -30,7 +30,7 @@ namespace AssemblyAnalyser
         protected override async Task BeginAnalysis(Analyser analyser)
         {
             Task returnType = ReturnType?.AnalyseAsync(analyser) ?? Task.CompletedTask;
-            Task parameterTypes = Task.WhenAll(ParameterTypes?.Select(p => p.AnalyseAsync(analyser)) ?? Enumerable.Empty<Task>());
+            Task parameterTypes = Task.WhenAll(ParameterTypes?.Select(p => p.AnalyseAsync(analyser)) ?? new Task[] { Task.CompletedTask });
             await Task.WhenAll(returnType, parameterTypes);
         }
 
