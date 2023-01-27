@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,6 +15,7 @@ namespace AssemblyAnalyser
         private bool _processed;
         private bool? _included;
         protected bool Included => _included ??= !IsExcluded() && IsIncluded();
+        
 
         public AbstractSpec(List<IRule> rules) 
         {
@@ -38,15 +40,11 @@ namespace AssemblyAnalyser
             {
                 _analysing = true;
                 await BeginAnalysis(analyser);
-                Log("AnalysisComplete");
                 _analysed = true;
             }
         }
 
-        protected virtual void Log(string message)
-        {
-            
-        }
+        public bool Analysed => _analysed;
 
         protected abstract void BeginProcessing(Analyser analyser);
         protected void BeginProcessingBase(Analyser analyser)

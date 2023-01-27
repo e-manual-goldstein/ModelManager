@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -19,11 +20,6 @@ namespace AssemblyAnalyser
             return spec;
         }
 
-        protected override void Log(string message)
-        {
-            Console.WriteLine($"Assembly {this}: {message}");
-        }
-
         Assembly _assembly;
 
         public AssemblySpec(Assembly assembly, List<IRule> rules) : this(assembly.FullName, rules)
@@ -35,9 +31,13 @@ namespace AssemblyAnalyser
 
         public AssemblySpec(string fullName, List<IRule> rules) : base(rules)
         {
-            AssemblyFullName = fullName;            
+            AssemblyFullName = fullName;     
+            
         }
 
+        public event LogEvent Log;
+
+        public delegate void LogEvent(LogLevel logLevel, string message, params object?[] args);
 
         public string AssemblyFullName { get; }
         public string AssemblyShortName { get; }
@@ -59,9 +59,27 @@ namespace AssemblyAnalyser
 
         protected override async Task BeginAnalysis(Analyser analyser)
         {
-            var typeTasks = Task.WhenAll(_typeSpecs.Select(t => t.AnalyseAsync(analyser)));
-            var assemblyTasks = Task.WhenAll(_referencedAssemblies.Select(a => a.AnalyseAsync(analyser)));
+            var typeTasks = Task.WhenAll(GetTypeTasks(analyser));
+            var assemblyTasks = Task.WhenAll(GetAssemblyTasks(analyser));
             await Task.WhenAll(typeTasks, assemblyTasks);                        
+        }
+
+        private IEnumerable<Task> GetTypeTasks(Analyser analyser)
+        {
+            return _typeSpecs.Select(async t =>
+            {
+                await t.AnalyseAsync(analyser);
+                UpdateProgress();
+            });
+        }
+
+        private IEnumerable<Task> GetAssemblyTasks(Analyser analyser)
+        {
+            return _referencedAssemblies.Select(async a =>
+            {
+                await a.AnalyseAsync(analyser);
+                UpdateProgress();                
+            });
         }
 
         private TypeSpec[] LoadTypeSpecs(Analyser analyser)
@@ -99,6 +117,16 @@ namespace AssemblyAnalyser
             return AssemblyShortName == assemblyName || AssemblyFullName == assemblyName;
         }
 
-        
+        double _assemblyProgress = 0f;
+        double _typesProgress = 0f;
+        private void UpdateProgress()
+        {
+            _assemblyProgress = 100.0 * _referencedAssemblies.Count(d => d.Analysed) / _referencedAssemblies.Length;
+            _typesProgress = 100.0 * _typeSpecs.Count(d => d.Analysed) / _typeSpecs.Length;
+            if (_typesProgress % 1 == 0 || _assemblyProgress % 1 == 0)
+            {
+                Log(LogLevel.Information, $"Types Progress: {_typesProgress}%\tAssembly Progress: {_assemblyProgress}");
+            }
+        }
     }
 }

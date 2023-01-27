@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -13,10 +14,12 @@ namespace AssemblyAnalyser
     {
         readonly string _workingDirectory;
         readonly Dictionary<string, string> _workingFiles;
+        readonly ILogger _logger;
 
-        public Analyser(string workingDirectory) 
+        public Analyser(string workingDirectory, ILogger logger) 
         {
             _workingDirectory = workingDirectory;
+            _logger = logger;
             _workingFiles = Directory.EnumerateFiles(_workingDirectory, "*.dll").ToDictionary(d => Path.GetFileNameWithoutExtension(d), e => e);
         }
 
@@ -65,7 +68,8 @@ namespace AssemblyAnalyser
                 }
                 //Console.WriteLine($"Unlocking for {assembly.FullName}");
             }
-            return assemblySpec ?? AssemblySpec.NullSpec;
+            assemblySpec ??= AssemblySpec.NullSpec;
+            return assemblySpec;
         }
 
         public AssemblySpec LoadAssemblySpec(AssemblyName assemblyName)
@@ -171,6 +175,7 @@ namespace AssemblyAnalyser
         private AssemblySpec CreateFullAssemblySpec(Assembly assembly)
         {
             var spec = new AssemblySpec(assembly, SpecRules);
+            spec.Log += _logger.Log;
             return spec;
         }
 
@@ -178,6 +183,8 @@ namespace AssemblyAnalyser
         {
             var spec = new AssemblySpec(assemblyName, SpecRules);
             spec.Exclude();
+            spec.SkipProcessing();
+            spec.Log += _logger.Log;
             return spec;
         }
         

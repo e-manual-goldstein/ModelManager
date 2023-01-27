@@ -1,4 +1,6 @@
-﻿using ModelManager.Tabs.Outputs;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using ModelManager.Tabs.Outputs;
 using ModelManager.Types;
 using ModelManager.Utils;
 using System;
@@ -32,15 +34,16 @@ namespace ModelManager.Core
         private List<OutputTab> _outputTabs = new List<OutputTab>();
 
         private int _outputTabCount = 0;
-
+        private readonly IServiceProvider _serviceProvider;
         #endregion
 
         public Thickness FocusedOutputTabThickness = new Thickness(2, 0, -1, 0);
         public SolidColorBrush ErrorTextBrush = new SolidColorBrush(Colors.Red);
 
 
-        public TabManager()
+        public TabManager(IServiceProvider serviceProvider)
         {
+            _serviceProvider = serviceProvider;
             _serviceTabs = getServiceTabs();
             createServiceTabs(_serviceTabs);
 
@@ -177,7 +180,13 @@ namespace ModelManager.Core
 
         private List<AbstractServiceTab> tabInstances(List<Type> tabTypes)
         {
-            var services = tabTypes.Select(t => Activator.CreateInstance(t)).Cast<AbstractServiceTab>().ToList();
+            var loggerProvider = _serviceProvider.GetService<ILoggerProvider>();
+            var services = tabTypes.Select(t => 
+            {
+                var instance = Activator.CreateInstance(t) as AbstractServiceTab;
+                instance.LoggerProvider = loggerProvider;
+                return instance;
+            }).ToList();
             return services;
         }
         

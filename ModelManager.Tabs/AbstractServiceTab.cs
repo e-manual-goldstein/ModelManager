@@ -1,4 +1,5 @@
-﻿using ModelManager.Tabs;
+﻿using Microsoft.Extensions.Logging;
+using ModelManager.Tabs;
 using ModelManager.Utils;
 using System;
 using System.Collections;
@@ -14,7 +15,8 @@ namespace ModelManager.Core
     public abstract class AbstractServiceTab : IServiceTab
     {
         public abstract string Title { get; }
-
+        public ILoggerProvider LoggerProvider { protected get; set; }
+        
         private TextBox _console;
         private TabControl _tabControl;
         private TabItem _tabItemControl;

@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ModelManager.Core;
 using System;
 using System.Collections.Generic;
@@ -15,17 +16,24 @@ namespace ModelManager
 	/// </summary>
 	public partial class App : Application
 	{
-        private readonly ServiceProvider _serviceProvider;
+        private readonly IServiceProvider _serviceProvider;
         private AppManager _appManager;
 
         public App()
         {
-            _serviceProvider =
-                new ServiceCollection()
-                .AddSingleton<AppManager>()
-                .AddSingleton<TabManager>()
-                .AddSingleton<MainWindow>()
-                .BuildServiceProvider();
+            _serviceProvider = CreateServiceProvider(new ServiceCollection());            
+        }
+        public IServiceProvider CreateServiceProvider(ServiceCollection services)
+        {
+            services.AddSingleton<AppManager>();
+            services.AddSingleton<TabManager>();
+            services.AddSingleton<MainWindow>();
+            services.AddLogging(loggingConfig =>
+            {
+                loggingConfig.AddDebug();
+                loggingConfig.AddConsole();
+            });
+            return services.BuildServiceProvider();
             
         }
 
