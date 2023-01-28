@@ -2,36 +2,57 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
-    public class Analyser
+    public class Analyser : IDisposable
     {
         readonly string _workingDirectory;
         readonly Dictionary<string, string> _workingFiles;
         readonly ILogger _logger;
-
+        private bool _disposed;
+        private readonly MetadataLoadContext _metadataLoadContext;
         public Analyser(string workingDirectory, ILogger logger) 
         {
             _workingDirectory = workingDirectory;
-            _logger = logger;
             _workingFiles = Directory.EnumerateFiles(_workingDirectory, "*.dll").ToDictionary(d => Path.GetFileNameWithoutExtension(d), e => e);
+            _logger = logger;
+            AppDomain.CurrentDomain.FirstChanceException += CurrentDomain_FirstChanceException;
+            _metadataLoadContext = CreateMetadataContext();
         }
 
         object _lock = new object();
 
         public async Task BeginAsync()
         {
-            var taskList = new List<Task>();
+            RegisterSpecs();
+            await AnalyseAsync();
+        }
+
+        public void RegisterSpecs()
+        {
             foreach (var (_, filePath) in _workingFiles)
             {
-                var assemblySpec = LoadAssemblySpec(Assembly.LoadFrom(filePath));
-                taskList.Add(assemblySpec.AnalyseAsync(this));
+                LoadAssemblyContext(filePath, out Assembly assembly);
+                var assemblySpec = LoadAssemblySpec(assembly);
+                assemblySpec.Process(this);
+            }
+        }
+
+        public async Task AnalyseAsync()
+        {
+            var taskList = new List<Task>();
+            foreach (var (_, spec) in _assemblySpecs)
+            {
+                taskList.Add(spec.AnalyseAsync(this));
             }
             await Task.WhenAll(taskList);
         }
@@ -75,56 +96,84 @@ namespace AssemblyAnalyser
         public AssemblySpec LoadAssemblySpec(AssemblyName assemblyName)
         {
             AssemblySpec assemblySpec;
-            if (!_assemblySpecs.TryGetValue(assemblyName.FullName, out assemblySpec))
+            if (!_assemblySpecs.TryGetValue(assemblyName.Name, out assemblySpec))
             {
-                //Console.WriteLine($"Locking for {assemblyName}");
                 lock (_lock)
                 {
-                    if (!_assemblySpecs.TryGetValue(assemblyName.FullName, out assemblySpec))
+                    if (!_assemblySpecs.TryGetValue(assemblyName.Name, out assemblySpec))
                     {
                         if (TryLoadAssembly(assemblyName, out Assembly assembly))
                         {
-                            _assemblySpecs[assemblyName.FullName] = assemblySpec = CreateFullAssemblySpec(assembly);
+                            _assemblySpecs[assemblyName.Name] = assemblySpec = CreateFullAssemblySpec(assembly);
                         }
                         else
                         {
-                            _assemblySpecs[assemblyName.FullName] = assemblySpec = CreatePartialAssemblySpec(assemblyName.FullName);
+                            _assemblySpecs[assemblyName.Name] = assemblySpec = CreatePartialAssemblySpec(assemblyName.Name);
                         }
                     }
                 }
-                //Console.WriteLine($"Unlocking for {assemblyName}");
+            }
+            else
+            {
+                if (assemblyName.ToString() != assemblySpec.AssemblyFullName)
+                {
+                    assemblySpec.AddRepresentedName(assemblyName);
+                }
             }
             return assemblySpec ?? AssemblySpec.NullSpec;
         }
 
         private bool TryLoadAssembly(AssemblyName assemblyName, out Assembly assembly)
         {
-            assembly = null;
+            if (_workingFiles.TryGetValue(assemblyName.Name, out string filePath))
+            {
+                _logger.Log(LogLevel.Information, $"Loading Working Path Assmebly: {assemblyName.Name}");
+                LoadAssemblyContext(filePath, out assembly);
+                return true;                    
+            }  
+            else if (TryLoadSystemAssembly(assemblyName.Name, out assembly))
+            {
+                _logger.Log(LogLevel.Information, $"Loading System Assembly: {assemblyName.Name}");
+                return true;
+            }
             try
             {
-                if (_workingFiles.TryGetValue(assemblyName.Name, out string filePath))
-                {
-                    var candidateAssembly = Assembly.LoadFrom(filePath);
-                    if (candidateAssembly.FullName == assemblyName.FullName)
-                    {
-                        assembly = candidateAssembly;
-                        return true;
-                    }
-                    else
-                    {
-                        Console.WriteLine("Incorrect Assembly Version");
-                    }
-                }  
-                else if (TryLoadSystemAssembly(assemblyName.Name, out assembly))
-                {
-                    return true;
-                }
+                assembly = _metadataLoadContext.LoadFromAssemblyName(assemblyName);
+                return true;
             }
-            catch (FileNotFoundException)
+            catch
             {
-                
+                _logger.LogWarning($"Unable to load assembly {assemblyName}");
             }
             return false;
+        }
+
+        private MetadataLoadContext CreateMetadataContext()
+        {
+            // Get the array of runtime assemblies.
+            string[] runtimeAssemblies = Directory.GetFiles(RuntimeEnvironment.GetRuntimeDirectory(), "*.dll");
+
+            // Create the list of assembly paths consisting of runtime assemblies and the inspected assembly.
+            var paths = new List<string>(runtimeAssemblies);
+            paths.AddRange(_workingFiles.Values);
+            paths.AddRange(Directory.GetFiles("C:\\WINDOWS\\assembly", "*.dll"));
+            var systemFolder = Environment.GetFolderPath(Environment.SpecialFolder.System);
+            var version = IntPtr.Size == 8 ? "64" : string.Empty;
+            var frameworkPaths = Directory.GetFiles(Path.Combine(systemFolder, $@"..\Microsoft.NET\Framework{version}\v2.0.50727\"), "*.dll");
+            paths.AddRange(frameworkPaths);
+            // Create PathAssemblyResolver that can resolve assemblies using the created list.
+            var resolver = new PathAssemblyResolver(paths);
+            return new MetadataLoadContext(resolver);
+        }
+
+        private void LoadAssemblyContext(string assemblyName, out Assembly assembly)
+        {   
+            // Load assembly into MetadataLoadContext.
+            assembly = _metadataLoadContext.LoadFromAssemblyPath(assemblyName);
+            AssemblyName name = assembly.GetName();
+
+            // Print assembly attribute information.
+            Console.WriteLine($"{name.Name} has following attributes: ");            
         }
 
         private bool TryLoadSystemAssembly(string assmemblyName, out Assembly assembly)
@@ -135,7 +184,7 @@ namespace AssemblyAnalyser
             bool exists;
             if (exists = File.Exists(dotnetv2Path))
             {
-                assembly = Assembly.LoadFrom(dotnetv2Path);
+                assembly = _metadataLoadContext.LoadFromAssemblyPath(dotnetv2Path);
             }
             else 
             { 
@@ -144,23 +193,23 @@ namespace AssemblyAnalyser
             return exists;
         }
 
-        private bool TryLoadAssembly(string assemblyName, out Assembly assembly)
-        {
-            assembly = null;
-            try
-            {
-                if (_workingFiles.TryGetValue(assemblyName, out string filePath))
-                {                    
-                    assembly = Assembly.LoadFrom(filePath);
-                    return true;                    
-                }
-            }
-            catch (FileNotFoundException)
-            {
+        //private bool TryLoadAssembly(string assemblyName, out Assembly assembly)
+        //{
+        //    assembly = null;
+        //    try
+        //    {
+        //        if (_workingFiles.TryGetValue(assemblyName, out string filePath))
+        //        {                    
+        //            assembly = Assembly.LoadFrom(filePath);
+        //            return true;                    
+        //        }
+        //    }
+        //    catch (FileNotFoundException)
+        //    {
 
-            }
-            return false;
-        }
+        //    }
+        //    return false;
+        //}
 
         public AssemblySpec[] LoadAssemblySpecs(Assembly[] types)
         {
@@ -175,7 +224,7 @@ namespace AssemblyAnalyser
         private AssemblySpec CreateFullAssemblySpec(Assembly assembly)
         {
             var spec = new AssemblySpec(assembly, SpecRules);
-            spec.Log += _logger.Log;
+            spec.Logger = _logger;
             return spec;
         }
 
@@ -184,13 +233,15 @@ namespace AssemblyAnalyser
             var spec = new AssemblySpec(assemblyName, SpecRules);
             spec.Exclude();
             spec.SkipProcessing();
-            spec.Log += _logger.Log;
+            spec.Logger = _logger;
             return spec;
         }
         
         public bool CanAnalyse(Assembly assembly)
         {
-            return _assemblySpecs.ContainsKey(assembly.FullName) || assembly.GetReferencedAssemblies().All(r => _workingFiles.Keys.Contains(r.Name));
+            return _assemblySpecs.TryGetValue(assembly.FullName, out AssemblySpec assemblySpec) && !assemblySpec.Skipped
+                && assemblySpec.ReferencedAssemblies.All(s => !s.Skipped);
+                //|| assembly.GetReferencedAssemblies().All(r => _workingFiles.Keys.Contains(r.Name));
         }
 
         #endregion
@@ -420,7 +471,6 @@ namespace AssemblyAnalyser
 
         ConcurrentDictionary<FieldInfo, FieldSpec> _fieldSpecs = new ConcurrentDictionary<FieldInfo, FieldSpec>();
 
-
         private FieldSpec LoadFieldSpec(FieldInfo fieldInfo)
         {
             FieldSpec fieldSpec = null;
@@ -485,5 +535,51 @@ namespace AssemblyAnalyser
                 $"Fields {_fieldSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}";
         }
 
+        public List<string> AssemblyReport()
+        {
+            var groups = _assemblySpecs.Values.GroupBy(a => a.AssemblyShortName)
+                            .OrderByDescending(c => c.Count()).ThenBy(c => c.Key);
+            
+            return groups.Select(s => $"{s.Key}: {s.Count()}").ToList();
+            //    $"Types: {_typeSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
+            //    $"Properties {_propertySpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
+            //    $"Methods {_methodSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
+            //    $"Fields {_fieldSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}";
+        }
+
+        private void CurrentDomain_FirstChanceException(object sender, FirstChanceExceptionEventArgs e)
+        {
+            if (e.Exception is FileNotFoundException fileNotFoundException && _logger != null)
+            {
+                //HandleMissingFile(fileNotFoundException);
+            }
+        }
+
+        private void HandleMissingFile(FileNotFoundException fileNotFoundException)
+        {
+            var fileFullPath = fileNotFoundException.FileName;
+            var fileName = Path.GetFileNameWithoutExtension(fileFullPath);
+            if (_assemblySpecs.TryGetValue(fileName, out var assemblySpec))
+            {
+                _logger.Log(LogLevel.Warning, $"Skipping Assembly: {fileName}");
+                assemblySpec.SkipProcessing();
+            }
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                AppDomain.CurrentDomain.FirstChanceException -= CurrentDomain_FirstChanceException;
+                _metadataLoadContext.Dispose();
+                _disposed = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
     }
 }

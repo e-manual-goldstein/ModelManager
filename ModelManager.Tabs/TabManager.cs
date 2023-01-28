@@ -7,8 +7,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -35,21 +37,32 @@ namespace ModelManager.Core
 
         private int _outputTabCount = 0;
         private readonly IServiceProvider _serviceProvider;
+        ILogger<TabManager> _logger;
         #endregion
 
         public Thickness FocusedOutputTabThickness = new Thickness(2, 0, -1, 0);
         public SolidColorBrush ErrorTextBrush = new SolidColorBrush(Colors.Red);
 
 
-        public TabManager(IServiceProvider serviceProvider)
+        public TabManager(IServiceProvider serviceProvider, ILogger<TabManager> logger)
         {
             _serviceProvider = serviceProvider;
             _serviceTabs = getServiceTabs();
+            _logger = logger;
             createServiceTabs(_serviceTabs);
-
             initialiseOutputTabs();
+            
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
 
+        }
+
+        private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            if (e.ExceptionObject is Exception ex && _logger != null)
+            {
+                _logger.LogError(ex, "Unhandled Exception");
+            }
         }
 
         public void DisplayOutput(OutputTab outputTab, object objectToDisplay, AbstractServiceTab source, MethodInfo actionMethod)

@@ -15,7 +15,8 @@ namespace AssemblyAnalyser
         private bool _processed;
         private bool? _included;
         protected bool Included => _included ??= !IsExcluded() && IsIncluded();
-        
+        public ILogger Logger { get; internal set; }
+
 
         public AbstractSpec(List<IRule> rules) 
         {
@@ -23,13 +24,17 @@ namespace AssemblyAnalyser
             ExclusionRules = rules.OfType<ExclusionRule>().ToList();
         }
 
-        public async Task AnalyseAsync(Analyser analyser)
+        public void Process(Analyser analyser)
         {
             if (ShouldProcess())
             {
-                BeginProcessingBase(analyser);
-                await BeginAnalysisBase(analyser);
-            }            
+                BeginProcessingBase(analyser);                
+            }
+        }
+
+        public async Task AnalyseAsync(Analyser analyser)
+        {
+            await BeginAnalysisBase(analyser);
         }
 
         protected abstract Task BeginAnalysis(Analyser analyser);
@@ -61,7 +66,7 @@ namespace AssemblyAnalyser
 
         private bool ShouldAnalyse()
         {
-            return Included && !_analysed && !_analysing;
+            return Included && _processed && !_analysed && !_analysing;
         }
 
         public bool IsExcluded()
@@ -78,9 +83,12 @@ namespace AssemblyAnalyser
         {
             ExclusionRules.Add(new ExclusionRule(s => true));
         }
+        
+        public bool Skipped { get; private set; }
 
         public void SkipProcessing()
         {
+            Skipped = true;
             _processed = true;
         }
 

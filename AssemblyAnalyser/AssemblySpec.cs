@@ -25,28 +25,34 @@ namespace AssemblyAnalyser
         public AssemblySpec(Assembly assembly, List<IRule> rules) : this(assembly.FullName, rules)
         {
             _assembly = assembly;
-            AssemblyShortName = _assembly.GetName().Name;
-            var version = _assembly.GetName().Version;
+            _representedAssemblyNames.Add(_assembly.GetName());
+            AssemblyShortName = _assembly.GetName().Name;            
         }
 
         public AssemblySpec(string fullName, List<IRule> rules) : base(rules)
         {
-            AssemblyFullName = fullName;     
-            
+            AssemblyFullName = fullName;            
         }
-
-        public event LogEvent Log;
-
-        public delegate void LogEvent(LogLevel logLevel, string message, params object?[] args);
 
         public string AssemblyFullName { get; }
         public string AssemblyShortName { get; }
+        
+        List<AssemblyName> _representedAssemblyNames = new List<AssemblyName>();
+
+        public void AddRepresentedName(AssemblyName assemblyName)
+        {
+            if (!_representedAssemblyNames.Any(n => n.FullName == assemblyName.FullName))
+            {
+                _representedAssemblyNames.Add(assemblyName);
+            }
+        }
 
         TypeSpec[] _typeSpecs;
         public TypeSpec[] TypeSpecs => _typeSpecs;
 
         AssemblySpec[] _referencedAssemblies;
         public AssemblySpec[] ReferencedAssemblies => _referencedAssemblies;
+
 
         protected override void BeginProcessing(Analyser analyser)
         {
@@ -91,19 +97,12 @@ namespace AssemblyAnalyser
                 {
                     types = _assembly.GetTypes();
                 }
-            }
+            }            
             catch (ReflectionTypeLoadException ex)
             {
+                Logger.Log(LogLevel.Warning, ex.Message, ex.LoaderExceptions);
                 types = ex.Types.Where(t => t != null).ToArray();
-            }
-            catch (FileNotFoundException)
-            {
-                types = Array.Empty<Type>();
-            }
-            catch
-            {
-
-            }
+            }            
             return types.Select(t => analyser.TryLoadTypeSpec(() => t)).ToArray();
         }
 
@@ -125,8 +124,10 @@ namespace AssemblyAnalyser
             _typesProgress = 100.0 * _typeSpecs.Count(d => d.Analysed) / _typeSpecs.Length;
             if (_typesProgress % 1 == 0 || _assemblyProgress % 1 == 0)
             {
-                Log(LogLevel.Information, $"Types Progress: {_typesProgress}%\tAssembly Progress: {_assemblyProgress}");
+                Logger.Log(LogLevel.Information, $"Types Progress: {_typesProgress}%\tAssembly Progress: {_assemblyProgress}");
             }
         }
+
+        
     }
 }
