@@ -47,11 +47,16 @@ namespace AssemblyAnalyser
                 await BeginAnalysis(analyser);
                 _analysed = true;
             }
+            else
+            {
+                Logger.LogWarning(SkipReason);
+            }
         }
 
         public bool Analysed => _analysed;
 
         protected abstract void BeginProcessing(Analyser analyser);
+
         protected void BeginProcessingBase(Analyser analyser)
         {
             _processing = true;
@@ -79,15 +84,19 @@ namespace AssemblyAnalyser
             return InclusionRules.All(r => r.Include(this));
         }
 
-        public void Exclude()
+        public string ExcludedReason { get; set; }
+
+        public void Exclude(string excludedReason)
         {
+            ExcludedReason = excludedReason;    
             ExclusionRules.Add(new ExclusionRule(s => true));
         }
         
         public bool Skipped { get; private set; }
-
-        public void SkipProcessing()
+        public string SkipReason { get; set; }
+        public void SkipProcessing(string skipReason)
         {
+            SkipReason = skipReason;
             Skipped = true;
             _processed = true;
         }

@@ -15,8 +15,8 @@ namespace AssemblyAnalyser
         private static AssemblySpec CreateNullSpec()
         {
             var spec = new AssemblySpec("null", new List<IRule>());
-            spec.Exclude();
-            spec.SkipProcessing();
+            spec.Exclude("Null Spec");
+            spec.SkipProcessing("Null Spec");
             return spec;
         }
 
@@ -60,6 +60,12 @@ namespace AssemblyAnalyser
             {
                 _referencedAssemblies = analyser.LoadAssemblySpecs(_assembly.GetReferencedAssemblies().ToArray());
                 _typeSpecs = LoadTypeSpecs(analyser);
+                Array.ForEach(_typeSpecs, spec => spec.Process(analyser));
+            }
+            else
+            {
+                _referencedAssemblies = Array.Empty<AssemblySpec>();
+                _typeSpecs = Array.Empty<TypeSpec>();
             }
         }
 
@@ -124,7 +130,7 @@ namespace AssemblyAnalyser
             _typesProgress = 100.0 * _typeSpecs.Count(d => d.Analysed) / _typeSpecs.Length;
             if (_typesProgress % 1 == 0 || _assemblyProgress % 1 == 0)
             {
-                Logger.Log(LogLevel.Information, $"Types Progress: {_typesProgress}%\tAssembly Progress: {_assemblyProgress}");
+                //Logger.Log(LogLevel.Information, $"Types Progress: {_typesProgress}%\tAssembly Progress: {_assemblyProgress}");
             }
         }
 

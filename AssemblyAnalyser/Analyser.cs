@@ -26,6 +26,7 @@ namespace AssemblyAnalyser
             _workingFiles = Directory.EnumerateFiles(_workingDirectory, "*.dll").ToDictionary(d => Path.GetFileNameWithoutExtension(d), e => e);
             _logger = logger;
             AppDomain.CurrentDomain.FirstChanceException += CurrentDomain_FirstChanceException;
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             _metadataLoadContext = CreateMetadataContext();
         }
 
@@ -57,16 +58,7 @@ namespace AssemblyAnalyser
             await Task.WhenAll(taskList);
         }
 
-        #region Rules
-
-        public List<IRule> SpecRules { get; set; } = new List<IRule>();
-
-        #endregion
-
         #region Assembly Specs
-
-        List<ExclusionRule<AssemblySpec>> _assemblyExclusions = new List<ExclusionRule<AssemblySpec>>();
-        List<InclusionRule<AssemblySpec>> _assemblyInclusions = new List<InclusionRule<AssemblySpec>>();
 
         ConcurrentDictionary<string, AssemblySpec> _assemblySpecs = new ConcurrentDictionary<string, AssemblySpec>();
 
@@ -77,14 +69,14 @@ namespace AssemblyAnalyser
             {
                 return AssemblySpec.NullSpec;
             }
-            if (!_assemblySpecs.TryGetValue(assembly.FullName, out assemblySpec))
+            if (!_assemblySpecs.TryGetValue(assembly.GetName().Name, out assemblySpec))
             {
                 //Console.WriteLine($"Locking for {assembly.FullName}");
                 lock (_lock)
                 {
-                    if (!_assemblySpecs.TryGetValue(assembly.FullName, out assemblySpec))
+                    if (!_assemblySpecs.TryGetValue(assembly.GetName().Name, out assemblySpec))
                     {
-                        _assemblySpecs[assembly.FullName] = assemblySpec = CreateFullAssemblySpec(assembly);
+                        _assemblySpecs[assembly.GetName().Name] = assemblySpec = CreateFullAssemblySpec(assembly);
                     }
                 }
                 //Console.WriteLine($"Unlocking for {assembly.FullName}");
@@ -127,7 +119,7 @@ namespace AssemblyAnalyser
         {
             if (_workingFiles.TryGetValue(assemblyName.Name, out string filePath))
             {
-                _logger.Log(LogLevel.Information, $"Loading Working Path Assmebly: {assemblyName.Name}");
+                _logger.Log(LogLevel.Information, $"Loading Working Path Assembly: {assemblyName.Name}");
                 LoadAssemblyContext(filePath, out assembly);
                 return true;                    
             }  
@@ -168,12 +160,7 @@ namespace AssemblyAnalyser
 
         private void LoadAssemblyContext(string assemblyName, out Assembly assembly)
         {   
-            // Load assembly into MetadataLoadContext.
             assembly = _metadataLoadContext.LoadFromAssemblyPath(assemblyName);
-            AssemblyName name = assembly.GetName();
-
-            // Print assembly attribute information.
-            Console.WriteLine($"{name.Name} has following attributes: ");            
         }
 
         private bool TryLoadSystemAssembly(string assmemblyName, out Assembly assembly)
@@ -192,24 +179,6 @@ namespace AssemblyAnalyser
             }
             return exists;
         }
-
-        //private bool TryLoadAssembly(string assemblyName, out Assembly assembly)
-        //{
-        //    assembly = null;
-        //    try
-        //    {
-        //        if (_workingFiles.TryGetValue(assemblyName, out string filePath))
-        //        {                    
-        //            assembly = Assembly.LoadFrom(filePath);
-        //            return true;                    
-        //        }
-        //    }
-        //    catch (FileNotFoundException)
-        //    {
-
-        //    }
-        //    return false;
-        //}
 
         public AssemblySpec[] LoadAssemblySpecs(Assembly[] types)
         {
@@ -231,15 +200,15 @@ namespace AssemblyAnalyser
         private AssemblySpec CreatePartialAssemblySpec(string assemblyName)
         {
             var spec = new AssemblySpec(assemblyName, SpecRules);
-            spec.Exclude();
-            spec.SkipProcessing();
+            spec.Exclude("Assembly is only partial spec");
+            spec.SkipProcessing("Assembly is only partial spec");
             spec.Logger = _logger;
             return spec;
         }
         
         public bool CanAnalyse(Assembly assembly)
         {
-            return _assemblySpecs.TryGetValue(assembly.FullName, out AssemblySpec assemblySpec) && !assemblySpec.Skipped
+            return _assemblySpecs.TryGetValue(assembly.GetName().Name, out AssemblySpec assemblySpec) && !assemblySpec.Skipped
                 && assemblySpec.ReferencedAssemblies.All(s => !s.Skipped);
                 //|| assembly.GetReferencedAssemblies().All(r => _workingFiles.Keys.Contains(r.Name));
         }
@@ -247,9 +216,6 @@ namespace AssemblyAnalyser
         #endregion
 
         #region Type Specs
-
-        List<ExclusionRule<TypeSpec>> _typeExclusions = new List<ExclusionRule<TypeSpec>>();
-        List<InclusionRule<TypeSpec>> _typeInclusions = new List<InclusionRule<TypeSpec>>();
 
         ConcurrentDictionary<string, TypeSpec> _typeSpecs = new ConcurrentDictionary<string, TypeSpec>();
 
@@ -285,7 +251,8 @@ namespace AssemblyAnalyser
 
         private TypeSpec CreateFullTypeSpec(Type type)
         {
-            var spec = new TypeSpec(type, SpecRules);            
+            var spec = new TypeSpec(type, SpecRules); 
+            spec.Logger = _logger;
             return spec;
         }
 
@@ -310,8 +277,9 @@ namespace AssemblyAnalyser
         private TypeSpec CreatePartialTypeSpec(string typeName)
         {
             var spec = new TypeSpec(typeName, SpecRules);
-            spec.Exclude();
-            spec.SkipProcessing();
+            spec.Exclude("Type is only partial spec");
+            spec.SkipProcessing("Type is only partial spec");
+            spec.Logger = _logger;
             return spec;
         }
 
@@ -336,6 +304,16 @@ namespace AssemblyAnalyser
             try
             {
                 types = getTypes();
+            }
+            catch (TypeLoadException ex)
+            {
+                _logger.LogError(ex.Message);
+                types = Array.Empty<Type>();
+            }
+            catch (FileNotFoundException ex)
+            {
+                _logger.LogError(ex.Message);
+                types = Array.Empty<Type>();
             }
             catch (ReflectionTypeLoadException ex)
             {
@@ -386,6 +364,35 @@ namespace AssemblyAnalyser
             return methodInfos.Select(m => LoadMethodSpec(m)).ToArray();
         }
 
+        internal MethodSpec[] TryLoadMethodSpecs(Func<MethodInfo[]> getMethods)
+        {
+            MethodInfo[] methods = null;
+            try
+            {
+                methods = getMethods();
+            }
+            catch (TypeLoadException ex)
+            {
+                _logger.LogError(ex.Message);
+            }
+            catch (FileNotFoundException ex)
+            {
+                _logger.LogError(ex.Message);
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                foreach (var loaderException in ex.LoaderExceptions)
+                {
+                    Console.WriteLine(loaderException.Message);
+                }
+            }
+            finally
+            {
+                methods ??= Array.Empty<MethodInfo>();
+            }
+            return LoadMethodSpecs(methods);
+        }
+
         #endregion
 
         #region Property Specs
@@ -420,6 +427,30 @@ namespace AssemblyAnalyser
             return _typeSpecs.Values.ToArray();
         }
 
+        public PropertySpec[] TryLoadPropertySpecs(Func<PropertyInfo[]> getProperties)
+        {
+            PropertyInfo[] properties = null;
+            try
+            {
+                properties = getProperties();
+            }
+            catch (TypeLoadException ex)
+            {
+                _logger.LogError(ex.Message);                
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                foreach (var loaderException in ex.LoaderExceptions)
+                {
+                    Console.WriteLine(loaderException.Message);
+                }                
+            }
+            finally
+            {
+                properties ??= Array.Empty<PropertyInfo>();
+            }
+            return LoadPropertySpecs(properties);
+        }
 
 
         #endregion
@@ -489,62 +520,78 @@ namespace AssemblyAnalyser
             return fieldSpec;
         }
 
-        internal FieldSpec[] LoadFieldSpecs(FieldInfo[] fieldInfos)
+        public FieldSpec[] LoadFieldSpecs(FieldInfo[] fieldInfos)
         {
             return fieldInfos.Select(f => LoadFieldSpec(f)).ToArray();
         }
 
+        public FieldSpec[] TryLoadFieldSpecs(Func<FieldInfo[]> getFields)
+        {
+            FieldInfo[] fields = null;
+            try
+            {
+                fields = getFields();
+            }
+            catch (TypeLoadException ex)
+            {
+                _logger.LogError(ex.Message);
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                foreach (var loaderException in ex.LoaderExceptions)
+                {
+                    Console.WriteLine(loaderException.Message);
+                }
+            }
+            finally
+            {
+                fields ??= Array.Empty<FieldInfo>();
+            }
+            return LoadFieldSpecs(fields);
+        }
+
         #endregion
 
-        public void AddAssemblyRule(ExclusionRule<AssemblySpec> rule)
-        {
-            _assemblyExclusions.Add(rule);
-        }
+        #region Rules
 
-        public void AddAssemblyRule(InclusionRule<AssemblySpec> rule)
-        {
-            _assemblyInclusions.Add(rule);
-        }
+        public List<IRule> SpecRules { get; set; } = new List<IRule>();
+        
+        #endregion
 
-        public void AddTypeRule(ExclusionRule<TypeSpec> rule)
+        public List<string> Report()
         {
-            _typeExclusions.Add(rule);
-        }
-
-        public void AddTypeRule(InclusionRule<TypeSpec> rule)
-        {
-            _typeInclusions.Add(rule);
-        }
-
-        public void AddPropertyRule(ExclusionRule<AssemblySpec> rule)
-        {
-            _assemblyExclusions.Add(rule);
-        }
-
-        public void AddPropertyRule(InclusionRule<AssemblySpec> rule)
-        {
-            _assemblyInclusions.Add(rule);
-        }
-
-        public string Report()
-        {
-            return $"Assemblies: {_assemblySpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
-                $"Types: {_typeSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
-                $"Properties {_propertySpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
-                $"Methods {_methodSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
-                $"Fields {_fieldSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}";
+            return new List<string>() 
+            {  
+                $"Assemblies: {_assemblySpecs.Count()}",
+                $"Types: {_typeSpecs.Count()}",
+                $"Properties {_propertySpecs.Count()}",
+                $"Methods {_methodSpecs.Count()}",
+                $"Fields {_fieldSpecs.Count()}"
+            };
         }
 
         public List<string> AssemblyReport()
         {
-            var groups = _assemblySpecs.Values.GroupBy(a => a.AssemblyShortName)
-                            .OrderByDescending(c => c.Count()).ThenBy(c => c.Key);
-            
-            return groups.Select(s => $"{s.Key}: {s.Count()}").ToList();
+            var groups = _assemblySpecs.Values.Where(spec => spec != AssemblySpec.NullSpec && !spec.Skipped && spec.Analysed)
+                .OrderByDescending(c => c.TypeSpecs.Count()).ThenBy(c => c.AssemblyShortName);
+            return groups.Select(s => $"{s.AssemblyShortName}: {s.TypeSpecs.Count()}").ToList();
             //    $"Types: {_typeSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
             //    $"Properties {_propertySpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
             //    $"Methods {_methodSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
             //    $"Fields {_fieldSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}";
+        }
+
+
+        private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            if (e.ExceptionObject is Exception exception)
+            {
+                _logger.LogError(exception, "Unhandled Exception");
+            }
+            else
+            {
+                _logger.LogError("Unhandled Exception");
+            }            
         }
 
         private void CurrentDomain_FirstChanceException(object sender, FirstChanceExceptionEventArgs e)
@@ -553,16 +600,9 @@ namespace AssemblyAnalyser
             {
                 //HandleMissingFile(fileNotFoundException);
             }
-        }
-
-        private void HandleMissingFile(FileNotFoundException fileNotFoundException)
-        {
-            var fileFullPath = fileNotFoundException.FileName;
-            var fileName = Path.GetFileNameWithoutExtension(fileFullPath);
-            if (_assemblySpecs.TryGetValue(fileName, out var assemblySpec))
+            else
             {
-                _logger.Log(LogLevel.Warning, $"Skipping Assembly: {fileName}");
-                assemblySpec.SkipProcessing();
+                _logger.LogError(e.Exception, "Unhandled Exception");
             }
         }
 

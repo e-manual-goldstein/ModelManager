@@ -16,8 +16,8 @@ namespace AssemblyAnalyser
         private static TypeSpec CreateNullSpec()
         {
             var spec = new TypeSpec("null", new List<IRule>());
-            spec.Exclude();
-            spec.SkipProcessing();
+            spec.Exclude("Null Spec");
+            spec.SkipProcessing("Null Spec");
             spec.IsNullSpec = true;
             return spec;
         }
@@ -44,9 +44,9 @@ namespace AssemblyAnalyser
             Assembly = analyser.LoadAssemblySpec(_type.Assembly);
             Interfaces = CreateInterfaceSpecs(analyser);
             BaseSpec = CreateBaseSpec(analyser);
-            Properties = analyser.LoadPropertySpecs(_type.GetProperties());
-            Methods = analyser.LoadMethodSpecs(_type.GetMethods().Except(Properties.SelectMany(p => p.InnerMethods())).ToArray());
-            Fields = analyser.LoadFieldSpecs(_type.GetFields()).ToArray();            
+            Properties = CreatePropertySpecs(analyser);
+            Methods = CreateMethodSpecs(analyser);
+            Fields = CreateFieldSpecs(analyser);
         }
 
         private TypeSpec[] CreateInterfaceSpecs(Analyser analyser)
@@ -67,6 +67,25 @@ namespace AssemblyAnalyser
                 typeSpec.AddSubType(this);
             }
             return typeSpec;
+        }
+
+        private PropertySpec[] CreatePropertySpecs(Analyser analyser)
+        {
+            var specs = analyser.TryLoadPropertySpecs(() => _type.GetProperties());
+            return specs;
+        }
+
+        private MethodSpec[] CreateMethodSpecs(Analyser analyser)
+        {
+            var specs = analyser.TryLoadMethodSpecs(() => 
+                _type.GetMethods().Except(Properties.SelectMany(p => p.InnerMethods())).ToArray());
+            return specs;
+        }
+
+        private FieldSpec[] CreateFieldSpecs(Analyser analyser)
+        {
+            var specs = analyser.TryLoadFieldSpecs(() => _type.GetFields());
+            return specs;
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)
