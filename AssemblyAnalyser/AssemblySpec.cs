@@ -26,7 +26,8 @@ namespace AssemblyAnalyser
         {
             _assembly = assembly;
             _representedAssemblyNames.Add(_assembly.GetName());
-            AssemblyShortName = _assembly.GetName().Name;            
+            AssemblyShortName = _assembly.GetName().Name;
+            FilePath = _assembly.Location;
         }
 
         public AssemblySpec(string fullName, List<IRule> rules) : base(rules)
@@ -36,7 +37,8 @@ namespace AssemblyAnalyser
 
         public string AssemblyFullName { get; }
         public string AssemblyShortName { get; }
-        
+        public string FilePath { get; internal set; }
+
         List<AssemblyName> _representedAssemblyNames = new List<AssemblyName>();
 
         public void AddRepresentedName(AssemblyName assemblyName)

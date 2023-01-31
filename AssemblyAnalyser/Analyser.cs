@@ -62,6 +62,8 @@ namespace AssemblyAnalyser
 
         ConcurrentDictionary<string, AssemblySpec> _assemblySpecs = new ConcurrentDictionary<string, AssemblySpec>();
 
+        public List<string> ListAssemblySpecs => _assemblySpecs.Values.Select(s => s.FilePath).ToList();
+
         public AssemblySpec LoadAssemblySpec(Assembly assembly)
         {
             AssemblySpec assemblySpec;
@@ -555,7 +557,7 @@ namespace AssemblyAnalyser
         #region Rules
 
         public List<IRule> SpecRules { get; set; } = new List<IRule>();
-        
+
         #endregion
 
         public List<string> Report()
