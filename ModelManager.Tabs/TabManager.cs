@@ -65,7 +65,7 @@ namespace ModelManager.Core
             }
         }
 
-        public void DisplayOutput(OutputTab outputTab, object objectToDisplay, AbstractServiceTab source, MethodInfo actionMethod)
+        public void DisplayOutput(OutputTab outputTab, object objectToDisplay, IOutputSource source, MethodInfo actionMethod)
 		{
 			var callingAction = outputTab.ExecutedAction ?? actionMethod;
 			outputTab.ClearInputElements();
@@ -73,13 +73,20 @@ namespace ModelManager.Core
             outputTab.Focus();
 		}
 
+        public void DisplayOutput(OutputTab outputTab, object objectToDisplay, IOutputSource source, string actionName)
+        {
+            outputTab.ClearInputElements();
+            outputTab.DisplayOutput(source, actionName, objectToDisplay ?? "No Output To Display");
+            outputTab.Focus();
+        }
+
         public void DisplayInputTab(OutputTab inputTab, AbstractServiceTab executingTab, MethodInfo executedAction)
         {
 			inputTab.DisplayInputFields(executingTab, executedAction);
             inputTab.Focus();
         }
 
-        public void DisplayError(Exception exception, AbstractServiceTab source, OutputTab tab)
+        public void DisplayError(Exception exception, IOutputSource source, OutputTab tab)
         {
             tab.TabTitle = "Error";
             var outputString = new StringBuilder();
@@ -155,6 +162,13 @@ namespace ModelManager.Core
         public OutputTab InitialiseOutputTab(AbstractServiceTab executingTab, MethodInfo executedAction)
         {
             var inputTab = createNewOutputTab(_outputControl, ref _outputTabCount, executedAction);
+            inputTab.Focus();
+            return inputTab;
+        }
+
+        public OutputTab InitialiseOutputTab(string buttonText)
+        {
+            var inputTab = createNewOutputTab(ref _outputTabCount, buttonText);
             inputTab.Focus();
             return inputTab;
         }
@@ -274,6 +288,20 @@ namespace ModelManager.Core
             _outputControl.SelectedItem = outputTab.TabItemControl;
 			_outputControl.SizeChanged += outputTab.SizeChanged;
 			return outputTab;
+        }
+
+        private OutputTab createNewOutputTab(ref int tabId, string buttonText)
+        {
+            tabId++;
+            var tabTitle = AppUtils.CreateDisplayString(buttonText, 12);
+            var outputTab = new OutputTab(this, _outputControl, tabId, tabTitle);
+            outputTab.PreviousTab = ActiveOutputTab;
+            ActiveOutputTab = outputTab;
+            _outputTabItems.Add(outputTab.TabItemControl);
+            _outputTabs.Add(outputTab);
+            _outputControl.SelectedItem = outputTab.TabItemControl;
+            _outputControl.SizeChanged += outputTab.SizeChanged;
+            return outputTab;
         }
 
         public void ResizeOutputControl(double newHeight, double newWidth)

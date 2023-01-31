@@ -5,9 +5,9 @@ using System.Text;
 
 namespace ModelManager.Tabs.Outputs
 {
-    public class ListOutput : AbstractOutput<List<string>>
+    public class ListOutput : AbstractOutput<IEnumerable<string>>
     {
-        public ListOutput(List<string> content) : base(content)
+        public ListOutput(IEnumerable<string> content) : base(content)
         {
 
         }

@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -18,7 +19,7 @@ using System.Windows.Media;
 namespace ModelManager.Core
 {
 	public class OutputTab : IDisposable
-	{
+    {
 		#region Private Fields
 
 		private TabManager _tabManager;
@@ -34,10 +35,12 @@ namespace ModelManager.Core
 		private const double FIELD_HEIGHT = 30;
 		private const double FIELD_LABEL_WIDTH = 150;
 		private const double FIELD_WIDTH = 150;
-
+        private const double BUTTON_HEIGHT = 30;
+        private const double BUTTON_WIDTH = 250;
+        
 		public OutputTab PreviousTab;
 
-		private AbstractServiceTab _executingTab;
+		private IOutputSource _executingTab;
 		private MethodInfo _executedAction;
 		private Dictionary<string, Control> _inputControls;
 		private List<UIElement> _disposableElements;
@@ -102,7 +105,7 @@ namespace ModelManager.Core
 			}
 		}
 
-		public void DisplayOutput(AbstractServiceTab callingService, string callingAction, object output, params string[] extraInfo)
+		public void DisplayOutput(IOutputSource callingService, string callingAction, object output, params string[] extraInfo)
 		{
 			var typedOutput = output as IOutput;
 			if (typedOutput == null)
@@ -133,6 +136,7 @@ namespace ModelManager.Core
                 TableOutput table => outputAsTable(table, out success),
                 _ => new Control()
             };
+			
             Canvas.SetTop(_outputControl, 50);
             Canvas.SetLeft(_outputControl, CANVAS_MARGIN);
             if (success)
@@ -143,7 +147,7 @@ namespace ModelManager.Core
             _executingTab = callingService;
         }
 
-        public void DisplayOutput<T>(AbstractServiceTab callingService, string callingAction, T output, params string[] extraInfo)
+		public void DisplayOutput<T>(AbstractServiceTab callingService, string callingAction, T output, params string[] extraInfo)
 			where T : IOutput
         {
             addOutputHeader(callingAction, extraInfo);
@@ -335,7 +339,7 @@ namespace ModelManager.Core
                 if (parameters.Any())
                 {
                     //_tabManager.CloseTab(this);
-                    var task = Task.Run(() => _executingTab.InvokeAction(this, _executedAction, parameters));
+                    var task = Task.Run(() => _executingTab.InvokeAction(_executedAction, parameters));
                     await task;
                     _tabManager.DisplayOutput(this, task.Result, _executingTab, _executedAction);
                 }
@@ -496,22 +500,68 @@ namespace ModelManager.Core
 			}
 		}
 
-		#endregion
+        #endregion
 
-		#region Output Processing
+        #region Output Processing
 
-		private TextBox outputAsSingle(SingleOutput output, out bool success)
+
+        private void SetControlLayout<T>(Control outputControl, AbstractOutput<T> output)
+        {
+			double contentButtonsHeight = 0;
+            var tabItemControlWidth = double.IsNaN(_tabItemControl.Width) ? TAB_ITEM_WIDTH : _tabItemControl.Width;
+            outputControl.Width = _tabControl.Width - tabItemControlWidth - (CANVAS_MARGIN * 2) - 10;
+            if (output.ContentActions.Any())
+			{
+				contentButtonsHeight = AddContentActionButtons(output);
+			}
+			outputControl.MaxHeight = _tabControl.Height - 100 - contentButtonsHeight;
+            if (outputControl is TextBoxBase textBox)
+			{
+				textBox.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
+                textBox.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+            }
+        }
+
+		private double AddContentActionButtons<T>(AbstractOutput<T> output)
+		{
+			double height = 0;
+			foreach (var (key, action) in output.ContentActions)
+			{
+				var button = new Button() 
+				{ 
+					Content = key, 
+					Height = BUTTON_HEIGHT,
+					Width = BUTTON_WIDTH
+				};
+				button.Click += (sender, e) =>
+				{                    
+                    var tab = _tabManager.InitialiseOutputTab(key);
+                    try
+                    {
+                        tab.DisplayExecutingMessage();
+                        var obj = action(output.Content);
+                        _tabManager.DisplayOutput(tab, obj, null, key);
+                    }
+                    catch (Exception ex)
+                    {
+                        _tabManager.DisplayError(ex, null, tab);
+                    }
+				};
+				Canvas.SetBottom(button, 25 + height);
+				_tabCanvas.Children.Add(button);
+				height += BUTTON_HEIGHT;
+            }
+			return 25 + height;
+		}
+
+        private TextBox outputAsSingle(SingleOutput output, out bool success)
         {
             var textBox = new TextBox();
-            var tabItemControlWidth = double.IsNaN(_tabItemControl.Width) ? TAB_ITEM_WIDTH : _tabItemControl.Width;
-            textBox.Width = _tabControl.Width - tabItemControlWidth - (CANVAS_MARGIN * 2) - 10;
-            textBox.MaxHeight = _tabControl.Height - 100;
-            textBox.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
-            textBox.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
             textBox.TextWrapping = TextWrapping.WrapWithOverflow;
             textBox.AppendText(output.Content);
             _outputContent = output.Content;
             success = true;
+            SetControlLayout(textBox, output);
             return textBox;
         }
 
@@ -519,11 +569,7 @@ namespace ModelManager.Core
 		{
 			var textBox = new TextBox();
 			var outputString = new StringBuilder();
-			var tabItemControlWidth = double.IsNaN(_tabItemControl.Width) ? TAB_ITEM_WIDTH : _tabItemControl.Width;
-			textBox.Width = _tabControl.Width - tabItemControlWidth - (CANVAS_MARGIN * 2) - 10;
-			textBox.MaxHeight = _tabControl.Height - 100;
-			textBox.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
-			textBox.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;			
+		
 			foreach (var line in output.Content)
 			{
 				outputString.AppendLine(line);
@@ -531,7 +577,8 @@ namespace ModelManager.Core
 			textBox.AppendText(outputString.ToString());
 			_outputContent = outputString.ToString();
 			success = true;
-			return textBox;
+            SetControlLayout(textBox, output);
+            return textBox;
 		}
 
 		private Control outputAsTable(TableOutput output, out bool success)
@@ -541,9 +588,6 @@ namespace ModelManager.Core
 			GridView gridView = new GridView();
 			listView.View = gridView;
 			
-			var tabItemControlWidth = double.IsNaN(_tabItemControl.Width) ? TAB_ITEM_WIDTH : _tabItemControl.Width;
-			listView.MaxWidth = _tabControl.Width - tabItemControlWidth - (CANVAS_MARGIN * 2) - 10;
-			listView.MaxHeight = _tabControl.Height - 100;
 			List<dynamic> myItems = new List<dynamic>();
 			dynamic myItem;
 			IDictionary<string, object> myItemValues;
@@ -602,6 +646,7 @@ namespace ModelManager.Core
 			}
 			_outputContent = clipboardReadyTable(output);
 			success = true;
+            SetControlLayout(listView, output); 
 			return listView;
 		}
 
@@ -617,13 +662,20 @@ namespace ModelManager.Core
 		}
 
         #endregion
+
 		public void Dispose()
 		{
 		}
+
 		public void SizeChanged(object sender, SizeChangedEventArgs e)
 		{
 			if (_outputControl != null)
 				_outputControl.MaxHeight = e.NewSize.Height - 100;
 		}
+
+		public object InvokeAction(Func<object> action)
+		{
+            return action();
+        }
 	}
 }

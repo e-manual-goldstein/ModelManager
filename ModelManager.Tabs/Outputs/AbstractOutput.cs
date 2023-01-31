@@ -1,6 +1,7 @@
 ﻿using ModelManager.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace ModelManager.Tabs.Outputs
@@ -18,5 +19,7 @@ namespace ModelManager.Tabs.Outputs
         public abstract OutputType OutputType { get; }
 
         public Dictionary<string, Func<T, IOutput>> ContentActions { get; }
+
+        
     }
 }

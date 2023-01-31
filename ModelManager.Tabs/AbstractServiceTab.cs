@@ -12,7 +12,7 @@ using System.Windows.Controls;
 
 namespace ModelManager.Core
 {
-    public abstract class AbstractServiceTab : IServiceTab
+    public abstract class AbstractServiceTab : IServiceTab, IOutputSource
     {
         public abstract string Title { get; }
         public ILoggerProvider LoggerProvider { protected get; set; }
@@ -137,7 +137,7 @@ namespace ModelManager.Core
                         try
                         {
 							tab.DisplayExecutingMessage();
-							var task = Task.Run(() => InvokeAction(tab, actionMethod, new object[] { }));
+							var task = Task.Run(() => InvokeAction(actionMethod, new object[] { }));
                             await task;
                             _tabManager.DisplayOutput(tab, task.Result, this, actionMethod);
                         }
@@ -150,7 +150,7 @@ namespace ModelManager.Core
             }
         }
 
-        public object InvokeAction(OutputTab outputTab, MethodInfo actionMethod, object[] parameters)
+        public object InvokeAction(MethodInfo actionMethod, object[] parameters)
         {   
             return actionMethod.Invoke(this, parameters);
         }
