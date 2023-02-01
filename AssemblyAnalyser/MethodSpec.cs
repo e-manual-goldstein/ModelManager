@@ -24,7 +24,7 @@ namespace AssemblyAnalyser
         {
             ReturnType = specManager.TryLoadTypeSpec(() => _methodInfo.ReturnType);
             DeclaringType = specManager.TryLoadTypeSpec(() => _methodInfo.DeclaringType);
-            ParameterTypes = analyser.TryLoadParameterSpecs(() => _methodInfo.GetParameters());            
+            ParameterTypes = specManager.TryLoadParameterSpecs(() => _methodInfo.GetParameters());            
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)

@@ -306,6 +306,228 @@ namespace AssemblyAnalyser
 
         #endregion
 
+        #region Method Specs
+        
+        public IReadOnlyDictionary<MethodInfo, MethodSpec> Methods => _methodSpecs;
+
+        ConcurrentDictionary<MethodInfo, MethodSpec> _methodSpecs = new ConcurrentDictionary<MethodInfo, MethodSpec>();
+
+        public MethodSpec LoadMethodSpec(MethodInfo method)
+        {
+            MethodSpec methodSpec = null;
+            if (method == null)
+            {
+                return null;
+            }
+            if (!_methodSpecs.TryGetValue(method, out methodSpec))
+            {
+                //Console.WriteLine($"Locking for {method.Name}");
+                lock (_lock)
+                {
+                    if (!_methodSpecs.TryGetValue(method, out methodSpec))
+                    {
+                        _methodSpecs[method] = methodSpec = new MethodSpec(method, SpecRules);
+                    }
+                }
+                //Console.WriteLine($"Unlocking for {method.Name}");
+            }
+            return methodSpec;
+        }
+
+        public MethodSpec[] LoadMethodSpecs(MethodInfo[] methodInfos)
+        {
+            return methodInfos.Select(m => LoadMethodSpec(m)).ToArray();
+        }
+
+        public MethodSpec[] TryLoadMethodSpecs(Func<MethodInfo[]> getMethods)
+        {
+            MethodInfo[] methods = null;
+            try
+            {
+                methods = getMethods();
+            }
+            catch (TypeLoadException ex)
+            {
+                _logger.LogError(ex.Message);
+            }
+            catch (FileNotFoundException ex)
+            {
+                _logger.LogError(ex.Message);
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                foreach (var loaderException in ex.LoaderExceptions)
+                {
+                    Console.WriteLine(loaderException.Message);
+                }
+            }
+            finally
+            {
+                methods ??= Array.Empty<MethodInfo>();
+            }
+            return LoadMethodSpecs(methods);
+        }
+
+        #endregion
+
+        #region Property Specs
+        
+        public IReadOnlyDictionary<PropertyInfo, PropertySpec> Properties => _propertySpecs;
+
+        ConcurrentDictionary<PropertyInfo, PropertySpec> _propertySpecs = new ConcurrentDictionary<PropertyInfo, PropertySpec>();
+
+        private PropertySpec LoadPropertySpec(PropertyInfo propertyInfo)
+        {
+            PropertySpec propertySpec;
+            if (!_propertySpecs.TryGetValue(propertyInfo, out propertySpec))
+            {
+                //Console.WriteLine($"Locking for {propertyInfo.Name}");
+                lock (_lock)
+                {
+                    if (!_propertySpecs.TryGetValue(propertyInfo, out propertySpec))
+                    {
+                        _propertySpecs[propertyInfo] = propertySpec = new PropertySpec(propertyInfo, SpecRules);
+                    }
+                }
+                //Console.WriteLine($"Unlocking for {propertyInfo.Name}");
+            }
+            return propertySpec;
+        }
+
+        public PropertySpec[] LoadPropertySpecs(PropertyInfo[] propertyInfos)
+        {
+            return propertyInfos.Select(p => LoadPropertySpec(p)).ToArray();
+        }
+
+        public PropertySpec[] TryLoadPropertySpecs(Func<PropertyInfo[]> getProperties)
+        {
+            PropertyInfo[] properties = null;
+            try
+            {
+                properties = getProperties();
+            }
+            catch (TypeLoadException ex)
+            {
+                _logger.LogError(ex.Message);
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                foreach (var loaderException in ex.LoaderExceptions)
+                {
+                    Console.WriteLine(loaderException.Message);
+                }
+            }
+            finally
+            {
+                properties ??= Array.Empty<PropertyInfo>();
+            }
+            return LoadPropertySpecs(properties);
+        }
+
+
+        #endregion
+
+        #region Parameter Specs
+
+        public IReadOnlyDictionary<ParameterInfo, ParameterSpec> Parameters => _parameterSpecs;
+
+        ConcurrentDictionary<ParameterInfo, ParameterSpec> _parameterSpecs = new ConcurrentDictionary<ParameterInfo, ParameterSpec>();
+
+        private ParameterSpec LoadParameterSpec(ParameterInfo parameterInfo)
+        {
+            ParameterSpec parameterSpec = null;
+            if (!_parameterSpecs.TryGetValue(parameterInfo, out parameterSpec))
+            {
+                //Console.WriteLine($"Locking for {parameterInfo.Name}");
+                lock (_lock)
+                {
+                    if (!_parameterSpecs.TryGetValue(parameterInfo, out parameterSpec))
+                    {
+                        _parameterSpecs[parameterInfo] = parameterSpec = new ParameterSpec(parameterInfo, SpecRules);
+                    }
+                }
+                //Console.WriteLine($"Unlocking for {parameterInfo.Name}");
+            }
+            return parameterSpec;
+        }
+
+        public ParameterSpec[] LoadParameterSpecs(ParameterInfo[] parameterInfos)
+        {
+            return parameterInfos?.Select(p => LoadParameterSpec(p)).ToArray();
+        }
+
+        public ParameterSpec[] TryLoadParameterSpecs(Func<ParameterInfo[]> parameterInfosFunc)
+        {
+            ParameterInfo[] parameterInfos = null;
+            try
+            {
+                parameterInfos = parameterInfosFunc();
+            }
+            catch (TypeLoadException)
+            {
+
+            }
+            return LoadParameterSpecs(parameterInfos);
+        }
+
+        #endregion
+
+        #region Field Specs
+
+        public IReadOnlyDictionary<FieldInfo, FieldSpec> Fields => _fieldSpecs;
+
+        ConcurrentDictionary<FieldInfo, FieldSpec> _fieldSpecs = new ConcurrentDictionary<FieldInfo, FieldSpec>();
+
+        private FieldSpec LoadFieldSpec(FieldInfo fieldInfo)
+        {
+            FieldSpec fieldSpec = null;
+            if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
+            {
+                //Console.WriteLine($"Locking for {fieldInfo.Name}");
+                lock (_lock)
+                {
+                    if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
+                    {
+                        _fieldSpecs[fieldInfo] = fieldSpec = new FieldSpec(fieldInfo, SpecRules);
+                    }
+                }
+                //Console.WriteLine($"Unlocking for {fieldInfo.Name}");
+            }
+            return fieldSpec;
+        }
+
+        public FieldSpec[] LoadFieldSpecs(FieldInfo[] fieldInfos)
+        {
+            return fieldInfos.Select(f => LoadFieldSpec(f)).ToArray();
+        }
+
+        public FieldSpec[] TryLoadFieldSpecs(Func<FieldInfo[]> getFields)
+        {
+            FieldInfo[] fields = null;
+            try
+            {
+                fields = getFields();
+            }
+            catch (TypeLoadException ex)
+            {
+                _logger.LogError(ex.Message);
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                foreach (var loaderException in ex.LoaderExceptions)
+                {
+                    Console.WriteLine(loaderException.Message);
+                }
+            }
+            finally
+            {
+                fields ??= Array.Empty<FieldInfo>();
+            }
+            return LoadFieldSpecs(fields);
+        }
+
+        #endregion
+
         #region IDisposable
         protected virtual void Dispose(bool disposing)
         {

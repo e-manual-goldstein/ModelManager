@@ -23,7 +23,7 @@ namespace AssemblyAnalyser
         protected override void BeginProcessing(Analyser analyser, ISpecManager specManager)
         {
             ParameterType = specManager.TryLoadTypeSpec(() => _parameterInfo.ParameterType);
-            Method = analyser.LoadMethodSpec(_parameterInfo.Member as MethodInfo);            
+            Method = specManager.LoadMethodSpec(_parameterInfo.Member as MethodInfo);            
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)

@@ -44,9 +44,9 @@ namespace AssemblyAnalyser
             Assembly = specManager.LoadAssemblySpec(_type.Assembly);
             Interfaces = CreateInterfaceSpecs(specManager);
             BaseSpec = CreateBaseSpec(specManager);
-            Properties = CreatePropertySpecs(analyser);
-            Methods = CreateMethodSpecs(analyser);
-            Fields = CreateFieldSpecs(analyser);
+            Properties = CreatePropertySpecs(specManager);
+            Methods = CreateMethodSpecs(specManager);
+            Fields = CreateFieldSpecs(specManager);
         }
 
         private TypeSpec[] CreateInterfaceSpecs(ITypeSpecManager specManager)
@@ -69,22 +69,22 @@ namespace AssemblyAnalyser
             return typeSpec;
         }
 
-        private PropertySpec[] CreatePropertySpecs(Analyser analyser)
+        private PropertySpec[] CreatePropertySpecs(IPropertySpecManager specManager)
         {
-            var specs = analyser.TryLoadPropertySpecs(() => _type.GetProperties());
+            var specs = specManager.TryLoadPropertySpecs(() => _type.GetProperties());
             return specs;
         }
 
-        private MethodSpec[] CreateMethodSpecs(Analyser analyser)
+        private MethodSpec[] CreateMethodSpecs(IMethodSpecManager specManager)
         {
-            var specs = analyser.TryLoadMethodSpecs(() => 
+            var specs = specManager.TryLoadMethodSpecs(() => 
                 _type.GetMethods().Except(Properties.SelectMany(p => p.InnerMethods())).ToArray());
             return specs;
         }
 
-        private FieldSpec[] CreateFieldSpecs(Analyser analyser)
+        private FieldSpec[] CreateFieldSpecs(IFieldSpecManager specManager)
         {
-            var specs = analyser.TryLoadFieldSpecs(() => _type.GetFields());
+            var specs = specManager.TryLoadFieldSpecs(() => _type.GetFields());
             return specs;
         }
 

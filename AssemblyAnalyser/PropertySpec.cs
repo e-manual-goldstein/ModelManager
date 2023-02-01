@@ -32,8 +32,8 @@ namespace AssemblyAnalyser
 
         protected override void BeginProcessing(Analyser analyser, ISpecManager specManager)
         {
-            Getter = analyser.LoadMethodSpec(_getter);
-            Setter = analyser.LoadMethodSpec(_setter);
+            Getter = specManager.LoadMethodSpec(_getter);
+            Setter = specManager.LoadMethodSpec(_setter);
             PropertyType = specManager.TryLoadTypeSpec(() => _propertyInfo.PropertyType);
             DeclaringType = specManager.TryLoadTypeSpec(() => _propertyInfo.DeclaringType);            
         }
