@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using ModelManager.Types;
+﻿using ModelManager.Types;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,20 +12,6 @@ namespace ModelManager.Utils
 {
 	public static class TypeUtils
 	{
-		public static bool IsMappingClass(Type baseTypeDefinition)
-		{
-			var typeDefinition = baseTypeDefinition;
-			while (typeDefinition.BaseType != null)
-			{
-				if (typeDefinition.BaseType.IsGenericType && typeDefinition.BaseType.GetGenericTypeDefinition() == typeof(IEntityTypeConfiguration<>))
-				{
-					return true;
-				}
-				typeDefinition = typeDefinition.BaseType;
-			}
-			return false;
-		}
-
 		public static bool InheritsFrom(this Type typeFrom, Type subType)
 		{
 			var type0 = typeFrom;

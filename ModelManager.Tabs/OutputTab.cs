@@ -1,21 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using ModelManager.Tabs.Outputs;
+﻿using ModelManager.Tabs.Outputs;
 using ModelManager.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
+
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Data;
-using System.Windows.Input;
-using System.Windows.Media;
 
 namespace ModelManager.Core
 {
@@ -521,7 +514,7 @@ namespace ModelManager.Core
 			}
 		}
 
-        #endregion
+        #endregion Input Mode
 
         #region Output Processing
 
@@ -575,16 +568,16 @@ namespace ModelManager.Core
 		//	return 25 + height;
 		//}
 
- 		private class Column : IDisposable
-		{
-			public string Title { get; set; }
-			public string SourceField { get; set; }
+ 	//	private class Column : IDisposable
+		//{
+		//	public string Title { get; set; }
+		//	public string SourceField { get; set; }
 
-			public void Dispose()
-			{
+		//	public void Dispose()
+		//	{
 
-			}
-		}
+		//	}
+		//}
 
         #endregion
 

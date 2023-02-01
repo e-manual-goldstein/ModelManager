@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using ModelManager.Types;
+﻿using ModelManager.Types;
 using System;
 using System.Collections;
 using System.Collections.Generic;
