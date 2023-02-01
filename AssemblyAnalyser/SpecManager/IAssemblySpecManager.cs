@@ -8,7 +8,6 @@ namespace AssemblyAnalyser
         IReadOnlyDictionary<string, AssemblySpec> Assemblies { get; }
         AssemblySpec[] LoadAssemblySpecs(Assembly[] types);
         AssemblySpec[] LoadAssemblySpecs(AssemblyName[] assemblyNames);
-        void LoadAssemblyContext(string filePath, out Assembly assembly);
-        AssemblySpec LoadAssemblySpec(Assembly assembly);
+        AssemblySpec LoadAssemblySpec(Assembly assembly);        
     }
 }

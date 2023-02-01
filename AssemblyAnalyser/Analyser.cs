@@ -45,9 +45,9 @@ namespace AssemblyAnalyser
         {
             foreach (var (_, filePath) in _workingFiles)
             {
-                _specManager.LoadAssemblyContext(filePath, out Assembly assembly);
-                var assemblySpec = _specManager.LoadAssemblySpec(assembly);
-                assemblySpec.Process(this, _specManager);
+                //_specManager.LoadAssemblyFromPath(filePath, out Assembly assembly);
+                //var assemblySpec = _specManager.LoadAssemblySpec(assembly);
+                //assemblySpec.Process(_specManager);
             }
         }
 
@@ -73,6 +73,15 @@ namespace AssemblyAnalyser
             return _specManager.Assemblies.TryGetValue(assembly.GetName().Name, out AssemblySpec assemblySpec) && !assemblySpec.Skipped
                 && assemblySpec.ReferencedAssemblies.All(s => !s.Skipped);
                 //|| assembly.GetReferencedAssemblies().All(r => _workingFiles.Keys.Contains(r.Name));
+        }
+
+        public void AnalyseAssemblies(IEnumerable<string> assemblyNames)
+        {
+            foreach (var assemblyName in assemblyNames)
+            {
+                var assembly = _specManager.Assemblies[assemblyName];
+                assembly.Process();
+            }
         }
 
         #endregion

@@ -39,8 +39,6 @@ namespace AssemblyAnalyser
 
         ConcurrentDictionary<string, AssemblySpec> _assemblySpecs = new ConcurrentDictionary<string, AssemblySpec>();
 
-        public List<string> ListAssemblySpecs => _assemblySpecs.Values.Select(s => s.FilePath).ToList();
-
         public AssemblySpec LoadAssemblySpec(Assembly assembly)
         {
             AssemblySpec assemblySpec;
@@ -99,7 +97,7 @@ namespace AssemblyAnalyser
             if (_workingFiles.TryGetValue(assemblyName.Name, out string filePath))
             {
                 _logger.Log(LogLevel.Information, $"Loading Working Path Assembly: {assemblyName.Name}");
-                LoadAssemblyContext(filePath, out assembly);
+                LoadAssemblyFromPath(filePath, out assembly);
                 return true;
             }
             else if (TryLoadSystemAssembly(assemblyName.Name, out assembly))
@@ -137,9 +135,9 @@ namespace AssemblyAnalyser
             return new MetadataLoadContext(resolver);
         }
 
-        public void LoadAssemblyContext(string assemblyName, out Assembly assembly)
+        public void LoadAssemblyFromPath(string assemblyPath, out Assembly assembly)
         {
-            assembly = _metadataLoadContext.LoadFromAssemblyPath(assemblyName);
+            assembly = _metadataLoadContext.LoadFromAssemblyPath(assemblyPath);
         }
 
         private bool TryLoadSystemAssembly(string assmemblyName, out Assembly assembly)
@@ -178,7 +176,7 @@ namespace AssemblyAnalyser
 
         private AssemblySpec CreatePartialAssemblySpec(string assemblyName)
         {
-            var spec = new AssemblySpec(assemblyName, SpecRules);
+            var spec = new AssemblySpec(assemblyName, this, SpecRules);
             spec.Exclude("Assembly is only partial spec");
             spec.SkipProcessing("Assembly is only partial spec");
             spec.Logger = _logger;
@@ -225,7 +223,7 @@ namespace AssemblyAnalyser
 
         private TypeSpec CreateFullTypeSpec(Type type)
         {
-            var spec = new TypeSpec(type, SpecRules);
+            var spec = new TypeSpec(type, this, SpecRules);
             spec.Logger = _logger;
             return spec;
         }
@@ -250,7 +248,7 @@ namespace AssemblyAnalyser
 
         private TypeSpec CreatePartialTypeSpec(string typeName)
         {
-            var spec = new TypeSpec(typeName, SpecRules);
+            var spec = new TypeSpec(typeName, this, SpecRules);
             spec.Exclude("Type is only partial spec");
             spec.SkipProcessing("Type is only partial spec");
             spec.Logger = _logger;
@@ -326,7 +324,7 @@ namespace AssemblyAnalyser
                 {
                     if (!_methodSpecs.TryGetValue(method, out methodSpec))
                     {
-                        _methodSpecs[method] = methodSpec = new MethodSpec(method, SpecRules);
+                        _methodSpecs[method] = methodSpec = new MethodSpec(method, this, SpecRules);
                     }
                 }
                 //Console.WriteLine($"Unlocking for {method.Name}");
@@ -386,7 +384,7 @@ namespace AssemblyAnalyser
                 {
                     if (!_propertySpecs.TryGetValue(propertyInfo, out propertySpec))
                     {
-                        _propertySpecs[propertyInfo] = propertySpec = new PropertySpec(propertyInfo, SpecRules);
+                        _propertySpecs[propertyInfo] = propertySpec = new PropertySpec(propertyInfo, this, SpecRules);
                     }
                 }
                 //Console.WriteLine($"Unlocking for {propertyInfo.Name}");
@@ -443,7 +441,7 @@ namespace AssemblyAnalyser
                 {
                     if (!_parameterSpecs.TryGetValue(parameterInfo, out parameterSpec))
                     {
-                        _parameterSpecs[parameterInfo] = parameterSpec = new ParameterSpec(parameterInfo, SpecRules);
+                        _parameterSpecs[parameterInfo] = parameterSpec = new ParameterSpec(parameterInfo, this, SpecRules);
                     }
                 }
                 //Console.WriteLine($"Unlocking for {parameterInfo.Name}");
@@ -488,7 +486,7 @@ namespace AssemblyAnalyser
                 {
                     if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
                     {
-                        _fieldSpecs[fieldInfo] = fieldSpec = new FieldSpec(fieldInfo, SpecRules);
+                        _fieldSpecs[fieldInfo] = fieldSpec = new FieldSpec(fieldInfo, this, SpecRules);
                     }
                 }
                 //Console.WriteLine($"Unlocking for {fieldInfo.Name}");

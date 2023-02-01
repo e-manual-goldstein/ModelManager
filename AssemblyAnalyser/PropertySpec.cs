@@ -13,7 +13,7 @@ namespace AssemblyAnalyser
         private MethodInfo _getter;
         private MethodInfo _setter;
 
-        public PropertySpec(PropertyInfo propertyInfo, List<IRule> rules) : base(rules)
+        public PropertySpec(PropertyInfo propertyInfo, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
         {
             _propertyInfo = propertyInfo;
             _getter = propertyInfo.GetGetMethod();
@@ -30,12 +30,12 @@ namespace AssemblyAnalyser
             return new[] { _getter, _setter };
         }
 
-        protected override void BeginProcessing(Analyser analyser, ISpecManager specManager)
+        protected override void BuildSpec()
         {
-            Getter = specManager.LoadMethodSpec(_getter);
-            Setter = specManager.LoadMethodSpec(_setter);
-            PropertyType = specManager.TryLoadTypeSpec(() => _propertyInfo.PropertyType);
-            DeclaringType = specManager.TryLoadTypeSpec(() => _propertyInfo.DeclaringType);            
+            Getter = _specManager.LoadMethodSpec(_getter);
+            Setter = _specManager.LoadMethodSpec(_setter);
+            PropertyType = _specManager.TryLoadTypeSpec(() => _propertyInfo.PropertyType);
+            DeclaringType = _specManager.TryLoadTypeSpec(() => _propertyInfo.DeclaringType);            
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)

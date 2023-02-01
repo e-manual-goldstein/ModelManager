@@ -18,17 +18,18 @@ namespace AssemblyAnalyser
         protected ISpecManager _specManager;
         public ILogger Logger { get; internal set; }
 
-        public AbstractSpec(List<IRule> rules) 
+        public AbstractSpec(List<IRule> rules, ISpecManager specManager) 
         {
+            _specManager = specManager;
             InclusionRules = rules.OfType<InclusionRule>().ToList();
             ExclusionRules = rules.OfType<ExclusionRule>().ToList();
         }
 
-        public void Process(Analyser analyser, ISpecManager specManager)
+        public void Process()
         {
             if (ShouldProcess())
             {
-                BeginProcessingBase(analyser, specManager);
+                Build();
             }
         }
 
@@ -55,12 +56,12 @@ namespace AssemblyAnalyser
 
         public bool Analysed => _analysed;
 
-        protected abstract void BeginProcessing(Analyser analyser, ISpecManager specManager);
+        protected abstract void BuildSpec();
 
-        protected void BeginProcessingBase(Analyser analyser, ISpecManager specManager)
+        protected void Build()
         {
             _processing = true;
-            BeginProcessing(analyser, specManager);
+            BuildSpec();
             _processed = true;
         }
 

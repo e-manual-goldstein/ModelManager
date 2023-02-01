@@ -14,7 +14,7 @@ namespace AssemblyAnalyser
 
         private static AssemblySpec CreateNullSpec()
         {
-            var spec = new AssemblySpec("null", new List<IRule>());
+            var spec = new AssemblySpec("null", null, new List<IRule>());
             spec.Exclude("Null Spec");
             spec.SkipProcessing("Null Spec");
             return spec;
@@ -22,17 +22,17 @@ namespace AssemblyAnalyser
 
         Assembly _assembly;
 
-        public AssemblySpec(Assembly assembly, ISpecManager specManager, List<IRule> rules) : this(assembly.FullName, rules)
+        public AssemblySpec(Assembly assembly, ISpecManager specManager, List<IRule> rules) : this(assembly.FullName, specManager, rules)
         {
             _assembly = assembly;
-            _specManager = specManager;
             _representedAssemblyNames.Add(_assembly.GetName());
             AssemblyShortName = _assembly.GetName().Name;
             FilePath = _assembly.Location;
         }
 
-        public AssemblySpec(string fullName, List<IRule> rules) : base(rules)
+        public AssemblySpec(string fullName, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
         {
+            _specManager = specManager;
             AssemblyFullName = fullName;            
         }
 
@@ -61,13 +61,13 @@ namespace AssemblyAnalyser
             return _referencedAssemblies ??= _specManager.LoadAssemblySpecs(_assembly.GetReferencedAssemblies().ToArray());
         }
 
-        protected override void BeginProcessing(Analyser analyser, ISpecManager specManager)
+        protected override void BuildSpec()
         {
             if (_assembly != null)
             {
-                _referencedAssemblies = specManager.LoadAssemblySpecs(_assembly.GetReferencedAssemblies().ToArray());
-                _typeSpecs = specManager.TryLoadTypeSpecs(() => _assembly.GetTypes());
-                Array.ForEach(_typeSpecs, spec => spec.Process(analyser, specManager));
+                _referencedAssemblies = _specManager.LoadAssemblySpecs(_assembly.GetReferencedAssemblies().ToArray());
+                _typeSpecs = _specManager.TryLoadTypeSpecs(() => _assembly.GetTypes());
+                Array.ForEach(_typeSpecs, spec => spec.Process());
             }
             else
             {

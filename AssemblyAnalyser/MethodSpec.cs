@@ -11,7 +11,7 @@ namespace AssemblyAnalyser
     {
         MethodInfo _methodInfo;
 
-        public MethodSpec(MethodInfo methodInfo, List<IRule> rules) : base(rules)
+        public MethodSpec(MethodInfo methodInfo, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
         {
             _methodInfo = methodInfo;
         }
@@ -20,11 +20,11 @@ namespace AssemblyAnalyser
         public TypeSpec DeclaringType { get; private set; }
         public ParameterSpec[] ParameterTypes { get; private set; }
 
-        protected override void BeginProcessing(Analyser analyser, ISpecManager specManager)
+        protected override void BuildSpec()
         {
-            ReturnType = specManager.TryLoadTypeSpec(() => _methodInfo.ReturnType);
-            DeclaringType = specManager.TryLoadTypeSpec(() => _methodInfo.DeclaringType);
-            ParameterTypes = specManager.TryLoadParameterSpecs(() => _methodInfo.GetParameters());            
+            ReturnType = _specManager.TryLoadTypeSpec(() => _methodInfo.ReturnType);
+            DeclaringType = _specManager.TryLoadTypeSpec(() => _methodInfo.DeclaringType);
+            ParameterTypes = _specManager.TryLoadParameterSpecs(() => _methodInfo.GetParameters());            
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)

@@ -12,7 +12,7 @@ namespace AssemblyAnalyser
     {
         private FieldInfo _fieldInfo;
 
-        public FieldSpec(FieldInfo fieldInfo, List<IRule> rules) : base(rules)
+        public FieldSpec(FieldInfo fieldInfo, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
         {
             _fieldInfo = fieldInfo;
         }
@@ -20,9 +20,9 @@ namespace AssemblyAnalyser
         public TypeSpec FieldType { get; private set; }
 
 
-        protected override void BeginProcessing(Analyser analyser, ISpecManager specManager)
+        protected override void BuildSpec()
         {
-            FieldType = specManager.TryLoadTypeSpec(() => _fieldInfo.FieldType);            
+            FieldType = _specManager.TryLoadTypeSpec(() => _fieldInfo.FieldType);            
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)

@@ -15,15 +15,15 @@ namespace AssemblyAnalyser
         public MethodSpec Method { get; set; }
 
 
-        public ParameterSpec(ParameterInfo parameterInfo, List<IRule> rules) : base(rules)
+        public ParameterSpec(ParameterInfo parameterInfo, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
         {
             _parameterInfo = parameterInfo;
         }
 
-        protected override void BeginProcessing(Analyser analyser, ISpecManager specManager)
+        protected override void BuildSpec()
         {
-            ParameterType = specManager.TryLoadTypeSpec(() => _parameterInfo.ParameterType);
-            Method = specManager.LoadMethodSpec(_parameterInfo.Member as MethodInfo);            
+            ParameterType = _specManager.TryLoadTypeSpec(() => _parameterInfo.ParameterType);
+            Method = _specManager.LoadMethodSpec(_parameterInfo.Member as MethodInfo);            
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)

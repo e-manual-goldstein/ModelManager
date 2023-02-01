@@ -15,7 +15,7 @@ namespace AssemblyAnalyser
 
         private static TypeSpec CreateNullSpec()
         {
-            var spec = new TypeSpec("null", new List<IRule>());
+            var spec = new TypeSpec("null", null, new List<IRule>());
             spec.Exclude("Null Spec");
             spec.SkipProcessing("Null Spec");
             spec.IsNullSpec = true;
@@ -28,30 +28,30 @@ namespace AssemblyAnalyser
         private string _typeName;
         bool _isInterface;
 
-        public TypeSpec(Type type, List<IRule> rules) : this(type.FullName, rules)
+        public TypeSpec(Type type, ISpecManager specManager, List<IRule> rules) : this(type.FullName, specManager, rules)
         {
             _type = type;
             _isInterface = _type.IsInterface;
         }
 
-        public TypeSpec(string typeName, List<IRule> rules) : base(rules)
+        public TypeSpec(string typeName, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
         {
             _typeName = typeName;
         }
 
-        protected override void BeginProcessing(Analyser analyser, ISpecManager specManager)
+        protected override void BuildSpec()
         {
-            Assembly = specManager.LoadAssemblySpec(_type.Assembly);
-            Interfaces = CreateInterfaceSpecs(specManager);
-            BaseSpec = CreateBaseSpec(specManager);
-            Properties = CreatePropertySpecs(specManager);
-            Methods = CreateMethodSpecs(specManager);
-            Fields = CreateFieldSpecs(specManager);
+            Assembly = _specManager.LoadAssemblySpec(_type.Assembly);
+            Interfaces = CreateInterfaceSpecs();
+            BaseSpec = CreateBaseSpec();
+            Properties = CreatePropertySpecs();
+            Methods = CreateMethodSpecs();
+            Fields = CreateFieldSpecs();
         }
 
-        private TypeSpec[] CreateInterfaceSpecs(ITypeSpecManager specManager)
+        private TypeSpec[] CreateInterfaceSpecs()
         {
-            var specs = specManager.TryLoadTypeSpecs(() => _type.GetInterfaces());
+            var specs = _specManager.TryLoadTypeSpecs(() => _type.GetInterfaces());
             foreach (var interfaceSpec in specs.Where(s => !s.IsNullSpec))
             {
                 interfaceSpec.AddImplementation(this); 
@@ -59,9 +59,9 @@ namespace AssemblyAnalyser
             return specs;
         }
 
-        private TypeSpec CreateBaseSpec(ITypeSpecManager specManager)
+        private TypeSpec CreateBaseSpec()
         {
-            var typeSpec = specManager.TryLoadTypeSpec(() => _type.BaseType);
+            var typeSpec = _specManager.TryLoadTypeSpec(() => _type.BaseType);
             if (typeSpec != null && typeSpec != NullSpec)
             {
                 typeSpec.AddSubType(this);
@@ -69,22 +69,22 @@ namespace AssemblyAnalyser
             return typeSpec;
         }
 
-        private PropertySpec[] CreatePropertySpecs(IPropertySpecManager specManager)
+        private PropertySpec[] CreatePropertySpecs()
         {
-            var specs = specManager.TryLoadPropertySpecs(() => _type.GetProperties());
+            var specs = _specManager.TryLoadPropertySpecs(() => _type.GetProperties());
             return specs;
         }
 
-        private MethodSpec[] CreateMethodSpecs(IMethodSpecManager specManager)
+        private MethodSpec[] CreateMethodSpecs()
         {
-            var specs = specManager.TryLoadMethodSpecs(() => 
+            var specs = _specManager.TryLoadMethodSpecs(() => 
                 _type.GetMethods().Except(Properties.SelectMany(p => p.InnerMethods())).ToArray());
             return specs;
         }
 
-        private FieldSpec[] CreateFieldSpecs(IFieldSpecManager specManager)
+        private FieldSpec[] CreateFieldSpecs()
         {
-            var specs = specManager.TryLoadFieldSpecs(() => _type.GetFields());
+            var specs = _specManager.TryLoadFieldSpecs(() => _type.GetFields());
             return specs;
         }
 
