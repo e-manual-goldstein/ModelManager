@@ -207,11 +207,11 @@ namespace ModelManager.Core
 
         private List<AbstractServiceTab> tabInstances(List<Type> tabTypes)
         {
-            var loggerProvider = _serviceProvider.GetService<ILoggerProvider>();
             var services = tabTypes.Select(t => 
             {
                 var instance = Activator.CreateInstance(t) as AbstractServiceTab;
-                instance.LoggerProvider = loggerProvider;
+                instance.LoggerProvider = _serviceProvider.GetService<ILoggerProvider>();
+                instance.ServiceProvider = _serviceProvider;
                 return instance;
             }).ToList();
             return services;

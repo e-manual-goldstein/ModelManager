@@ -22,9 +22,10 @@ namespace AssemblyAnalyser
 
         Assembly _assembly;
 
-        public AssemblySpec(Assembly assembly, List<IRule> rules) : this(assembly.FullName, rules)
+        public AssemblySpec(Assembly assembly, ISpecManager specManager, List<IRule> rules) : this(assembly.FullName, rules)
         {
             _assembly = assembly;
+            _specManager = specManager;
             _representedAssemblyNames.Add(_assembly.GetName());
             AssemblyShortName = _assembly.GetName().Name;
             FilePath = _assembly.Location;
@@ -55,14 +56,18 @@ namespace AssemblyAnalyser
         AssemblySpec[] _referencedAssemblies;
         public AssemblySpec[] ReferencedAssemblies => _referencedAssemblies;
 
+        public AssemblySpec[] LoadReferencedAssemblies()
+        {
+            return _referencedAssemblies ??= _specManager.LoadAssemblySpecs(_assembly.GetReferencedAssemblies().ToArray());
+        }
 
-        protected override void BeginProcessing(Analyser analyser)
+        protected override void BeginProcessing(Analyser analyser, ISpecManager specManager)
         {
             if (_assembly != null)
             {
-                _referencedAssemblies = analyser.LoadAssemblySpecs(_assembly.GetReferencedAssemblies().ToArray());
-                _typeSpecs = LoadTypeSpecs(analyser);
-                Array.ForEach(_typeSpecs, spec => spec.Process(analyser));
+                _referencedAssemblies = specManager.LoadAssemblySpecs(_assembly.GetReferencedAssemblies().ToArray());
+                _typeSpecs = specManager.TryLoadTypeSpecs(() => _assembly.GetTypes());
+                Array.ForEach(_typeSpecs, spec => spec.Process(analyser, specManager));
             }
             else
             {
@@ -96,23 +101,23 @@ namespace AssemblyAnalyser
             });
         }
 
-        private TypeSpec[] LoadTypeSpecs(Analyser analyser)
-        {
-            Type[] types = Array.Empty<Type>();
-            try
-            {
-                if (analyser.CanAnalyse(_assembly))
-                {
-                    types = _assembly.GetTypes();
-                }
-            }            
-            catch (ReflectionTypeLoadException ex)
-            {
-                Logger.Log(LogLevel.Warning, ex.Message, ex.LoaderExceptions);
-                types = ex.Types.Where(t => t != null).ToArray();
-            }            
-            return types.Select(t => analyser.TryLoadTypeSpec(() => t)).ToArray();
-        }
+        //private TypeSpec[] LoadTypeSpecs(Analyser analyser)
+        //{
+        //    Type[] types = Array.Empty<Type>();
+        //    try
+        //    {
+        //        if (analyser.CanAnalyse(_assembly))
+        //        {
+        //            types = _assembly.GetTypes();
+        //        }
+        //    }            
+        //    catch (ReflectionTypeLoadException ex)
+        //    {
+        //        Logger.Log(LogLevel.Warning, ex.Message, ex.LoaderExceptions);
+        //        types = ex.Types.Where(t => t != null).ToArray();
+        //    }            
+        //    return types.Select(t => analyser.TryLoadTypeSpec(() => t)).ToArray();
+        //}
 
         public override string ToString()
         {

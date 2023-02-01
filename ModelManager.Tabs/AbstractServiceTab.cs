@@ -15,7 +15,8 @@ namespace ModelManager.Core
     public abstract class AbstractServiceTab : IServiceTab, IOutputSource
     {
         public abstract string Title { get; }
-        public ILoggerProvider LoggerProvider { protected get; set; }
+        public ILoggerProvider LoggerProvider { get; internal set; }
+        public IServiceProvider ServiceProvider { get; internal set; }
         
         private TextBox _console;
         private TabControl _tabControl;

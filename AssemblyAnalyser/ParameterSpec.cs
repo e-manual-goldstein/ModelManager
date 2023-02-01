@@ -20,9 +20,9 @@ namespace AssemblyAnalyser
             _parameterInfo = parameterInfo;
         }
 
-        protected override void BeginProcessing(Analyser analyser)
+        protected override void BeginProcessing(Analyser analyser, ISpecManager specManager)
         {
-            ParameterType = analyser.TryLoadTypeSpec(() => _parameterInfo.ParameterType);
+            ParameterType = specManager.TryLoadTypeSpec(() => _parameterInfo.ParameterType);
             Method = analyser.LoadMethodSpec(_parameterInfo.Member as MethodInfo);            
         }
 

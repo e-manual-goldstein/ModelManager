@@ -20,10 +20,10 @@ namespace AssemblyAnalyser
         public TypeSpec DeclaringType { get; private set; }
         public ParameterSpec[] ParameterTypes { get; private set; }
 
-        protected override void BeginProcessing(Analyser analyser)
+        protected override void BeginProcessing(Analyser analyser, ISpecManager specManager)
         {
-            ReturnType = analyser.TryLoadTypeSpec(() => _methodInfo.ReturnType);
-            DeclaringType = analyser.TryLoadTypeSpec(() => _methodInfo.DeclaringType);
+            ReturnType = specManager.TryLoadTypeSpec(() => _methodInfo.ReturnType);
+            DeclaringType = specManager.TryLoadTypeSpec(() => _methodInfo.DeclaringType);
             ParameterTypes = analyser.TryLoadParameterSpecs(() => _methodInfo.GetParameters());            
         }
 

@@ -20,9 +20,9 @@ namespace AssemblyAnalyser
         public TypeSpec FieldType { get; private set; }
 
 
-        protected override void BeginProcessing(Analyser analyser)
+        protected override void BeginProcessing(Analyser analyser, ISpecManager specManager)
         {
-            FieldType = analyser.TryLoadTypeSpec(() => _fieldInfo.FieldType);            
+            FieldType = specManager.TryLoadTypeSpec(() => _fieldInfo.FieldType);            
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)

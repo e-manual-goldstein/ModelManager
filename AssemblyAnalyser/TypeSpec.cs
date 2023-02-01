@@ -39,19 +39,19 @@ namespace AssemblyAnalyser
             _typeName = typeName;
         }
 
-        protected override void BeginProcessing(Analyser analyser)
+        protected override void BeginProcessing(Analyser analyser, ISpecManager specManager)
         {
-            Assembly = analyser.LoadAssemblySpec(_type.Assembly);
-            Interfaces = CreateInterfaceSpecs(analyser);
-            BaseSpec = CreateBaseSpec(analyser);
+            Assembly = specManager.LoadAssemblySpec(_type.Assembly);
+            Interfaces = CreateInterfaceSpecs(specManager);
+            BaseSpec = CreateBaseSpec(specManager);
             Properties = CreatePropertySpecs(analyser);
             Methods = CreateMethodSpecs(analyser);
             Fields = CreateFieldSpecs(analyser);
         }
 
-        private TypeSpec[] CreateInterfaceSpecs(Analyser analyser)
+        private TypeSpec[] CreateInterfaceSpecs(ITypeSpecManager specManager)
         {
-            var specs = analyser.TryLoadTypeSpecs(() => _type.GetInterfaces());
+            var specs = specManager.TryLoadTypeSpecs(() => _type.GetInterfaces());
             foreach (var interfaceSpec in specs.Where(s => !s.IsNullSpec))
             {
                 interfaceSpec.AddImplementation(this); 
@@ -59,9 +59,9 @@ namespace AssemblyAnalyser
             return specs;
         }
 
-        private TypeSpec CreateBaseSpec(Analyser analyser)
+        private TypeSpec CreateBaseSpec(ITypeSpecManager specManager)
         {
-            var typeSpec = analyser.TryLoadTypeSpec(() => _type.BaseType);
+            var typeSpec = specManager.TryLoadTypeSpec(() => _type.BaseType);
             if (typeSpec != null && typeSpec != NullSpec)
             {
                 typeSpec.AddSubType(this);

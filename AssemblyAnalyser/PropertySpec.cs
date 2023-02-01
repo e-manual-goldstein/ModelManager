@@ -30,12 +30,12 @@ namespace AssemblyAnalyser
             return new[] { _getter, _setter };
         }
 
-        protected override void BeginProcessing(Analyser analyser)
+        protected override void BeginProcessing(Analyser analyser, ISpecManager specManager)
         {
             Getter = analyser.LoadMethodSpec(_getter);
             Setter = analyser.LoadMethodSpec(_setter);
-            PropertyType = analyser.TryLoadTypeSpec(() => _propertyInfo.PropertyType);
-            DeclaringType = analyser.TryLoadTypeSpec(() => _propertyInfo.DeclaringType);            
+            PropertyType = specManager.TryLoadTypeSpec(() => _propertyInfo.PropertyType);
+            DeclaringType = specManager.TryLoadTypeSpec(() => _propertyInfo.DeclaringType);            
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)
