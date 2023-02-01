@@ -270,37 +270,37 @@ namespace ModelManager.Core
 				Clipboard.SetText(_clipboardReady);
 		}
 
-		private string clipboardReadyList(ListOutput outputContent)
-		{
-			var list = new StringBuilder();
-			foreach (var item in outputContent.Content)
-			{
-				list.Append(item + "\n");
-			}
-			return list.ToString().TrimEnd();
-		}
+		//private string clipboardReadyList(ListOutput outputContent)
+		//{
+		//	var list = new StringBuilder();
+		//	foreach (var item in outputContent.Content)
+		//	{
+		//		list.Append(item + "\n");
+		//	}
+		//	return list.ToString().TrimEnd();
+		//}
 
-		private string clipboardReadyTable(TableOutput outputContent)
-		{
-			var table = new StringBuilder();
-			var tableContent = outputContent.Content;
-			var tableLength = tableContent.Values.First().Count();
-			table.Append(tableContent.Keys.ElementAt(0));
-			for (int i = 1; i < tableContent.Count; i++)
-			{
-				table.Append("\t" + tableContent.Keys.ElementAt(i));
-			}
-			for (int i = 0; i < tableLength; i++)
-			{
-				table.Append("\n");
-				table.Append(tableContent.ElementAt(0).Value.ElementAt(i));
-				for (int j = 1; j < tableContent.Count; j++)
-				{
-					table.Append("\t" + tableContent.ElementAt(j).Value.ElementAt(i));
-				}
-			}
-			return table.ToString();
-		}
+		//private string clipboardReadyTable(TableOutput outputContent)
+		//{
+		//	var table = new StringBuilder();
+		//	var tableContent = outputContent.Content;
+		//	var tableLength = tableContent.Values.First().Count();
+		//	table.Append(tableContent.Keys.ElementAt(0));
+		//	for (int i = 1; i < tableContent.Count; i++)
+		//	{
+		//		table.Append("\t" + tableContent.Keys.ElementAt(i));
+		//	}
+		//	for (int i = 0; i < tableLength; i++)
+		//	{
+		//		table.Append("\n");
+		//		table.Append(tableContent.ElementAt(0).Value.ElementAt(i));
+		//		for (int j = 1; j < tableContent.Count; j++)
+		//		{
+		//			table.Append("\t" + tableContent.ElementAt(j).Value.ElementAt(i));
+		//		}
+		//	}
+		//	return table.ToString();
+		//}
 
 		#endregion
 
@@ -526,54 +526,54 @@ namespace ModelManager.Core
         #region Output Processing
 
 
-        private void SetControlLayout<T>(Control outputControl, AbstractOutput<T> output)
-        {
-			double contentButtonsHeight = 0;
-            var tabItemControlWidth = double.IsNaN(_tabItemControl.Width) ? TAB_ITEM_WIDTH : _tabItemControl.Width;
-            outputControl.Width = _tabControl.Width - tabItemControlWidth - (CANVAS_MARGIN * 2) - 10;
-            if (output.ContentActions.Any())
-			{
-				contentButtonsHeight = AddContentActionButtons(output);
-			}
-			outputControl.MaxHeight = _tabControl.Height - 100 - contentButtonsHeight;
-            if (outputControl is TextBoxBase textBox)
-			{
-				textBox.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
-                textBox.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-            }
-        }
+		//     private void SetControlLayout<T>(Control outputControl, AbstractOutput<T> output)
+   //     {
+			//double contentButtonsHeight = 0;
+   //         var tabItemControlWidth = double.IsNaN(_tabItemControl.Width) ? TAB_ITEM_WIDTH : _tabItemControl.Width;
+   //         outputControl.Width = _tabControl.Width - tabItemControlWidth - (CANVAS_MARGIN * 2) - 10;
+   //         if (output.ContentActions.Any())
+			//{
+			//	contentButtonsHeight = AddContentActionButtons(output);
+			//}
+			//outputControl.MaxHeight = _tabControl.Height - 100 - contentButtonsHeight;
+   //         if (outputControl is TextBoxBase textBox)
+			//{
+			//	textBox.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
+   //             textBox.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+   //         }
+   //     }
 
-		private double AddContentActionButtons<T>(AbstractOutput<T> output)
-		{
-			double height = 0;
-			foreach (var (key, action) in output.ContentActions)
-			{
-				var button = new Button() 
-				{ 
-					Content = key, 
-					Height = BUTTON_HEIGHT,
-					Width = BUTTON_WIDTH
-				};
-				button.Click += (sender, e) =>
-				{                    
-                    var tab = _tabManager.InitialiseOutputTab(key);
-                    try
-                    {
-                        tab.DisplayExecutingMessage();
-                        var obj = action(output.Content);
-                        _tabManager.DisplayOutput(tab, obj, null, key);
-                    }
-                    catch (Exception ex)
-                    {
-                        _tabManager.DisplayError(ex, null, tab);
-                    }
-				};
-				Canvas.SetBottom(button, 25 + height);
-				_tabCanvas.Children.Add(button);
-				height += BUTTON_HEIGHT;
-            }
-			return 25 + height;
-		}
+		//private double AddContentActionButtons<T>(AbstractOutput<T> output)
+		//{
+		//	double height = 0;
+		//	foreach (var (key, action) in output.ContentActions)
+		//	{
+		//		var button = new Button() 
+		//		{ 
+		//			Content = key, 
+		//			Height = BUTTON_HEIGHT,
+		//			Width = BUTTON_WIDTH
+		//		};
+		//		button.Click += (sender, e) =>
+		//		{                    
+  //                  var tab = _tabManager.InitialiseOutputTab(key);
+  //                  try
+  //                  {
+  //                      tab.DisplayExecutingMessage();
+  //                      var obj = action(output.Content);
+  //                      _tabManager.DisplayOutput(tab, obj, null, key);
+  //                  }
+  //                  catch (Exception ex)
+  //                  {
+  //                      _tabManager.DisplayError(ex, null, tab);
+  //                  }
+		//		};
+		//		Canvas.SetBottom(button, 25 + height);
+		//		_tabCanvas.Children.Add(button);
+		//		height += BUTTON_HEIGHT;
+  //          }
+		//	return 25 + height;
+		//}
 
  		private class Column : IDisposable
 		{

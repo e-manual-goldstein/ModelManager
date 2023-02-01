@@ -23,7 +23,7 @@ namespace ModelManager.Tabs.Outputs
 
 		protected string _clipboardReady;
 
-        public T Content { get; private set; }
+        protected T Content { get; private set; }
 
         public abstract OutputType OutputType { get; }
 
@@ -46,6 +46,8 @@ namespace ModelManager.Tabs.Outputs
             Control.MaxHeight = tabHeight - contentButtonsHeight;
         }
 
+        protected abstract T GetActionableContent();
+
         private double AddContentActionButtons()
         {
             double height = 25;
@@ -60,7 +62,7 @@ namespace ModelManager.Tabs.Outputs
                                 
                 button.Click += (sender, eventArgs) =>
                 {
-                    ActionClicked(() => ContentActions[key](Content), key);
+                    ActionClicked(() => ContentActions[key](GetActionableContent()), key);
                 };
                 Canvas.SetBottom(button, height);
                 ActionButtons.Add(button);

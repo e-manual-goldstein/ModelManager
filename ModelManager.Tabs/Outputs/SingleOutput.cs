@@ -11,24 +11,36 @@ namespace ModelManager.Tabs.Outputs
     {
         public SingleOutput(string content) : base(content)
         {
-            
+            _textBox = new TextBox()
+            {
+                TextWrapping = TextWrapping.WrapWithOverflow,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            };
+            Control = _textBox;
         }
+
+        TextBox _textBox;
 
         public override OutputType OutputType => OutputType.Single;
 
 
         public override Control GetOutput(double controlWidth, double tabHeight, out bool success)
         {
-            var textBox = new TextBox();
-            textBox.TextWrapping = TextWrapping.WrapWithOverflow;
-            textBox.AppendText(Content);
-            textBox.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
-            textBox.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+            _textBox.AppendText(Content);
             _clipboardReady = Content;
-            success = true;
-            Control = textBox;
             SetControlLayout(controlWidth, tabHeight);
-            return textBox;
+            success = true;
+            return _textBox;
+        }
+
+        protected override string GetActionableContent()
+        {
+            if (!string.IsNullOrEmpty(_textBox.SelectedText))
+            {
+                return _textBox.SelectedText;
+            }
+            return Content;
         }
     }
 }

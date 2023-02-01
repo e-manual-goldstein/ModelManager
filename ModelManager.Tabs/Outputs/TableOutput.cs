@@ -98,6 +98,11 @@ namespace ModelManager.Tabs.Outputs
             return listView;
         }
 
+        protected override IDictionary<string, IEnumerable<string>> GetActionableContent()
+        {
+            return Content;
+        }
+
         private string clipboardReadyTable()
         {
             var table = new StringBuilder();

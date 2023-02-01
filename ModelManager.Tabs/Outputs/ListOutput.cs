@@ -1,6 +1,8 @@
 ﻿using ModelManager.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -32,6 +34,23 @@ namespace ModelManager.Tabs.Outputs
             Control = listBox;
             SetControlLayout(controlWidth, tabHeight);
             return listBox;
+        }
+
+        protected override IEnumerable<string> GetActionableContent()
+        {
+            var actionableItems = new List<string>();
+            if (Control is ListBox listBox)
+            {
+                foreach (string item in listBox.SelectedItems)
+                {
+                    actionableItems.Add(item);
+                }
+                if (!actionableItems.Any())
+                {
+                    actionableItems.AddRange(Content);
+                }
+            }
+            return actionableItems;
         }
     }
 }
