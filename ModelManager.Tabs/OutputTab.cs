@@ -1,4 +1,5 @@
-﻿using ModelManager.Tabs.Outputs;
+﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using ModelManager.Tabs.Outputs;
 using ModelManager.Utils;
 using System;
 using System.Collections;
@@ -128,38 +129,22 @@ namespace ModelManager.Core
             }
             addOutputHeader(callingAction, extraInfo);
             addCopyOutputButton();
-            bool success = false;
-            _outputControl = typedOutput switch
-            {
-                SingleOutput single => outputAsSingle(single, out success),
-                ListOutput list => outputAsList(list, out success),
-                TableOutput table => outputAsTable(table, out success),
-                _ => new Control()
-            };
-			
-            Canvas.SetTop(_outputControl, 50);
-            Canvas.SetLeft(_outputControl, CANVAS_MARGIN);
-            if (success)
-            {
-                _tabCanvas.Children.Add(_outputControl);
-                _disposableElements.Add(_outputControl);
-            }
-            _executingTab = callingService;
-        }
-
-		public void DisplayOutput<T>(AbstractServiceTab callingService, string callingAction, T output, params string[] extraInfo)
-			where T : IOutput
-        {
-            addOutputHeader(callingAction, extraInfo);
-            addCopyOutputButton();
-            bool success = false;
-            _outputControl = output switch
+			//_outputControl = typedOutput switch
+			//{
+			//    SingleOutput single => single.GetOutput(out success),
+			//    ListOutput list => list.GetOutput(out success),
+			//    TableOutput table => table.GetOutput(out success),
+			//    _ => new Control()
+			//};
+			var tabItemControlWidth = double.IsNaN(_tabItemControl.Width) ? TAB_ITEM_WIDTH : _tabItemControl.Width;
+			var controlWidth = _tabControl.Width - tabItemControlWidth - (CANVAS_MARGIN * 2) - 10;
+            _outputControl = typedOutput.GetOutput(controlWidth, _tabControl.Height - 100, out bool success);
+			typedOutput.ActionClicked += OutputActionClicked;
+			foreach (Button button in typedOutput.ActionButtons)
 			{
-				SingleOutput single => outputAsSingle(single, out success),
-				ListOutput list => outputAsList(list, out success),
-				TableOutput table => outputAsTable(table, out success),
-				_ => new Control()
-			};            
+				_tabCanvas.Children.Add(button);
+			}
+			//SetControlLayout(_outputControl, typedOutput);
             Canvas.SetTop(_outputControl, 50);
             Canvas.SetLeft(_outputControl, CANVAS_MARGIN);
             if (success)
@@ -170,8 +155,44 @@ namespace ModelManager.Core
             _executingTab = callingService;
         }
 
+		private void OutputActionClicked(Func<object> func, string actionName)
+		{
+            var tab = _tabManager.InitialiseOutputTab(actionName);
+            try
+            {
+                tab.DisplayExecutingMessage();
+				_tabManager.DisplayOutput(tab, func(), null, actionName);
+            }
+            catch (Exception ex)
+            {
+                _tabManager.DisplayError(ex, null, tab);
+            }
+		}
 
-        private void selectOutputTab(object sender, RoutedEventArgs e)
+		//public void DisplayOutput<T>(AbstractServiceTab callingService, string callingAction, T output, params string[] extraInfo)
+		//	where T : IOutput
+		//      {
+		//          addOutputHeader(callingAction, extraInfo);
+		//          addCopyOutputButton();
+		//          bool success = false;
+		//          _outputControl = output switch
+		//	{
+		//		SingleOutput single => outputAsSingle(single, out success),
+		//		ListOutput list => outputAsList(list, out success),
+		//		TableOutput table => outputAsTable(table, out success),
+		//		_ => new Control()
+		//	};            
+		//          Canvas.SetTop(_outputControl, 50);
+		//          Canvas.SetLeft(_outputControl, CANVAS_MARGIN);
+		//          if (success)
+		//          {
+		//              _tabCanvas.Children.Add(_outputControl);
+		//              _disposableElements.Add(_outputControl);
+		//          }
+		//          _executingTab = callingService;
+		//      }
+
+		private void selectOutputTab(object sender, RoutedEventArgs e)
 		{
 			_tabManager.SelectOutputTab(this);
 		}
@@ -554,104 +575,7 @@ namespace ModelManager.Core
 			return 25 + height;
 		}
 
-        private TextBox outputAsSingle(SingleOutput output, out bool success)
-        {
-            var textBox = new TextBox();
-            textBox.TextWrapping = TextWrapping.WrapWithOverflow;
-            textBox.AppendText(output.Content);
-            _clipboardReady = output.Content;
-            success = true;
-            SetControlLayout(textBox, output);
-            return textBox;
-        }
-
-        private ListBox outputAsList(ListOutput output, out bool success)
-		{
-			var listBox = new ListBox() { SelectionMode = SelectionMode.Extended };
-			
-			var outputString = new StringBuilder();
-		
-			foreach (var line in output.Content)
-			{
-				outputString.AppendLine(line);
-				listBox.Items.Add(line);
-			}
-			_clipboardReady = outputString.ToString();
-			success = true;
-            SetControlLayout(listBox, output);
-            return listBox;
-		}
-
-		private Control outputAsTable(TableOutput output, out bool success)
-		{
-			success = false;
-			var listView = new ListView();
-			GridView gridView = new GridView();
-			listView.View = gridView;
-			
-			List<dynamic> myItems = new List<dynamic>();
-			dynamic myItem;
-			IDictionary<string, object> myItemValues;
-
-			var columns = output.Content;
-			var rowCount = columns.First().Value.Count();
-			var columnNames = columns.Keys;
-
-			// Populate the objects with dynamic columns
-			for (var i = 0; i < rowCount; i++)
-			{
-				myItem = new System.Dynamic.ExpandoObject();
-
-				foreach (string columnName in columnNames)
-				{
-					myItemValues = (IDictionary<string, object>)myItem;
-					myItemValues[columnName] = columns[columnName].ElementAt(i);
-				}
-
-				myItems.Add(myItem);
-			}
-			if (!myItems.Any())
-				return outputAsSingle(new SingleOutput("0 Rows Returned"), out success);
-			// Assuming that all objects have same columns - using first item to determine the columns
-			List<Column> gridColumns = new List<Column>();
-
-			myItemValues = (IDictionary<string, object>)myItems[0];
-
-			// Key is the column, value is the value
-			foreach (var pair in myItemValues)
-			{
-				Column column = new Column();
-
-				column.Title = pair.Key;
-				column.SourceField = pair.Key;
-
-				gridColumns.Add(column);
-			}
-
-			// Add the column definitions to the list view
-			gridView.Columns.Clear();
-
-			foreach (var column in gridColumns)
-			{
-				var binding = new Binding(column.SourceField);
-
-				gridView.Columns.Add(new GridViewColumn { Header = column.Title, DisplayMemberBinding = binding });
-
-				column.Dispose();
-			}
-
-			// Add all items to the list
-			foreach (dynamic item in myItems)
-			{
-				listView.Items.Add(item);
-			}
-			_clipboardReady = clipboardReadyTable(output);
-			success = true;
-            SetControlLayout(listView, output); 
-			return listView;
-		}
-
-		private class Column : IDisposable
+ 		private class Column : IDisposable
 		{
 			public string Title { get; set; }
 			public string SourceField { get; set; }
