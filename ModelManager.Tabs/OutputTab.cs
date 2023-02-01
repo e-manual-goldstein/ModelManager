@@ -28,7 +28,7 @@ namespace ModelManager.Core
 		private Canvas _tabCanvas;
 
 		private Control _outputControl;
-		private string _outputContent;
+		private string _clipboardReady;
 
 		private const double CANVAS_MARGIN = 15;
 		private const double TAB_ITEM_WIDTH = 100;
@@ -245,8 +245,8 @@ namespace ModelManager.Core
 
 		private void copyOutput(object sender, RoutedEventArgs e)
 		{
-			if (_outputContent != null)
-				Clipboard.SetText(_outputContent);
+			if (_clipboardReady != null)
+				Clipboard.SetText(_clipboardReady);
 		}
 
 		private string clipboardReadyList(ListOutput outputContent)
@@ -559,26 +559,27 @@ namespace ModelManager.Core
             var textBox = new TextBox();
             textBox.TextWrapping = TextWrapping.WrapWithOverflow;
             textBox.AppendText(output.Content);
-            _outputContent = output.Content;
+            _clipboardReady = output.Content;
             success = true;
             SetControlLayout(textBox, output);
             return textBox;
         }
 
-        private TextBox outputAsList(ListOutput output, out bool success)
+        private ListBox outputAsList(ListOutput output, out bool success)
 		{
-			var textBox = new TextBox();
+			var listBox = new ListBox() { SelectionMode = SelectionMode.Extended };
+			
 			var outputString = new StringBuilder();
 		
 			foreach (var line in output.Content)
 			{
 				outputString.AppendLine(line);
+				listBox.Items.Add(line);
 			}
-			textBox.AppendText(outputString.ToString());
-			_outputContent = outputString.ToString();
+			_clipboardReady = outputString.ToString();
 			success = true;
-            SetControlLayout(textBox, output);
-            return textBox;
+            SetControlLayout(listBox, output);
+            return listBox;
 		}
 
 		private Control outputAsTable(TableOutput output, out bool success)
@@ -644,7 +645,7 @@ namespace ModelManager.Core
 			{
 				listView.Items.Add(item);
 			}
-			_outputContent = clipboardReadyTable(output);
+			_clipboardReady = clipboardReadyTable(output);
 			success = true;
             SetControlLayout(listView, output); 
 			return listView;
