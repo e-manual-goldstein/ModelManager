@@ -14,6 +14,7 @@ namespace AssemblyAnalyser
     public class SpecManager : ISpecManager
     {
         private MetadataLoadContext _metadataLoadContext;
+        private PathAssemblyResolver _pathResolver;
         Dictionary<string, string> _workingFiles;
         readonly ILogger _logger;
         readonly IExceptionManager _exceptionManager;
@@ -31,10 +32,32 @@ namespace AssemblyAnalyser
         public void SetWorkingDirectory(string workingDirectory)
         {
             _workingFiles = Directory.EnumerateFiles(workingDirectory, "*.dll").ToDictionary(d => Path.GetFileNameWithoutExtension(d), e => e);
+            _pathResolver = CreatePathResolver();
             _metadataLoadContext = CreateMetadataContext();
         }
 
-        
+        private MetadataLoadContext CreateMetadataContext()
+        {
+            return new MetadataLoadContext(_pathResolver);
+        }
+
+        private PathAssemblyResolver CreatePathResolver()
+        {
+            // Get the array of runtime assemblies.
+            string[] runtimeAssemblies = Directory.GetFiles(RuntimeEnvironment.GetRuntimeDirectory(), "*.dll");
+
+            // Create the list of assembly paths consisting of runtime assemblies and the inspected assembly.
+            var paths = new List<string>(runtimeAssemblies);
+            paths.AddRange(_workingFiles.Values);
+            paths.AddRange(Directory.GetFiles("C:\\WINDOWS\\assembly", "*.dll"));
+            var systemFolder = Environment.GetFolderPath(Environment.SpecialFolder.System);
+            var version = IntPtr.Size == 8 ? "64" : string.Empty;
+            var frameworkPaths = Directory.GetFiles(Path.Combine(systemFolder, $@"..\Microsoft.NET\Framework{version}\v2.0.50727\"), "*.dll");
+            paths.AddRange(frameworkPaths);
+            // Create PathAssemblyResolver that can resolve assemblies using the created list.
+            return new PathAssemblyResolver(paths);
+        }
+
         #region Assemblies
 
         public IReadOnlyDictionary<string, AssemblySpec> Assemblies => _assemblySpecs;
@@ -88,10 +111,40 @@ namespace AssemblyAnalyser
             {
                 if (assemblyName.ToString() != assemblySpec.AssemblyFullName)
                 {
-                    assemblySpec.AddRepresentedName(assemblyName);
+                    assemblySpec.AddRepresentedName(assemblyName.FullName);
                 }
             }
             return assemblySpec ?? AssemblySpec.NullSpec;
+        }
+
+        public AssemblySpec[] LoadReferencedAssemblies(string assemblyFullName)
+        {
+            var specs = new List<AssemblySpec>();
+            using (var loadContext = CreateMetadataContext())
+            {
+                var assembly = loadContext.LoadFromAssemblyName(assemblyFullName);
+                foreach (var assemblyName in assembly.GetReferencedAssemblies())
+                {
+                    try
+                    {
+                        var referencedAssembly = loadContext.LoadFromAssemblyName(assemblyName);
+                        _assemblySpecs[assemblyName.Name] = new AssemblySpec(referencedAssembly.FullName,
+                            referencedAssembly.GetName().Name,
+                            referencedAssembly.Location, this, SpecRules);
+                        specs.Add(_assemblySpecs[assemblyName.Name]);
+                    }
+                    catch (FileNotFoundException ex)
+                    {
+                        _exceptionManager.Handle(ex);
+                        _logger.LogWarning($"Unable to load assembly {assemblyName.Name}");
+                    }
+                    catch
+                    {
+                        _logger.LogWarning($"Unable to load assembly {assemblyName.Name}");
+                    }
+                }
+            }
+            return specs.ToArray();
         }
 
         private bool TryLoadAssembly(AssemblyName assemblyName, out Assembly assembly)
@@ -117,24 +170,6 @@ namespace AssemblyAnalyser
                 _logger.LogWarning($"Unable to load assembly {assemblyName}");
             }
             return false;
-        }
-
-        private MetadataLoadContext CreateMetadataContext()
-        {
-            // Get the array of runtime assemblies.
-            string[] runtimeAssemblies = Directory.GetFiles(RuntimeEnvironment.GetRuntimeDirectory(), "*.dll");
-
-            // Create the list of assembly paths consisting of runtime assemblies and the inspected assembly.
-            var paths = new List<string>(runtimeAssemblies);
-            paths.AddRange(_workingFiles.Values);
-            paths.AddRange(Directory.GetFiles("C:\\WINDOWS\\assembly", "*.dll"));
-            var systemFolder = Environment.GetFolderPath(Environment.SpecialFolder.System);
-            var version = IntPtr.Size == 8 ? "64" : string.Empty;
-            var frameworkPaths = Directory.GetFiles(Path.Combine(systemFolder, $@"..\Microsoft.NET\Framework{version}\v2.0.50727\"), "*.dll");
-            paths.AddRange(frameworkPaths);
-            // Create PathAssemblyResolver that can resolve assemblies using the created list.
-            var resolver = new PathAssemblyResolver(paths);
-            return new MetadataLoadContext(resolver);
         }
 
         public void LoadAssemblyFromPath(string assemblyPath, out Assembly assembly)
@@ -171,7 +206,8 @@ namespace AssemblyAnalyser
 
         private AssemblySpec CreateFullAssemblySpec(Assembly assembly)
         {
-            var spec = new AssemblySpec(assembly, this, SpecRules);
+            var spec = new AssemblySpec(assembly.FullName, assembly.GetName().Name, 
+                assembly.Location, this, SpecRules);
             spec.Logger = _logger;
             return spec;
         }
@@ -192,6 +228,16 @@ namespace AssemblyAnalyser
         public IReadOnlyDictionary<string, TypeSpec> Types => _typeSpecs;
 
         ConcurrentDictionary<string, TypeSpec> _typeSpecs = new ConcurrentDictionary<string, TypeSpec>();
+
+        public TypeSpec[] TryLoadTypesForAssembly(string assemblyFullName)
+        {
+            var specs = new List<TypeSpec>();
+            using (var loadContext = CreateMetadataContext())
+            {
+                var assembly = loadContext.LoadFromAssemblyName(assemblyFullName);
+                return TryLoadTypeSpecs(() => assembly.DefinedTypes.ToArray());
+            }
+        }
 
         private TypeSpec LoadTypeSpec(Type type)
         {
@@ -318,7 +364,7 @@ namespace AssemblyAnalyser
         #endregion
 
         #region Method Specs
-        
+
         public IReadOnlyDictionary<MethodInfo, MethodSpec> Methods => _methodSpecs;
 
         ConcurrentDictionary<MethodInfo, MethodSpec> _methodSpecs = new ConcurrentDictionary<MethodInfo, MethodSpec>();
@@ -568,7 +614,7 @@ namespace AssemblyAnalyser
         {
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
-        } 
+        }
         #endregion
 
     }

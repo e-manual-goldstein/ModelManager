@@ -1,9 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Reflection;
+
 using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
@@ -20,33 +18,34 @@ namespace AssemblyAnalyser
             return spec;
         }
 
-        Assembly _assembly;
+        //Assembly _assembly;
 
-        public AssemblySpec(Assembly assembly, ISpecManager specManager, List<IRule> rules) : this(assembly.FullName, specManager, rules)
+        public AssemblySpec(string assemblyFullName, string shortName, string filePath,
+            ISpecManager specManager, List<IRule> rules) : this(assemblyFullName, specManager, rules)
         {
-            _assembly = assembly;
-            _representedAssemblyNames.Add(_assembly.GetName());
-            AssemblyShortName = _assembly.GetName().Name;
-            FilePath = _assembly.Location;
+            //_assembly = assembly;
+            AssemblyShortName = shortName;
+            FilePath = filePath;
         }
 
-        public AssemblySpec(string fullName, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        public AssemblySpec(string assemblyFullName, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
         {
+            _representedAssemblyNames.Add(assemblyFullName);
             _specManager = specManager;
-            AssemblyFullName = fullName;            
+            AssemblyFullName = assemblyFullName;            
         }
 
         public string AssemblyFullName { get; }
         public string AssemblyShortName { get; }
         public string FilePath { get; internal set; }
 
-        List<AssemblyName> _representedAssemblyNames = new List<AssemblyName>();
+        List<string> _representedAssemblyNames = new List<string>();
 
-        public void AddRepresentedName(AssemblyName assemblyName)
+        public void AddRepresentedName(string assemblyFullName)
         {
-            if (!_representedAssemblyNames.Any(n => n.FullName == assemblyName.FullName))
+            if (!_representedAssemblyNames.Any(n => n == assemblyFullName))
             {
-                _representedAssemblyNames.Add(assemblyName);
+                _representedAssemblyNames.Add(assemblyFullName);
             }
         }
 
@@ -58,22 +57,15 @@ namespace AssemblyAnalyser
 
         public AssemblySpec[] LoadReferencedAssemblies()
         {
-            return _referencedAssemblies ??= _specManager.LoadAssemblySpecs(_assembly.GetReferencedAssemblies().ToArray());
+            //Assembly assembly = _specManager.ReloadAssembly(AssemblyFullName);
+            return _referencedAssemblies ??= _specManager.LoadReferencedAssemblies(AssemblyFullName);
         }
 
         protected override void BuildSpec()
-        {
-            if (_assembly != null)
-            {
-                _referencedAssemblies = _specManager.LoadAssemblySpecs(_assembly.GetReferencedAssemblies().ToArray());
-                _typeSpecs = _specManager.TryLoadTypeSpecs(() => _assembly.GetTypes());
-                Array.ForEach(_typeSpecs, spec => spec.Process());
-            }
-            else
-            {
-                _referencedAssemblies = Array.Empty<AssemblySpec>();
-                _typeSpecs = Array.Empty<TypeSpec>();
-            }
+        {            
+            LoadReferencedAssemblies();
+            _typeSpecs = _specManager.TryLoadTypesForAssembly(AssemblyFullName);
+            Array.ForEach(_typeSpecs, spec => spec.Process());           
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)
