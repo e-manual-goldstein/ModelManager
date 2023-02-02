@@ -121,7 +121,6 @@ namespace ModelManager.Core
                 }
             }
             addOutputHeader(callingAction, extraInfo);
-            addCopyOutputButton();
 			//_outputControl = typedOutput switch
 			//{
 			//    SingleOutput single => single.GetOutput(out success),
@@ -133,6 +132,7 @@ namespace ModelManager.Core
 			var controlWidth = _tabControl.Width - tabItemControlWidth - (CANVAS_MARGIN * 2) - 10;
             _outputControl = typedOutput.GetOutput(controlWidth, _tabControl.Height - 100, out bool success);
 			typedOutput.ActionClicked += OutputActionClicked;
+            addCopyOutputButton(typedOutput);
 			foreach (Button button in typedOutput.ActionButtons)
 			{
 				_tabCanvas.Children.Add(button);
@@ -244,24 +244,20 @@ namespace ModelManager.Core
 
 		#region Copy Output
 
-		private void addCopyOutputButton()
+		private void addCopyOutputButton(IOutput output)
 		{
 			var copyButton = new Button();
 			copyButton.Height = 20;
 			copyButton.Width = 60;
 			copyButton.Content = "Copy";
-			copyButton.Click += copyOutput;
+			copyButton.Click += output.copyOutput;
 			Canvas.SetTop(copyButton, 2);
 			Canvas.SetRight(copyButton, 200);
 			copyButton.HorizontalAlignment = HorizontalAlignment.Center;
 			_tabCanvas.Children.Add(copyButton);
 		}
 
-		private void copyOutput(object sender, RoutedEventArgs e)
-		{
-			if (_clipboardReady != null)
-				Clipboard.SetText(_clipboardReady);
-		}
+		
 
 		//private string clipboardReadyList(ListOutput outputContent)
 		//{

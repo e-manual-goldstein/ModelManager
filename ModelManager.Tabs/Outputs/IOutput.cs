@@ -1,5 +1,6 @@
 ﻿using ModelManager.Utils;
 using System.Collections.Generic;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace ModelManager.Tabs.Outputs
@@ -12,5 +13,7 @@ namespace ModelManager.Tabs.Outputs
         Control GetOutput(double controlWidth, double tabHeight, out bool success);
 
         event ButtonClickedEventHandler ActionClicked;
+
+        void copyOutput(object sender, RoutedEventArgs e);
     }
 }

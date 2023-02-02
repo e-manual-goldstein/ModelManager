@@ -73,6 +73,11 @@ namespace ModelManager.Tabs.Outputs
 
         public event ButtonClickedEventHandler ActionClicked;
 
+        public void copyOutput(object sender, RoutedEventArgs e)        
+        {
+            if (_clipboardReady != null)
+                Clipboard.SetText(_clipboardReady);
+        }
     }
 
     public delegate void ButtonClickedEventHandler(Func<object> func, string actionName);

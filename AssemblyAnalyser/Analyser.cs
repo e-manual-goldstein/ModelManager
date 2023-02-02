@@ -18,12 +18,14 @@ namespace AssemblyAnalyser
         readonly string _workingDirectory;
         readonly Dictionary<string, string> _workingFiles;
         readonly ILogger _logger;
-        readonly  ISpecManager _specManager;
+        readonly ISpecManager _specManager;
+        private IExceptionManager _exceptionManager;
         private bool _disposed;
         
-        public Analyser(string workingDirectory, ILogger logger, ISpecManager specManager) 
+        public Analyser(string workingDirectory, ILogger logger, ISpecManager specManager, IExceptionManager exceptionManager) 
         {
             _specManager = specManager;
+            _exceptionManager = exceptionManager;
             specManager.SetWorkingDirectory(workingDirectory);
             _workingDirectory = workingDirectory;
             _workingFiles = Directory.EnumerateFiles(_workingDirectory, "*.dll").ToDictionary(d => Path.GetFileNameWithoutExtension(d), e => e);
@@ -109,6 +111,10 @@ namespace AssemblyAnalyser
             //    $"Fields {_fieldSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}";
         }
 
+        public List<string> MissingFileReport()
+        {
+            return _exceptionManager.MissingFiles;
+        }
 
         private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
@@ -126,7 +132,7 @@ namespace AssemblyAnalyser
         {
             if (e.Exception is FileNotFoundException fileNotFoundException && _logger != null)
             {
-                //HandleMissingFile(fileNotFoundException);
+                //_exceptionManager.Handle(fileNotFoundException);
             }
             else
             {

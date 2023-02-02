@@ -16,12 +16,14 @@ namespace AssemblyAnalyser
         private MetadataLoadContext _metadataLoadContext;
         Dictionary<string, string> _workingFiles;
         readonly ILogger _logger;
+        readonly IExceptionManager _exceptionManager;
         object _lock = new object();
         private bool _disposed;
 
-        public SpecManager(ILoggerProvider loggerProvider)
+        public SpecManager(ILoggerProvider loggerProvider, IExceptionManager exceptionManager)
         {            
             _logger = loggerProvider.CreateLogger("Spec Manager");
+            _exceptionManager = exceptionManager;
         }
         
         public List<IRule> SpecRules { get; set; } = new List<IRule>();
@@ -255,16 +257,26 @@ namespace AssemblyAnalyser
             return spec;
         }
 
-        public TypeSpec TryLoadTypeSpec(Func<Type> propertyTypeFunc)
+        public TypeSpec TryLoadTypeSpec(Func<Type> getType)
         {
             Type type = null;
             try
             {
-                type = propertyTypeFunc();
+                type = getType();
             }
             catch (TypeLoadException ex)
             {
                 return LoadPartialTypeSpec(ex.TypeName);
+            }
+            catch (FileNotFoundException ex)
+            {
+                _exceptionManager.Handle(ex);
+                _logger.LogError(ex, "File Not Found");
+                return TypeSpec.NullSpec;
+            }
+            catch (Exception ex)
+            {
+
             }
             return LoadTypeSpec(type);
         }
@@ -283,6 +295,7 @@ namespace AssemblyAnalyser
             }
             catch (FileNotFoundException ex)
             {
+                _exceptionManager.Handle(ex);
                 _logger.LogError(ex.Message);
                 types = Array.Empty<Type>();
             }
@@ -350,6 +363,7 @@ namespace AssemblyAnalyser
             }
             catch (FileNotFoundException ex)
             {
+                _exceptionManager.Handle(ex);
                 _logger.LogError(ex.Message);
             }
             catch (ReflectionTypeLoadException ex)
@@ -415,6 +429,11 @@ namespace AssemblyAnalyser
                     Console.WriteLine(loaderException.Message);
                 }
             }
+            catch (FileNotFoundException ex)
+            {
+                _exceptionManager.Handle(ex);
+                _logger.LogError(ex, "File Not Found");
+            }
             finally
             {
                 properties ??= Array.Empty<PropertyInfo>();
@@ -461,7 +480,11 @@ namespace AssemblyAnalyser
             {
                 parameterInfos = parameterInfosFunc();
             }
-            catch (TypeLoadException)
+            catch (TypeLoadException typeLoadException)
+            {
+
+            }
+            catch (Exception)
             {
 
             }
@@ -516,6 +539,11 @@ namespace AssemblyAnalyser
                 {
                     Console.WriteLine(loaderException.Message);
                 }
+            }
+            catch (FileNotFoundException ex)
+            {
+                _exceptionManager.Handle(ex);
+                _logger.LogError(ex, "File Not Found");
             }
             finally
             {
