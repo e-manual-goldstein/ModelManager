@@ -34,8 +34,8 @@ namespace AssemblyAnalyser
         {
             Getter = _specManager.LoadMethodSpec(_getter);
             Setter = _specManager.LoadMethodSpec(_setter);
-            PropertyType = _specManager.TryLoadTypeSpec(() => _propertyInfo.PropertyType);
-            DeclaringType = _specManager.TryLoadTypeSpec(() => _propertyInfo.DeclaringType);            
+           // PropertyType = _specManager.TryLoadTypeSpec(() => _propertyInfo.PropertyType);
+           // DeclaringType = _specManager.TryLoadTypeSpec(() => _propertyInfo.DeclaringType);            
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)

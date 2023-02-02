@@ -22,7 +22,7 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            FieldType = _specManager.TryLoadTypeSpec(() => _fieldInfo.FieldType);            
+            //FieldType = _specManager.TryLoadTypeSpec(() => _fieldInfo.FieldType);            
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)

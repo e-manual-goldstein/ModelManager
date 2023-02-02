@@ -64,9 +64,14 @@ namespace AssemblyAnalyser
         protected override void BuildSpec()
         {            
             LoadReferencedAssemblies();
-            _typeSpecs = _specManager.TryLoadTypesForAssembly(AssemblyFullName);
-            Array.ForEach(_typeSpecs, spec => spec.Process());           
+            _typeSpecs = _specManager.TryLoadTypesForAssembly(this);
+            //Array.ForEach(_typeSpecs, spec => spec.Process());           
         }
+
+        //private TypeSpec[] CreateTypeSpecs()
+        //{
+        //    _specManager.TryLoadTypesForAssembly(AssemblyFullName);
+        //}
 
         protected override async Task BeginAnalysis(Analyser analyser)
         {

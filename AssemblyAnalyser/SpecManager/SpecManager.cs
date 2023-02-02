@@ -136,11 +136,11 @@ namespace AssemblyAnalyser
                     catch (FileNotFoundException ex)
                     {
                         _exceptionManager.Handle(ex);
-                        _logger.LogWarning($"Unable to load assembly {assemblyName.Name}");
+                        _logger.LogWarning($"Unable to load assembly {assemblyName.Name}. Required by {assemblyFullName}");
                     }
                     catch
                     {
-                        _logger.LogWarning($"Unable to load assembly {assemblyName.Name}");
+                        _logger.LogWarning($"Unable to load assembly {assemblyName.Name}. Required by {assemblyFullName}");
                     }
                 }
             }
@@ -229,26 +229,49 @@ namespace AssemblyAnalyser
 
         ConcurrentDictionary<string, TypeSpec> _typeSpecs = new ConcurrentDictionary<string, TypeSpec>();
 
-        public TypeSpec[] TryLoadTypesForAssembly(string assemblyFullName)
+
+        public void TryBuildTypeSpecForAssembly(string fullTypeName, AssemblySpec assemblySpec, Action<Type> buildAction)
+        {
+            Type type = null;
+            using (var loadContext = CreateMetadataContext())
+            {
+                var assembly = loadContext.LoadFromAssemblyName(assemblySpec.AssemblyFullName);
+                try
+                {
+                    type = assembly.DefinedTypes.SingleOrDefault(t => t.FullName == fullTypeName);
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    type = ex.Types.SingleOrDefault(t => t.FullName == fullTypeName);
+                }
+                if (type != null)
+                {
+                    buildAction(type);
+                }
+            }
+        }
+
+        public TypeSpec[] TryLoadTypesForAssembly(AssemblySpec assemblySpec)
         {
             var specs = new List<TypeSpec>();
             using (var loadContext = CreateMetadataContext())
             {
-                var assembly = loadContext.LoadFromAssemblyName(assemblyFullName);
-                return TryLoadTypeSpecs(() => assembly.DefinedTypes.ToArray());
+                var assembly = loadContext.LoadFromAssemblyName(assemblySpec.AssemblyFullName);
+                TryLoadTypeSpecs(() => assembly.DefinedTypes.ToArray(), assemblySpec, out TypeSpec[] typeSpecs);
+                return typeSpecs;
             }
         }
 
-        private TypeSpec LoadTypeSpec(Type type)
+        private TypeSpec LoadTypeSpec(Type type, AssemblySpec assemblySpec)
         {
             if (type == null)
             {
                 return TypeSpec.NullSpec;
             }
-            return LoadFullTypeSpec(type);
+            return LoadFullTypeSpec(type, assemblySpec);
         }
 
-        private TypeSpec LoadFullTypeSpec(Type type)
+        private TypeSpec LoadFullTypeSpec(Type type, AssemblySpec assemblySpec)
         {
             TypeSpec typeSpec = TypeSpec.NullSpec;
             if (!string.IsNullOrEmpty(type.FullName))
@@ -260,7 +283,7 @@ namespace AssemblyAnalyser
                     {
                         if (!_typeSpecs.TryGetValue(type.FullName, out typeSpec))
                         {
-                            _typeSpecs[type.FullName] = typeSpec = CreateFullTypeSpec(type);
+                            _typeSpecs[type.FullName] = typeSpec = CreateFullTypeSpec(type, assemblySpec);
                         }
                     }
                     //Console.WriteLine($"Unlocking for {type.FullName}");
@@ -269,14 +292,15 @@ namespace AssemblyAnalyser
             return typeSpec;
         }
 
-        private TypeSpec CreateFullTypeSpec(Type type)
+        private TypeSpec CreateFullTypeSpec(Type type, AssemblySpec assemblySpec)
         {
-            var spec = new TypeSpec(type, this, SpecRules);
+            var spec = new TypeSpec(type.FullName, type.IsInterface, this, SpecRules);
             spec.Logger = _logger;
+            spec.Assembly = assemblySpec;
             return spec;
         }
 
-        private TypeSpec LoadPartialTypeSpec(string typeName)
+        private TypeSpec LoadPartialTypeSpec(string typeName, AssemblySpec assemblySpec)
         {
             TypeSpec typeSpec = TypeSpec.NullSpec;
             if (!_typeSpecs.TryGetValue(typeName, out typeSpec))
@@ -286,7 +310,7 @@ namespace AssemblyAnalyser
                 {
                     if (!_typeSpecs.TryGetValue(typeName, out typeSpec))
                     {
-                        _typeSpecs[typeName] = typeSpec = CreatePartialTypeSpec(typeName);
+                        _typeSpecs[typeName] = typeSpec = CreatePartialTypeSpec(typeName, assemblySpec);
                     }
                 }
                 //Console.WriteLine($"Unlocking for {typeName}");
@@ -294,56 +318,62 @@ namespace AssemblyAnalyser
             return typeSpec;
         }
 
-        private TypeSpec CreatePartialTypeSpec(string typeName)
+        private TypeSpec CreatePartialTypeSpec(string typeName, AssemblySpec assemblySpec)
         {
             var spec = new TypeSpec(typeName, this, SpecRules);
             spec.Exclude("Type is only partial spec");
             spec.SkipProcessing("Type is only partial spec");
             spec.Logger = _logger;
+            spec.Assembly = assemblySpec;
             return spec;
         }
 
-        public TypeSpec TryLoadTypeSpec(Func<Type> getType)
+        public bool TryLoadTypeSpec(Func<Type> getType, AssemblySpec assemblySpec, out TypeSpec typeSpec)
         {
-            Type type = null;
+            bool success = false;
+            typeSpec = TypeSpec.NullSpec;
             try
             {
-                type = getType();
+                typeSpec = LoadTypeSpec(getType(), assemblySpec);
+                success = true;
             }
             catch (TypeLoadException ex)
             {
-                return LoadPartialTypeSpec(ex.TypeName);
+                if (!string.IsNullOrEmpty(ex.TypeName))
+                {
+                    typeSpec = LoadPartialTypeSpec(ex.TypeName, assemblySpec);
+                    success = true;
+                }                
             }
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
-                _logger.LogError(ex, "File Not Found");
-                return TypeSpec.NullSpec;
+                _logger.LogError(ex, "File Not Found");            
             }
             catch (Exception ex)
             {
-
+                
             }
-            return LoadTypeSpec(type);
+            return success;
         }
 
-        public TypeSpec[] TryLoadTypeSpecs(Func<Type[]> getTypes)
+        public bool TryLoadTypeSpecs(Func<Type[]> getTypes, AssemblySpec assemblySpec, out TypeSpec[] typeSpecs)
         {
-            Type[] types;
+            typeSpecs = Array.Empty<TypeSpec>();
+            bool success = false;
             try
-            {
-                types = getTypes();
+            { 
+                typeSpecs = LoadTypeSpecs(getTypes(), assemblySpec);
+                success = true;
             }
             catch (TypeLoadException ex)
             {
-                _logger.LogError(ex.Message);
-                types = Array.Empty<Type>();
+                _logger.LogError(ex.Message);            
             }
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
                 _logger.LogError(ex.Message);
-                types = Array.Empty<Type>();
             }
             catch (ReflectionTypeLoadException ex)
             {
@@ -351,14 +381,18 @@ namespace AssemblyAnalyser
                 {
                     Console.WriteLine(loaderException.Message);
                 }
-                types = ex.Types.ToArray();
+                if (ex.Types.Any())
+                {
+                    success = true;
+                    typeSpecs = LoadTypeSpecs(ex.Types, assemblySpec);
+                }
             }
-            return LoadTypeSpecs(types);
+            return success;
         }
 
-        public TypeSpec[] LoadTypeSpecs(Type[] types)
+        public TypeSpec[] LoadTypeSpecs(Type[] types, AssemblySpec assemblySpec)
         {
-            return types.Select(t => LoadTypeSpec(t)).ToArray();
+            return types.Select(t => LoadTypeSpec(t, assemblySpec)).ToArray();
         }
 
         #endregion

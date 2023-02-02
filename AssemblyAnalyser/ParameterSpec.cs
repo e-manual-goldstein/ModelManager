@@ -22,7 +22,7 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            ParameterType = _specManager.TryLoadTypeSpec(() => _parameterInfo.ParameterType);
+            //ParameterType = _specManager.TryLoadTypeSpec(() => _parameterInfo.ParameterType);
             Method = _specManager.LoadMethodSpec(_parameterInfo.Member as MethodInfo);            
         }
 

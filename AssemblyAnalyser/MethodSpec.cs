@@ -22,8 +22,8 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            ReturnType = _specManager.TryLoadTypeSpec(() => _methodInfo.ReturnType);
-            DeclaringType = _specManager.TryLoadTypeSpec(() => _methodInfo.DeclaringType);
+            //ReturnType = _specManager.TryLoadTypeSpec(() => _methodInfo.ReturnType);
+            //DeclaringType = _specManager.TryLoadTypeSpec(() => _methodInfo.DeclaringType);
             ParameterTypes = _specManager.TryLoadParameterSpecs(() => _methodInfo.GetParameters());            
         }
 

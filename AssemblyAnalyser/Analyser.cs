@@ -77,12 +77,24 @@ namespace AssemblyAnalyser
                 //|| assembly.GetReferencedAssemblies().All(r => _workingFiles.Keys.Contains(r.Name));
         }
 
-        public void AnalyseAssemblies(IEnumerable<string> assemblyNames)
+        public void BuildAssemblies(IEnumerable<string> assemblyNames)
         {
             foreach (var assemblyName in assemblyNames)
             {
                 var assembly = _specManager.Assemblies[assemblyName];
                 assembly.Process();
+            }
+        }
+
+        #endregion
+
+        #region Type Specs
+
+        public void BuildTypes()
+        {
+            foreach (var typeSpec in _specManager.Types.Values)
+            {
+                typeSpec.Process();
             }
         }
 
