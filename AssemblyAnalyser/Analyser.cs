@@ -146,7 +146,7 @@ namespace AssemblyAnalyser
             }
             else
             {
-                _logger.LogError(e.Exception, "Unhandled Exception");
+                //_logger.LogError(e.Exception, "Unhandled Exception");
             }
         }
 

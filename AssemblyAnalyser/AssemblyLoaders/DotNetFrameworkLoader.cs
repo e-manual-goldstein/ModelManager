@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using AssemblyAnalyser.AssemblyLoaders;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -30,22 +31,34 @@ namespace AssemblyAnalyser
         Dictionary<string, Assembly> _loadedAssembliesByName = new Dictionary<string, Assembly>();
         Dictionary<string, Assembly> _loadedAssembliesByPath = new Dictionary<string, Assembly>();
 
-        public DotNetFrameworkLoader(string imageRuntimeVersion) 
+        public DotNetFrameworkLoader(string imageRuntimeVersion, IEnumerable<string> additionalPaths) : this(imageRuntimeVersion)
         {
-            _imageRuntimeVersion = imageRuntimeVersion;
-            CreateLoadContext(GetFilePathsForLoadContext());
+            CreateLoadContext(GetFilePathsForLoadContext().Concat(additionalPaths));
         }
 
-        private void CreateLoadContext(List<string> filePaths)
+        private DotNetFrameworkLoader(string imageRuntimeVersion)
+        {
+            _imageRuntimeVersion = imageRuntimeVersion;
+        }
+
+        private void CreateLoadContext(IEnumerable<string> filePaths)
         {
             if (_loadContext != null)
             {
                 _loadContext.Dispose();                
             }
+            DropCache();
             _resolver = new PathAssemblyResolver(filePaths);
             _loadContext = new MetadataLoadContext(_resolver);
         }
-        
+
+        private void DropCache()
+        {
+            _loadedAssembliesByPath.Clear();
+            _loadedAssembliesByPath.Clear();
+            
+        }
+
         private List<string> GetFilePathsForLoadContext(IEnumerable<string> additionalPaths = default)
         {
             additionalPaths ??= Enumerable.Empty<string>();
@@ -76,8 +89,15 @@ namespace AssemblyAnalyser
         {
             if (!_loadedAssembliesByName.TryGetValue(assemblyName, out Assembly assembly))
             {
-                TryLoadAssemblyByName(assemblyName, out assembly);                
-            }
+                if (SystemAssemblyLookup.TryGetPath(assemblyName, out var assemblyPath))
+                {
+                    TryLoadAssemblyByPath(assemblyPath, out assembly);
+                }
+                else
+                {
+                    TryLoadAssemblyByName(assemblyName, out assembly);
+                }
+            }            
             return assembly;
         }
 
@@ -136,7 +156,7 @@ namespace AssemblyAnalyser
                 CreateLoadContext(GetFilePathsForLoadContext());
                 assembly = _loadContext.LoadFromAssemblyName(assemblyName);
                 CacheLoadedAssembly(assembly);
-            }
+            }            
             catch (Exception ex)
             {
                 if (!_loadContext.GetAssemblies().Any(d => d.FullName == assemblyName))
@@ -147,6 +167,11 @@ namespace AssemblyAnalyser
                 assembly = _loadContext.GetAssemblies().SingleOrDefault(d => d.FullName == assemblyName);
             }
             return success;
+        }
+
+        private bool TryLoadFromGAC(string assemblyName, out Assembly assembly)
+        {
+            throw new NotImplementedException();
         }
 
         private void CacheLoadedAssembly(Assembly assembly)

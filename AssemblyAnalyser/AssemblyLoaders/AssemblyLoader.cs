@@ -34,7 +34,13 @@ namespace AssemblyAnalyser
                     return loaders.Single();
                 }
             }
-            return new DotNetFrameworkLoader("v4.0.30319");
+
+            var extraGAC = new List<string>()
+            {
+                "C:\\Windows\\assembly\\GAC_MSIL\\Microsoft.IdentityModel\\3.5.0.0__31bf3856ad364e35\\Microsoft.IdentityModel.dll",
+
+            };
+            return new DotNetFrameworkLoader("v4.0.30319", extraGAC);
         }
 
         public abstract Assembly LoadAssemblyByName(string assemblyName);
