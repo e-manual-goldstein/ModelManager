@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
-    public class DotNetFrameworkLoader
+    public class DotNetFrameworkLoader : AssemblyLoader
     {
         List<string> _filePathsForLoadContext;
         string _imageRuntimeVersion;
@@ -26,6 +26,9 @@ namespace AssemblyAnalyser
             { "v4.0.30319", new [] { "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319", "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319" } },
             { "COMPLUS",    new [] { "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319", "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319" } }
         };
+
+        Dictionary<string, Assembly> _loadedAssembliesByName = new Dictionary<string, Assembly>();
+        Dictionary<string, Assembly> _loadedAssembliesByPath = new Dictionary<string, Assembly>();
 
         public DotNetFrameworkLoader(string imageRuntimeVersion) 
         {
@@ -69,41 +72,100 @@ namespace AssemblyAnalyser
         public List<string> Faults { get; } = new List<string>();
         public List<string> Results { get; } = new List<string>();
 
-        public bool TryLoadAssembly(string filePath, out Assembly assembly)
+        public override Assembly LoadAssemblyByName(string assemblyName)
         {
-            bool success = false;
+            if (!_loadedAssembliesByName.TryGetValue(assemblyName, out Assembly assembly))
+            {
+                TryLoadAssemblyByName(assemblyName, out assembly);                
+            }
+            return assembly;
+        }
+
+        public override Assembly LoadAssemblyByPath(string assemblyPath)
+        {
+            if (!_loadedAssembliesByPath.TryGetValue(assemblyPath, out Assembly assembly))
+            {
+                TryLoadAssemblyByPath(assemblyPath, out assembly);
+            }
+            return assembly;
+        }
+
+        public override IEnumerable<Assembly> LoadReferencedAssembliesByRootPath(string rootAssemblyPath)
+        {
+            if (!_loadedAssembliesByPath.TryGetValue(rootAssemblyPath, out Assembly assembly))
+            {
+                TryLoadAssemblyByPath(rootAssemblyPath, out assembly);
+            }
+            if (assembly == null)
+            {
+                return Array.Empty<Assembly>();
+            }
+            TryLoadReferencedAssemblies(rootAssemblyPath, out var assemblies);
+            assemblies ??= Array.Empty<Assembly>();
+            return assemblies;
+        }
+
+        private bool TryLoadAssemblyByPath(string filePath, out Assembly assembly)
+        {
+            bool success = true;
             assembly = null;            
             try
             {
-                CreateLoadContext(GetFilePathsForLoadContext());                
+                CreateLoadContext(GetFilePathsForLoadContext());
                 assembly = _loadContext.LoadFromAssemblyPath(filePath);
+                CacheLoadedAssembly(assembly);
             }
-            catch
+            catch (Exception ex)
             {
-
+                if (!_loadContext.GetAssemblies().Any(d => d.Location == filePath))
+                {
+                    Faults.Add($"Assembly: {filePath} {ex.Message}");
+                    success = false;
+                }
+                assembly = _loadContext.GetAssemblies().SingleOrDefault(d => d.Location == filePath);
             }
             return success;
         }
 
-        public bool TryLoadReferencedAssemblies(string filePath, out IEnumerable<Assembly> assemblies)
+        private bool TryLoadAssemblyByName(string assemblyName, out Assembly assembly)
         {
-            CreateLoadContext(GetFilePathsForLoadContext(GetReferencedAssemblyLocations(filePath)));
-            var assemblyNames = GetAssemblyNamesForAssembly(filePath);            
-            return TryLoadReferences(assemblyNames, out assemblies);
-        }
-
-        private string[] GetAssemblyNamesForAssembly(string filePath)
-        {
+            bool success = false;
+            assembly = null;
             try
             {
-                var assembly = _loadContext.LoadFromAssemblyPath(filePath);
-                return assembly.GetReferencedAssemblies().Select(c => c.FullName).ToArray();
+                CreateLoadContext(GetFilePathsForLoadContext());
+                assembly = _loadContext.LoadFromAssemblyName(assemblyName);
+                CacheLoadedAssembly(assembly);
             }
             catch (Exception ex)
             {
-                Faults.Add($"Assembly: {filePath} {ex.Message}");
-            }            
-            return Array.Empty<string>();
+                if (!_loadContext.GetAssemblies().Any(d => d.FullName == assemblyName))
+                {
+                    Faults.Add($"Assembly: {assemblyName} {ex.Message}");
+                    success = false;
+                }
+                assembly = _loadContext.GetAssemblies().SingleOrDefault(d => d.FullName == assemblyName);
+            }
+            return success;
+        }
+
+        private void CacheLoadedAssembly(Assembly assembly)
+        {
+            _loadedAssembliesByPath[assembly.Location] = assembly;
+            _loadedAssembliesByPath[assembly.FullName] = assembly;
+        }
+
+        private bool TryLoadReferencedAssemblies(string filePath, out IEnumerable<Assembly> assemblies)
+        {
+            CreateLoadContext(GetFilePathsForLoadContext(GetReferencedAssemblyLocations(filePath)));
+            var assemblyNames = GetAssemblyNamesForAssembly(filePath);
+            return TryLoadReferences(assemblyNames, out assemblies);
+        }
+
+        private IEnumerable<string> GetAssemblyNamesForAssembly(string filePath)
+        {
+            var assembly = LoadAssemblyByPath(filePath);
+            return assembly != null ? assembly.GetReferencedAssemblies().Select(d => d.FullName) : Enumerable.Empty<string>();
         }
 
         private bool TryLoadReferences(IEnumerable<string> assemblyNames, out IEnumerable<Assembly> assemblies)

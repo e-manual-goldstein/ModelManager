@@ -35,8 +35,6 @@ namespace AssemblyAnalyser
             
         }
 
-        object _lock = new object();
-
         public async Task BeginAsync()
         {
             RegisterSpecs();

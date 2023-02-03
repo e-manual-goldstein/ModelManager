@@ -1,12 +1,14 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AssemblyAnalyser.AssemblyLoaders
+namespace AssemblyAnalyser
 {
-    public class AssemblyLoader
+    public abstract class AssemblyLoader
     {
         public static AssemblyLoader GetLoader(string targetFrameworkVersion, string imageRuntimeVersion)
         {
@@ -32,8 +34,14 @@ namespace AssemblyAnalyser.AssemblyLoaders
                     return loaders.Single();
                 }
             }
-            throw new NotSupportedException();
+            return new DotNetFrameworkLoader("v4.0.30319");
         }
+
+        public abstract Assembly LoadAssemblyByName(string assemblyName);
+
+        public abstract Assembly LoadAssemblyByPath(string assemblyPath);
+
+        public abstract IEnumerable<Assembly> LoadReferencedAssembliesByRootPath(string rootAssemblyPath);
 
         private static IDictionary<string, List<AssemblyLoader>> _imageRuntimeLoaders = new Dictionary<string, List<AssemblyLoader>>();
 

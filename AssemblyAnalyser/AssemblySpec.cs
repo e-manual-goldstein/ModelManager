@@ -39,6 +39,9 @@ namespace AssemblyAnalyser
         public string AssemblyShortName { get; }
         public string FilePath { get; internal set; }
 
+        public string TargetFrameworkVersion { get; internal set; }
+        public string ImageRuntimeVersion { get; internal set; }
+
         List<string> _representedAssemblyNames = new List<string>();
 
         public void AddRepresentedName(string assemblyFullName)
@@ -54,6 +57,7 @@ namespace AssemblyAnalyser
 
         AssemblySpec[] _referencedAssemblies;
         public AssemblySpec[] ReferencedAssemblies => _referencedAssemblies;
+
 
         public AssemblySpec[] LoadReferencedAssemblies()
         {
