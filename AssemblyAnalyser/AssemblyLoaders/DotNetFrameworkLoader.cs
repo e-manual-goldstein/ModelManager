@@ -89,15 +89,14 @@ namespace AssemblyAnalyser
         {
             if (!_loadedAssembliesByName.TryGetValue(assemblyName, out Assembly assembly))
             {
-                if (SystemAssemblyLookup.TryGetPath(assemblyName, out var assemblyPath))
+                if (!TryLoadAssemblyByName(assemblyName, out assembly))
                 {
-                    TryLoadAssemblyByPath(assemblyPath, out assembly);
-                }
-                else
-                {
-                    TryLoadAssemblyByName(assemblyName, out assembly);
-                }
-            }            
+                    if (SystemAssemblyLookup.TryGetPath(assemblyName, out var assemblyPath))
+                    {
+                        TryLoadAssemblyByPath(assemblyPath, out assembly);
+                    }
+                }                
+            }
             return assembly;
         }
 
@@ -149,13 +148,13 @@ namespace AssemblyAnalyser
 
         private bool TryLoadAssemblyByName(string assemblyName, out Assembly assembly)
         {
-            bool success = false;
+            bool success = true;
             assembly = null;
             try
             {
                 CreateLoadContext(GetFilePathsForLoadContext());
                 assembly = _loadContext.LoadFromAssemblyName(assemblyName);
-                CacheLoadedAssembly(assembly);
+                CacheLoadedAssembly(assembly);                
             }            
             catch (Exception ex)
             {

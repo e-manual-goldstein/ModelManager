@@ -147,7 +147,7 @@ namespace AssemblyAnalyser
                 }
             }
             //}
-            return specs.OrderBy(s => s.AssemblyFullName).ToArray();
+            return specs.OrderBy(s => s.FilePath).ToArray();
         }
 
         //private bool TryLoadAssembly(AssemblyName assemblyName, out Assembly assembly)
