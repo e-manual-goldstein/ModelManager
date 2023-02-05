@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using ModelManager.Tabs;
+using ModelManager.Core;
 using ModelManager.Utils;
 using System;
 using System.Collections;
@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace ModelManager.Core
+namespace ModelManager.Tabs
 {
     public abstract class AbstractServiceTab : IServiceTab, IOutputSource
     {
@@ -24,6 +24,7 @@ namespace ModelManager.Core
         private TabManager _tabManager;
         private Canvas _tabCanvas = new Canvas();
         private Canvas _buttonCanvas;
+        Dictionary<string, Action<double>> _progressUpdaters = new Dictionary<string, Action<double>>();
         private Dictionary<string, MethodInfo> _actionMethods = new Dictionary<string, MethodInfo>();
         //private Dictionary<string, string> _actionSummaries = new Dictionary<string, string>();
         private const double BUTTON_HEIGHT = 30;
@@ -98,22 +99,6 @@ namespace ModelManager.Core
             return actionButton;
         }
 
-        //TODO: This won't work in its current form
-        //private Button createInfoButtonForAction(MethodInfo action, int buttonId)
-        //{
-        //    string infoId = Title + "_" + buttonId + "_Info";
-        //    var infoButton = new Button();
-        //    infoButton.Name = infoId;
-        //    infoButton.Click += clickButton;
-        //    var summary = action.
-        //    _actionSummaries.Add(infoId, summary);
-        //    infoButton.Height = BUTTON_HEIGHT;
-        //    infoButton.Width = BUTTON_WIDTH;
-        //    infoButton.Content = AppUtils.CreateDisplayString(action.Name);
-        //    placeButtonOnTab(infoButton, buttonId);
-        //    return infoButton;
-        //}
-
         private void placeButtonOnTab(Button button, int buttonCount)
         {
             var top = ((buttonCount - 1) * BUTTON_HEIGHT) + 1;
@@ -131,21 +116,15 @@ namespace ModelManager.Core
                 if (actionMethod != null)
                 {
                     var tab = _tabManager.InitialiseOutputTab(this, actionMethod);
-                    if (actionMethod.GetParameters().Any())
+                    var actionContext = new ActionContext(actionMethod, tab, this);
+                    //if (actionContext.GetParameters().Any())
+                    if (actionContext.HasParameters)
+                    {
                         _tabManager.DisplayInputTab(tab, this, actionMethod);
+                    }
                     else
                     {
-                        try
-                        {
-							tab.DisplayExecutingMessage();
-							var task = Task.Run(() => InvokeAction(actionMethod, new object[] { }));
-                            await task;
-                            _tabManager.DisplayOutput(tab, task.Result, this, actionMethod);
-                        }
-                        catch (Exception ex)
-                        {
-                            _tabManager.DisplayError(ex, this, tab);
-                        }
+                        await actionContext.ExecuteAction();       
                     }
                 }
             }
@@ -186,6 +165,7 @@ namespace ModelManager.Core
             }
         }
 
+
         private List<MethodInfo> getDefinedActions()
         {
             var allMethods = GetType().GetMethods();
@@ -202,18 +182,6 @@ namespace ModelManager.Core
             foreach (var input in inputList)
             {
                 WriteLine(input);
-            }
-        }
-
-		[Obsolete]
-        public void TableView(IEnumerable[] inputTable)
-        {
-            foreach (IEnumerable enumerable in inputTable)
-            {
-                foreach (object item in enumerable)
-                {
-
-                }
             }
         }
 

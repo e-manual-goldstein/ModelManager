@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ModelManager.Tabs;
 using ModelManager.Tabs.Outputs;
 using ModelManager.Types;
 using ModelManager.Utils;
@@ -65,20 +66,20 @@ namespace ModelManager.Core
             }
         }
 
-        public void DisplayOutput(OutputTab outputTab, object objectToDisplay, IOutputSource source, MethodInfo actionMethod)
-		{
-			var callingAction = outputTab.ExecutedAction ?? actionMethod;
-			outputTab.ClearInputElements();
-            outputTab.DisplayOutput(source, callingAction.Name, objectToDisplay ?? "No Output To Display");
-            outputTab.Focus();
-		}
+  //      public void DisplayOutput(OutputTab outputTab, object objectToDisplay, IOutputSource source, MethodInfo actionMethod)
+		//{
+		//	var callingAction = outputTab.ExecutedAction ?? actionMethod;
+		//	outputTab.ClearInputElements();
+  //          outputTab.DisplayOutput(source, callingAction.Name, objectToDisplay ?? "No Output To Display");
+  //          outputTab.Focus();
+		//}
 
-        public void DisplayOutput(OutputTab outputTab, object objectToDisplay, IOutputSource source, string actionName)
-        {
-            outputTab.ClearInputElements();
-            outputTab.DisplayOutput(source, actionName, objectToDisplay ?? "No Output To Display");
-            outputTab.Focus();
-        }
+        //public void DisplayOutput(OutputTab outputTab, object objectToDisplay, IOutputSource source, string actionName)
+        //{
+        //    outputTab.ClearInputElements();
+        //    outputTab.DisplayOutput(source, actionName, objectToDisplay ?? "No Output To Display");
+        //    outputTab.Focus();
+        //}
 
         public void DisplayInputTab(OutputTab inputTab, AbstractServiceTab executingTab, MethodInfo executedAction)
         {

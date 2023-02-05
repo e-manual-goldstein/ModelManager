@@ -1,4 +1,5 @@
-﻿using ModelManager.Tabs.Outputs;
+﻿using ModelManager.Core;
+using ModelManager.Tabs.Outputs;
 using ModelManager.Utils;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace ModelManager.Core
+namespace ModelManager.Tabs
 {
 	public class OutputTab : IDisposable
     {
@@ -22,7 +23,6 @@ namespace ModelManager.Core
 		private Canvas _tabCanvas;
 
 		private Control _outputControl;
-		private string _clipboardReady;
 
 		private const double CANVAS_MARGIN = 15;
 		private const double TAB_ITEM_WIDTH = 100;
@@ -40,12 +40,13 @@ namespace ModelManager.Core
 		private List<UIElement> _disposableElements;
 		private Dictionary<string, Control> _mandatoryControls;
 		private TextBlock _errorMessage;
+		private ProgressBar _progressBar;
 
-		#endregion
+        #endregion
 
-		#region Constructors
+        #region Constructors
 
-		public OutputTab(TabManager tabManager, TabControl tabControl, int tabId, string tabTitle)
+        public OutputTab(TabManager tabManager, TabControl tabControl, int tabId, string tabTitle)
 		{
 			_tabManager = tabManager;
 			_tabControl = tabControl;
@@ -60,11 +61,12 @@ namespace ModelManager.Core
 			//_tabItemControl.MouseLeftButtonUp += selectOutputTab;
 			_tabControl.Items.Add(_tabItemControl);
 			addCloseButton();
+			addProgressBar();
 			TabId = tabId;
 		}
 
 		#endregion
-		
+
 		#region Tab Management
 
 		public int TabId { get; private set; }
@@ -121,13 +123,6 @@ namespace ModelManager.Core
                 }
             }
             addOutputHeader(callingAction, extraInfo);
-			//_outputControl = typedOutput switch
-			//{
-			//    SingleOutput single => single.GetOutput(out success),
-			//    ListOutput list => list.GetOutput(out success),
-			//    TableOutput table => table.GetOutput(out success),
-			//    _ => new Control()
-			//};
 			var tabItemControlWidth = double.IsNaN(_tabItemControl.Width) ? TAB_ITEM_WIDTH : _tabItemControl.Width;
 			var controlWidth = _tabControl.Width - tabItemControlWidth - (CANVAS_MARGIN * 2) - 10;
             _outputControl = typedOutput.GetOutput(controlWidth, _tabControl.Height - 100, out bool success);
@@ -154,7 +149,7 @@ namespace ModelManager.Core
             try
             {
                 tab.DisplayExecutingMessage();
-				_tabManager.DisplayOutput(tab, func(), null, actionName);
+				tab.DisplayOutput(func(), null, actionName);
             }
             catch (Exception ex)
             {
@@ -226,16 +221,32 @@ namespace ModelManager.Core
 			Canvas.SetTop(closeButton, 2);
 			Canvas.SetRight(closeButton, 2);
 			_tabCanvas.Children.Add(closeButton);
-		}
+        }
 
-		private void closeTab(object sender, RoutedEventArgs e)
+        private void closeTab(object sender, RoutedEventArgs e)
 		{
 			_tabManager.CloseTab(this);
+        }
+
+        private void addProgressBar()
+        {
+            _progressBar = new ProgressBar();
+            _progressBar.Height = 40;
+            _progressBar.Width = 280;
+            Canvas.SetTop(_progressBar, 2);
+            Canvas.SetRight(_progressBar, 300);
+            _tabCanvas.Children.Add(_progressBar);
+        }
+
+		public void UpdateProgress(double progress)
+		{
+			
+			_progressBar.Value = progress;
 		}
 
-		#endregion
+        #endregion
 
-		public override string ToString()
+        public override string ToString()
 		{
 			return _tabItemControl != null ? _tabItemControl.Header.ToString() : "Output Tab";
 		}
@@ -351,7 +362,7 @@ namespace ModelManager.Core
                     //_tabManager.CloseTab(this);
                     var task = Task.Run(() => _executingTab.InvokeAction(_executedAction, parameters));
                     await task;
-                    _tabManager.DisplayOutput(this, task.Result, _executingTab, _executedAction);
+                    DisplayOutput(task.Result, _executingTab, _executedAction);
                 }
             }
 			catch (Exception ex)
@@ -514,70 +525,42 @@ namespace ModelManager.Core
 
         #region Output Processing
 
+        public void DisplayOutput(object objectToDisplay, IOutputSource source, MethodInfo actionMethod)
+        {
+            var callingAction = ExecutedAction ?? actionMethod;
+            ClearInputElements();
+            DisplayOutput(source, callingAction.Name, objectToDisplay ?? "No Output To Display");
+            Focus();
+        }
 
-		//     private void SetControlLayout<T>(Control outputControl, AbstractOutput<T> output)
-   //     {
-			//double contentButtonsHeight = 0;
-   //         var tabItemControlWidth = double.IsNaN(_tabItemControl.Width) ? TAB_ITEM_WIDTH : _tabItemControl.Width;
-   //         outputControl.Width = _tabControl.Width - tabItemControlWidth - (CANVAS_MARGIN * 2) - 10;
-   //         if (output.ContentActions.Any())
-			//{
-			//	contentButtonsHeight = AddContentActionButtons(output);
-			//}
-			//outputControl.MaxHeight = _tabControl.Height - 100 - contentButtonsHeight;
-   //         if (outputControl is TextBoxBase textBox)
-			//{
-			//	textBox.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
-   //             textBox.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-   //         }
-   //     }
+        public void DisplayOutput(object objectToDisplay, IOutputSource source, string actionName)
+        {
+            ClearInputElements();
+            DisplayOutput(source, actionName, objectToDisplay ?? "No Output To Display");
+            Focus();
+        }
 
-		//private double AddContentActionButtons<T>(AbstractOutput<T> output)
-		//{
-		//	double height = 0;
-		//	foreach (var (key, action) in output.ContentActions)
-		//	{
-		//		var button = new Button() 
-		//		{ 
-		//			Content = key, 
-		//			Height = BUTTON_HEIGHT,
-		//			Width = BUTTON_WIDTH
-		//		};
-		//		button.Click += (sender, e) =>
-		//		{                    
-  //                  var tab = _tabManager.InitialiseOutputTab(key);
-  //                  try
-  //                  {
-  //                      tab.DisplayExecutingMessage();
-  //                      var obj = action(output.Content);
-  //                      _tabManager.DisplayOutput(tab, obj, null, key);
-  //                  }
-  //                  catch (Exception ex)
-  //                  {
-  //                      _tabManager.DisplayError(ex, null, tab);
-  //                  }
-		//		};
-		//		Canvas.SetBottom(button, 25 + height);
-		//		_tabCanvas.Children.Add(button);
-		//		height += BUTTON_HEIGHT;
-  //          }
-		//	return 25 + height;
-		//}
-
- 	//	private class Column : IDisposable
-		//{
-		//	public string Title { get; set; }
-		//	public string SourceField { get; set; }
-
-		//	public void Dispose()
-		//	{
-
-		//	}
-		//}
+        public void DisplayError(Exception exception, IOutputSource source)
+        {
+            TabTitle = "Error";
+            var outputString = new StringBuilder();
+            outputString.AppendLine("Error calling action. Unwinding Stacktrace:");
+            outputString.AppendLine("-------------------------------------------");
+            outputString.AppendLine(exception.Message);
+            var indent = string.Empty;
+            while (exception.InnerException != null)
+            {
+                indent += " ";
+                outputString.AppendLine(indent + ">" + exception.InnerException.Message);
+                exception = exception.InnerException;
+            }
+            DisplayOutput(source, "Error", outputString.ToString());
+            Focus();
+        }
 
         #endregion
 
-		public void Dispose()
+        public void Dispose()
 		{
 		}
 
@@ -587,9 +570,6 @@ namespace ModelManager.Core
 				_outputControl.MaxHeight = e.NewSize.Height - 100;
 		}
 
-		public object InvokeAction(Func<object> action)
-		{
-            return action();
-        }
+		
 	}
 }
