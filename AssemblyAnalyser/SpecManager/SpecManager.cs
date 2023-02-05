@@ -117,33 +117,32 @@ namespace AssemblyAnalyser
         //    return assemblySpec ?? AssemblySpec.NullSpec;
         //}
 
-        public AssemblySpec[] LoadReferencedAssemblies(string assemblyFullName)
+        public AssemblySpec[] LoadReferencedAssemblies(string assemblyFullName, string assemblyFilePath)
         {
             var specs = new List<AssemblySpec>();
             //using (var loadContext = CreateMetadataContext())
             //{
             //    var assembly = loadContext.LoadFromAssemblyName(assemblyFullName);
-            var loader = AssemblyLoader.GetLoader("", "");
-            var assembly = loader.LoadAssemblyByName(assemblyFullName);
+            var loader = AssemblyLoader.GetLoader(null, null);
+            var assemblies = loader.LoadReferencedAssembliesByRootPath(assemblyFilePath);
+            //var assembly = loader.LoadAssemblyByName(assemblyFullName);
 
-            foreach (var assemblyName in assembly.GetReferencedAssemblies())
+            foreach (var assembly in assemblies)
             {
                 try
                 {
-                    var referencedAssembly = loader.LoadAssemblyByName(assemblyName.FullName);
-                    _assemblySpecs[assemblyName.Name] = new AssemblySpec(referencedAssembly.FullName,
-                        referencedAssembly.GetName().Name,
-                        referencedAssembly.Location, this, SpecRules);
-                    specs.Add(_assemblySpecs[assemblyName.Name]);
+                    var referencedAssembly = loader.LoadAssemblyByName(assembly.FullName);
+                    _assemblySpecs[assembly.GetName().Name] = CreateFullAssemblySpec(referencedAssembly);
+                    specs.Add(_assemblySpecs[assembly.GetName().Name]);
                 }
                 catch (FileNotFoundException ex)
                 {
                     _exceptionManager.Handle(ex);
-                    _logger.LogWarning($"Unable to load assembly {assemblyName.Name}. Required by {assemblyFullName}");
+                    _logger.LogWarning($"Unable to load assembly {assembly.GetName().Name}. Required by {assemblyFullName}");
                 }
                 catch
                 {
-                    _logger.LogWarning($"Unable to load assembly {assemblyName.Name}. Required by {assemblyFullName}");
+                    _logger.LogWarning($"Unable to load assembly {assembly.GetName().Name}. Required by {assemblyFullName}");
                 }
             }
             //}
@@ -210,10 +209,35 @@ namespace AssemblyAnalyser
 
         private AssemblySpec CreateFullAssemblySpec(Assembly assembly)
         {
-            var spec = new AssemblySpec(assembly.FullName, assembly.GetName().Name, 
-                assembly.Location, this, SpecRules);
+            var frameworkVersion = GetTargetFrameworkVersion(assembly);
+            var spec = new AssemblySpec(assembly.FullName, assembly.GetName().Name, assembly.Location, this, SpecRules)
+            {
+                ImageRuntimeVersion = assembly.ImageRuntimeVersion,
+                TargetFrameworkVersion = frameworkVersion,
+            };
             spec.Logger = _logger;
             return spec;
+        }
+
+        private string GetTargetFrameworkVersion(Assembly assembly)
+        {
+            var attributes = assembly.GetCustomAttributesData();
+            foreach (var attributeData in attributes)
+            {
+                try
+                {
+                    if (attributeData.AttributeType.FullName == "System.Runtime.Versioning.TargetFrameworkAttribute")
+                    {
+                        var attributeValue = attributeData.ConstructorArguments[0];
+                        return attributeValue.Value.ToString();
+                    }
+                }
+                catch
+                {
+
+                }
+            }
+            return null;
         }
 
         private AssemblySpec CreatePartialAssemblySpec(string assemblyName)

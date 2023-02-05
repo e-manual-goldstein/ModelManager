@@ -62,7 +62,7 @@ namespace AssemblyAnalyser
         public AssemblySpec[] LoadReferencedAssemblies()
         {
             //Assembly assembly = _specManager.ReloadAssembly(AssemblyFullName);
-            return _referencedAssemblies ??= _specManager.LoadReferencedAssemblies(AssemblyFullName);
+            return _referencedAssemblies ??= _specManager.LoadReferencedAssemblies(AssemblyFullName, FilePath);
         }
 
         protected override void BuildSpec()

@@ -9,6 +9,6 @@ namespace AssemblyAnalyser
         AssemblySpec[] LoadAssemblySpecs(Assembly[] types);
         AssemblySpec[] LoadAssemblySpecs(AssemblyName[] assemblyNames);
         AssemblySpec LoadAssemblySpec(Assembly assembly);
-        AssemblySpec[] LoadReferencedAssemblies(string assemblyFullName);
+        AssemblySpec[] LoadReferencedAssemblies(string assemblyFullName, string assemblyFullPath);
     }
 }

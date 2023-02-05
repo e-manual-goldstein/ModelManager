@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
-    public enum FrameworkVersion
+    public enum ImageRuntimeVersion
     {
         v4030319,
         v2050727,

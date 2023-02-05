@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -10,38 +11,45 @@ namespace AssemblyAnalyser
 {
     public abstract class AssemblyLoader
     {
+        protected List<string> _filePathsForLoadContext = new List<string>();
+
         public static AssemblyLoader GetLoader(string targetFrameworkVersion, string imageRuntimeVersion)
         {
-            if (_imageRuntimeLoaders.TryGetValue(imageRuntimeVersion, out var loaders))
+            if (string.IsNullOrEmpty(targetFrameworkVersion) && string.IsNullOrEmpty(imageRuntimeVersion))
             {
-                if (loaders.Count > 1)
-                {
-                    //find best loader
-                }
-                else
-                {
-                    return loaders.Single();
-                }
+                return CreateOrGetLoader("v4.0.30319");
             }
-            else if (_frameworkVersionLoaders.TryGetValue(targetFrameworkVersion, out loaders))
+            if (!string.IsNullOrEmpty(targetFrameworkVersion))
             {
-                if (loaders.Count > 1)
-                {
-                    //find best loader
-                }
-                else
-                {
-                    return loaders.Single();
-                }
+                return GetLoaderForFrameworkVersion(targetFrameworkVersion);
             }
-
-            var extraGAC = new List<string>()
+            if (!string.IsNullOrEmpty(imageRuntimeVersion))
             {
-                "C:\\Windows\\assembly\\GAC_MSIL\\Microsoft.IdentityModel\\3.5.0.0__31bf3856ad364e35\\Microsoft.IdentityModel.dll",
-
-            };
-            return new DotNetFrameworkLoader("v4.0.30319", extraGAC);
+                return GetLoaderForImageRuntimeVersion(imageRuntimeVersion);
+            }
+            return new DotNetFrameworkLoader("v4.0.30319");
         }
+
+        private static AssemblyLoader GetLoaderForFrameworkVersion(string targetFrameworkVersion)
+        {
+            return new DotNetFrameworkLoader("v4.0.30319");            
+        }
+
+        private static AssemblyLoader GetLoaderForImageRuntimeVersion(string targetFrameworkVersion)
+        {
+            return new DotNetFrameworkLoader("v4.0.30319");
+        }
+
+        private static AssemblyLoader CreateOrGetLoader(string imageRuntimeVersion)
+        {
+            if (!_loaderCache.TryGetValue(imageRuntimeVersion, out AssemblyLoader loader))
+            {
+                _loaderCache.Add(imageRuntimeVersion, new DotNetFrameworkLoader(imageRuntimeVersion));
+            }
+            return _loaderCache[imageRuntimeVersion];
+        }
+
+        private static Dictionary<string, AssemblyLoader> _loaderCache = new Dictionary<string, AssemblyLoader>();
 
         public abstract Assembly LoadAssemblyByName(string assemblyName);
 
@@ -49,10 +57,9 @@ namespace AssemblyAnalyser
 
         public abstract IEnumerable<Assembly> LoadReferencedAssembliesByRootPath(string rootAssemblyPath);
 
-        private static IDictionary<string, List<AssemblyLoader>> _imageRuntimeLoaders = new Dictionary<string, List<AssemblyLoader>>();
-
-        private static IDictionary<string, List<AssemblyLoader>> _frameworkVersionLoaders = new Dictionary<string, List<AssemblyLoader>>();
-
-
+        internal void AddDirectory(string directory)
+        {
+            _filePathsForLoadContext.AddRange(Directory.GetFiles(directory, "*.dll", SearchOption.AllDirectories));
+        }
     }
 }

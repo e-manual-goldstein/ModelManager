@@ -1,25 +1,19 @@
 ﻿using AssemblyAnalyser.AssemblyLoaders;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
     public class DotNetFrameworkLoader : AssemblyLoader
     {
-        List<string> _filePathsForLoadContext;
         string _imageRuntimeVersion;
         PathAssemblyResolver _resolver;
         MetadataLoadContext _loadContext;
 
-        Dictionary<string, string[]> _baseFrameworkPaths = new Dictionary<string, string[]>() 
+        Dictionary<string, string[]> _baseFrameworkPaths = new Dictionary<string, string[]>()
         {
             { "v1.0.3705",  new [] { "C:\\Windows\\Microsoft.NET\\Framework64\\v2.0.50727", "C:\\Windows\\Microsoft.NET\\Framework\\v2.0.50727"} },
             { "v1.1.4322",  new [] { "C:\\Windows\\Microsoft.NET\\Framework64\\v2.0.50727", "C:\\Windows\\Microsoft.NET\\Framework\\v2.0.50727" } },
@@ -31,38 +25,70 @@ namespace AssemblyAnalyser
         Dictionary<string, Assembly> _loadedAssembliesByName = new Dictionary<string, Assembly>();
         Dictionary<string, Assembly> _loadedAssembliesByPath = new Dictionary<string, Assembly>();
 
-        public DotNetFrameworkLoader(string imageRuntimeVersion, IEnumerable<string> additionalPaths) : this(imageRuntimeVersion)
-        {
-            CreateLoadContext(GetFilePathsForLoadContext().Concat(additionalPaths));
-        }
-
-        private DotNetFrameworkLoader(string imageRuntimeVersion)
+        public DotNetFrameworkLoader(string imageRuntimeVersion)
         {
             _imageRuntimeVersion = imageRuntimeVersion;
+            CreateLoadContext(GetBaseFilePathsForLoadContext());
         }
 
         private void CreateLoadContext(IEnumerable<string> filePaths)
         {
+            _filePathsForLoadContext.AddRange(filePaths);
+            Reset();
+        }
+
+        private void InitialiseLoadContext(string filePath)
+        {
+            if (!_filePathsForLoadContext.Contains(filePath))
+            {
+                _filePathsForLoadContext.Add(filePath);
+                Reset();
+            }
+        }
+
+        private void InitialiseLoadContext(IEnumerable<string> filePaths)
+        {
+            foreach (string filePath in filePaths)
+            {
+                if (!_filePathsForLoadContext.Contains(filePath))
+                {
+                    _filePathsForLoadContext.Add(filePath);
+                }
+            }
+            Reset();
+        }
+
+        private void Reset()
+        {
             if (_loadContext != null)
             {
-                _loadContext.Dispose();                
+                _loadContext.Dispose();
             }
+            var loadedAssemblies = _loadedAssembliesByPath.Keys.ToArray();
             DropCache();
-            _resolver = new PathAssemblyResolver(filePaths);
+            _resolver = new PathAssemblyResolver(_filePathsForLoadContext);
             _loadContext = new MetadataLoadContext(_resolver);
+            ReloadAssemblies(loadedAssemblies);
         }
 
         private void DropCache()
         {
             _loadedAssembliesByPath.Clear();
-            _loadedAssembliesByPath.Clear();
-            
+            _loadedAssembliesByName.Clear();
         }
 
-        private List<string> GetFilePathsForLoadContext(IEnumerable<string> additionalPaths = default)
+        private void ReloadAssemblies(string[] assemblyPaths)
         {
-            additionalPaths ??= Enumerable.Empty<string>();
-            var paths = new List<string>(additionalPaths);
+            foreach (var assmblyPath in assemblyPaths)
+            {
+                var assembly = _loadContext.LoadFromAssemblyPath(assmblyPath);
+                CacheLoadedAssembly(assembly);
+            }
+        }
+
+        private List<string> GetBaseFilePathsForLoadContext()
+        {
+            var paths = new List<string>();
             string fxPath = string.Empty;
             var basePaths = _baseFrameworkPaths[_imageRuntimeVersion];
             if (basePaths.Length > 1)
@@ -76,8 +102,8 @@ namespace AssemblyAnalyser
             }
 
             var frameworkDllPaths = Directory.GetFiles(fxPath, "*.dll", SearchOption.AllDirectories);
-            
-            paths.AddRange(frameworkDllPaths);
+
+            paths.AddRange(frameworkDllPaths.Where(path => !path.Contains("Temporary ASP.NET Files", StringComparison.CurrentCultureIgnoreCase)));
 
             return paths;
         }
@@ -95,7 +121,7 @@ namespace AssemblyAnalyser
                     {
                         TryLoadAssemblyByPath(assemblyPath, out assembly);
                     }
-                }                
+                }
             }
             return assembly;
         }
@@ -127,10 +153,10 @@ namespace AssemblyAnalyser
         private bool TryLoadAssemblyByPath(string filePath, out Assembly assembly)
         {
             bool success = true;
-            assembly = null;            
+            assembly = null;
             try
             {
-                CreateLoadContext(GetFilePathsForLoadContext());
+                InitialiseLoadContext(filePath);
                 assembly = _loadContext.LoadFromAssemblyPath(filePath);
                 CacheLoadedAssembly(assembly);
             }
@@ -152,36 +178,36 @@ namespace AssemblyAnalyser
             assembly = null;
             try
             {
-                CreateLoadContext(GetFilePathsForLoadContext());
+                //CreateLoadContext(GetBaseFilePathsForLoadContext());
                 assembly = _loadContext.LoadFromAssemblyName(assemblyName);
-                CacheLoadedAssembly(assembly);                
-            }            
+                CacheLoadedAssembly(assembly);
+            }
             catch (Exception ex)
             {
                 if (!_loadContext.GetAssemblies().Any(d => d.FullName == assemblyName))
                 {
-                    Faults.Add($"Assembly: {assemblyName} {ex.Message}");
-                    success = false;
+                    if (SystemAssemblyLookup.TryGetPath(assemblyName, out var assemblyPath)
+                        && TryLoadAssemblyByPath(assemblyPath, out assembly))
+                    {
+
+                        Faults.Add($"Assembly: {assemblyName} {ex.Message}");
+                        success = false;
+                    }
                 }
                 assembly = _loadContext.GetAssemblies().SingleOrDefault(d => d.FullName == assemblyName);
             }
             return success;
         }
 
-        private bool TryLoadFromGAC(string assemblyName, out Assembly assembly)
-        {
-            throw new NotImplementedException();
-        }
-
         private void CacheLoadedAssembly(Assembly assembly)
         {
             _loadedAssembliesByPath[assembly.Location] = assembly;
-            _loadedAssembliesByPath[assembly.FullName] = assembly;
+            _loadedAssembliesByName[assembly.FullName] = assembly;
         }
 
         private bool TryLoadReferencedAssemblies(string filePath, out IEnumerable<Assembly> assemblies)
         {
-            CreateLoadContext(GetFilePathsForLoadContext(GetReferencedAssemblyLocations(filePath)));
+            InitialiseLoadContext(Directory.GetFiles(Path.GetDirectoryName(filePath), "*dll"));
             var assemblyNames = GetAssemblyNamesForAssembly(filePath);
             return TryLoadReferences(assemblyNames, out assemblies);
         }
@@ -194,31 +220,23 @@ namespace AssemblyAnalyser
 
         private bool TryLoadReferences(IEnumerable<string> assemblyNames, out IEnumerable<Assembly> assemblies)
         {
-            //assemblies = new List<Assembly>();
+            var list = new List<Assembly>();
             bool success = true;
             foreach (var assemblyName in assemblyNames)
             {
-                try
+                var assembly = LoadAssemblyByName(assemblyName);
+                if (assembly == null)
                 {
-                    var referencedAssembly = _loadContext.LoadFromAssemblyName(assemblyName);
-                    Results.Add($"{assemblyName}");                    
+                    success = false;
                 }
-                catch (Exception ex)
+                else
                 {
-                    if (!_loadContext.GetAssemblies().Any(d => d.FullName == assemblyName))
-                    {
-                        Faults.Add($"Assembly: {assemblyName} {ex.Message}");
-                        success = false;
-                    }
-                }                
+                    list.Add(assembly);
+                }
             }
-            assemblies = _loadContext.GetAssemblies().Where(a => assemblyNames.Contains(a.FullName));
+            assemblies = list;
             return success;
         }
 
-        private IEnumerable<string> GetReferencedAssemblyLocations(string assemblyPath)
-        {
-            return Directory.GetFiles(Path.GetDirectoryName(assemblyPath), "*.dll", SearchOption.AllDirectories);
-        }
     }
 }
