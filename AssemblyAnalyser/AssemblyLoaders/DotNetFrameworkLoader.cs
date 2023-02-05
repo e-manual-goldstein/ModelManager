@@ -10,8 +10,7 @@ namespace AssemblyAnalyser
     public class DotNetFrameworkLoader : AssemblyLoader
     {
         string _imageRuntimeVersion;
-        PathAssemblyResolver _resolver;
-        MetadataLoadContext _loadContext;
+        //PathAssemblyResolver _resolver;
 
         Dictionary<string, string[]> _baseFrameworkPaths = new Dictionary<string, string[]>()
         {
@@ -22,71 +21,19 @@ namespace AssemblyAnalyser
             { "COMPLUS",    new [] { "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319", "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319" } }
         };
 
-        Dictionary<string, Assembly> _loadedAssembliesByName = new Dictionary<string, Assembly>();
-        Dictionary<string, Assembly> _loadedAssembliesByPath = new Dictionary<string, Assembly>();
-
-        public DotNetFrameworkLoader(string imageRuntimeVersion)
+        public DotNetFrameworkLoader(string imageRuntimeVersion) : base()
         {
             _imageRuntimeVersion = imageRuntimeVersion;
             CreateLoadContext(GetBaseFilePathsForLoadContext());
         }
 
-        private void CreateLoadContext(IEnumerable<string> filePaths)
+        protected override void CreateLoadContext(IEnumerable<string> filePaths)
         {
             _filePathsForLoadContext.AddRange(filePaths);
             Reset();
         }
 
-        private void InitialiseLoadContext(string filePath)
-        {
-            if (!_filePathsForLoadContext.Contains(filePath))
-            {
-                _filePathsForLoadContext.Add(filePath);
-                Reset();
-            }
-        }
-
-        private void InitialiseLoadContext(IEnumerable<string> filePaths)
-        {
-            foreach (string filePath in filePaths)
-            {
-                if (!_filePathsForLoadContext.Contains(filePath))
-                {
-                    _filePathsForLoadContext.Add(filePath);
-                }
-            }
-            Reset();
-        }
-
-        private void Reset()
-        {
-            if (_loadContext != null)
-            {
-                _loadContext.Dispose();
-            }
-            var loadedAssemblies = _loadedAssembliesByPath.Keys.ToArray();
-            DropCache();
-            _resolver = new PathAssemblyResolver(_filePathsForLoadContext);
-            _loadContext = new MetadataLoadContext(_resolver);
-            ReloadAssemblies(loadedAssemblies);
-        }
-
-        private void DropCache()
-        {
-            _loadedAssembliesByPath.Clear();
-            _loadedAssembliesByName.Clear();
-        }
-
-        private void ReloadAssemblies(string[] assemblyPaths)
-        {
-            foreach (var assmblyPath in assemblyPaths)
-            {
-                var assembly = _loadContext.LoadFromAssemblyPath(assmblyPath);
-                CacheLoadedAssembly(assembly);
-            }
-        }
-
-        private List<string> GetBaseFilePathsForLoadContext()
+        protected override List<string> GetBaseFilePathsForLoadContext()
         {
             var paths = new List<string>();
             string fxPath = string.Empty;
@@ -107,9 +54,6 @@ namespace AssemblyAnalyser
 
             return paths;
         }
-
-        public List<string> Faults { get; } = new List<string>();
-        public List<string> Results { get; } = new List<string>();
 
         public override Assembly LoadAssemblyByName(string assemblyName)
         {
@@ -150,6 +94,21 @@ namespace AssemblyAnalyser
             return assemblies;
         }
 
+        public override IEnumerable<string> PreLoadReferencedAssembliesByRootPath(string rootAssemblyPath)
+        {
+            if (!_loadedAssembliesByPath.TryGetValue(rootAssemblyPath, out Assembly assembly))
+            {
+                TryLoadAssemblyByPath(rootAssemblyPath, out assembly);
+            }
+            if (assembly == null)
+            {
+                return Array.Empty<string>();
+            }
+            TryPreLoadReferencedAssemblies(rootAssemblyPath, out var assemblyPaths);
+            assemblyPaths ??= Array.Empty<string>();
+            return assemblyPaths;
+        }
+
         private bool TryLoadAssemblyByPath(string filePath, out Assembly assembly)
         {
             bool success = true;
@@ -186,8 +145,8 @@ namespace AssemblyAnalyser
             {
                 if (!_loadContext.GetAssemblies().Any(d => d.FullName == assemblyName))
                 {
-                    if (SystemAssemblyLookup.TryGetPath(assemblyName, out var assemblyPath)
-                        && TryLoadAssemblyByPath(assemblyPath, out assembly))
+                    if (!SystemAssemblyLookup.TryGetPath(assemblyName, out var assemblyPath)
+                        || !TryLoadAssemblyByPath(assemblyPath, out assembly))
                     {
 
                         Faults.Add($"Assembly: {assemblyName} {ex.Message}");
@@ -199,17 +158,18 @@ namespace AssemblyAnalyser
             return success;
         }
 
-        private void CacheLoadedAssembly(Assembly assembly)
-        {
-            _loadedAssembliesByPath[assembly.Location] = assembly;
-            _loadedAssembliesByName[assembly.FullName] = assembly;
-        }
-
         private bool TryLoadReferencedAssemblies(string filePath, out IEnumerable<Assembly> assemblies)
         {
             InitialiseLoadContext(Directory.GetFiles(Path.GetDirectoryName(filePath), "*dll"));
             var assemblyNames = GetAssemblyNamesForAssembly(filePath);
             return TryLoadReferences(assemblyNames, out assemblies);
+        }
+
+        private bool TryPreLoadReferencedAssemblies(string filePath, out IEnumerable<string> assemblyPaths)
+        {
+            InitialiseLoadContext(Directory.GetFiles(Path.GetDirectoryName(filePath), "*dll"));
+            var assemblyNames = GetAssemblyNamesForAssembly(filePath);
+            return TryPreLoadReferences(assemblyNames, out assemblyPaths);
         }
 
         private IEnumerable<string> GetAssemblyNamesForAssembly(string filePath)
@@ -237,6 +197,27 @@ namespace AssemblyAnalyser
             assemblies = list;
             return success;
         }
+
+        private bool TryPreLoadReferences(IEnumerable<string> assemblyNames, out IEnumerable<string> assemblies)
+        {
+            var list = new List<string>();
+            bool success = true;
+            foreach (var assemblyName in assemblyNames)
+            {
+                var assembly = LoadAssemblyByName(assemblyName);
+                if (assembly == null)
+                {
+                    success = false;
+                }
+                else
+                {
+                    list.Add(assembly.FullName);
+                }
+            }
+            assemblies = list;
+            return success;
+        }
+
 
     }
 }

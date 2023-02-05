@@ -124,77 +124,30 @@ namespace AssemblyAnalyser
             //{
             //    var assembly = loadContext.LoadFromAssemblyName(assemblyFullName);
             var loader = AssemblyLoader.GetLoader(null, null);
-            var assemblies = loader.LoadReferencedAssembliesByRootPath(assemblyFilePath);
+            var assemblyNames = loader.PreLoadReferencedAssembliesByRootPath(assemblyFilePath);
             //var assembly = loader.LoadAssemblyByName(assemblyFullName);
 
-            foreach (var assembly in assemblies)
+            foreach (var assemblyName in assemblyNames)
             {
                 try
                 {
-                    var referencedAssembly = loader.LoadAssemblyByName(assembly.FullName);
-                    _assemblySpecs[assembly.GetName().Name] = CreateFullAssemblySpec(referencedAssembly);
+                    var assembly = loader.LoadAssemblyByName(assemblyName);
+                    _assemblySpecs[assembly.GetName().Name] = CreateFullAssemblySpec(assembly);
                     specs.Add(_assemblySpecs[assembly.GetName().Name]);
                 }
                 catch (FileNotFoundException ex)
                 {
                     _exceptionManager.Handle(ex);
-                    _logger.LogWarning($"Unable to load assembly {assembly.GetName().Name}. Required by {assemblyFullName}");
+                    _logger.LogWarning($"Unable to load assembly {assemblyName}. Required by {assemblyFullName}");
                 }
                 catch
                 {
-                    _logger.LogWarning($"Unable to load assembly {assembly.GetName().Name}. Required by {assemblyFullName}");
+                    _logger.LogWarning($"Unable to load assembly {assemblyName}. Required by {assemblyFullName}");
                 }
             }
             //}
             return specs.OrderBy(s => s.FilePath).ToArray();
         }
-
-        //private bool TryLoadAssembly(AssemblyName assemblyName, out Assembly assembly)
-        //{
-        //    if (_workingFiles.TryGetValue(assemblyName.Name, out string filePath))
-        //    {
-        //        _logger.Log(LogLevel.Information, $"Loading Working Path Assembly: {assemblyName.Name}");
-        //        LoadAssemblyFromPath(filePath, out assembly);
-        //        return true;
-        //    }
-        //    else if (TryLoadSystemAssembly(assemblyName.Name, out assembly))
-        //    {
-        //        _logger.Log(LogLevel.Information, $"Loading System Assembly: {assemblyName.Name}");
-        //        return true;
-        //    }
-        //    try
-        //    {
-        //        assembly = _metadataLoadContext.LoadFromAssemblyName(assemblyName);
-        //        return true;
-        //    }
-        //    catch
-        //    {
-        //        _logger.LogWarning($"Unable to load assembly {assemblyName}");
-        //    }
-        //    return false;
-        //}
-
-        //public void LoadAssemblyFromPath(string assemblyPath, out Assembly assembly)
-        //{
-        //    assembly = _metadataLoadContext.LoadFromAssemblyPath(assemblyPath);
-        //}
-
-        //private bool TryLoadSystemAssembly(string assmemblyName, out Assembly assembly)
-        //{
-        //    var systemFolder = Environment.GetFolderPath(Environment.SpecialFolder.System);
-        //    var version = IntPtr.Size == 8 ? "64" : string.Empty;
-        //    var dotnetv2Path = Path.Combine(systemFolder, $@"..\Microsoft.NET\Framework{version}\v2.0.50727\{assmemblyName}.dll");
-        //    bool exists;
-        //    if (exists = File.Exists(dotnetv2Path))
-        //    {
-        //        assembly = _metadataLoadContext.LoadFromAssemblyPath(dotnetv2Path);
-        //    }
-        //    else
-        //    {
-        //        assembly = null;
-        //    }
-        //    return exists;
-        //}
 
         public AssemblySpec[] LoadAssemblySpecs(Assembly[] types)
         {
@@ -209,7 +162,7 @@ namespace AssemblyAnalyser
 
         private AssemblySpec CreateFullAssemblySpec(Assembly assembly)
         {
-            var frameworkVersion = GetTargetFrameworkVersion(assembly);
+            assembly.TryGetTargetFrameworkVersion(out string frameworkVersion);
             var spec = new AssemblySpec(assembly.FullName, assembly.GetName().Name, assembly.Location, this, SpecRules)
             {
                 ImageRuntimeVersion = assembly.ImageRuntimeVersion,
@@ -219,26 +172,7 @@ namespace AssemblyAnalyser
             return spec;
         }
 
-        private string GetTargetFrameworkVersion(Assembly assembly)
-        {
-            var attributes = assembly.GetCustomAttributesData();
-            foreach (var attributeData in attributes)
-            {
-                try
-                {
-                    if (attributeData.AttributeType.FullName == "System.Runtime.Versioning.TargetFrameworkAttribute")
-                    {
-                        var attributeValue = attributeData.ConstructorArguments[0];
-                        return attributeValue.Value.ToString();
-                    }
-                }
-                catch
-                {
 
-                }
-            }
-            return null;
-        }
 
         private AssemblySpec CreatePartialAssemblySpec(string assemblyName)
         {
