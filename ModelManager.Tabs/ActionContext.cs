@@ -11,29 +11,39 @@ namespace ModelManager.Tabs
 {
     public class ActionContext : IOutputSource
     {
-        MethodInfo _actionMethod;
+        string _actionName;
         OutputTab _tab;
         IOutputSource _actionSource;
-        
+        Func<object> _func;
 
         public ActionContext(MethodInfo actionMethod, OutputTab tab, IOutputSource actionSource)
         {
-            _actionMethod = actionMethod;
+            HasParameters = actionMethod.GetParameters().Any();
+            _actionName = actionMethod.Name;
+            _func = () => actionMethod.Invoke(_actionSource, new object[] { });// InvokeAction(_actionMethod, new object[] { });
             _tab = tab;
             _actionSource = actionSource;
-            _actionContextsById.Add(GetNewActionId($"{_actionMethod.DeclaringType}.{_actionMethod.Name}"), this);
+            _actionContextsById.Add(GetNewActionId($"{actionMethod.DeclaringType}.{actionMethod.Name}"), this);
         }
 
-        public bool HasParameters => _actionMethod.GetParameters().Any();
+        public ActionContext(string actionName, OutputTab tab, Func<object> func)
+        {
+            _tab = tab;
+            _actionName = actionName;
+            _actionContextsById.Add(GetNewActionId(actionName), this);
+            _func = func;
+        }
+
+        public bool HasParameters { get; }
 
         public async Task ExecuteAction()
         {
             try
             {
-                _tab.DisplayExecutingMessage();
-                var task = Task.Run(() => InvokeAction(_actionMethod, new object[] { }));
+                //_tab.DisplayExecutingMessage();
+                var task = Task.Run(_func);
                 await task;
-                _tab.DisplayOutput(task.Result, this, _actionMethod);
+                _tab.DisplayOutput(task.Result, this, _actionName);
             }
             catch (Exception ex)
             {

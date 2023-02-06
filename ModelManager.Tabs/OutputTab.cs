@@ -127,6 +127,7 @@ namespace ModelManager.Tabs
 			var controlWidth = _tabControl.Width - tabItemControlWidth - (CANVAS_MARGIN * 2) - 10;
             _outputControl = typedOutput.GetOutput(controlWidth, _tabControl.Height - 100, out bool success);
 			typedOutput.ActionClicked += OutputActionClicked;
+			typedOutput.ActionClickedAsync += OutputActionClickedAsync;
             addCopyOutputButton(typedOutput);
 			foreach (Button button in typedOutput.ActionButtons)
 			{
@@ -146,10 +147,11 @@ namespace ModelManager.Tabs
 		private void OutputActionClicked(Func<object> func, string actionName)
 		{
             var tab = _tabManager.InitialiseOutputTab(actionName);
+			var actionContext = new ActionContext(actionName, tab, func);
+			tab.DisplayExecutingMessage();
             try
             {
-                tab.DisplayExecutingMessage();
-				tab.DisplayOutput(func(), null, actionName);
+				Task.Run(async () => await actionContext.ExecuteAction());
             }
             catch (Exception ex)
             {
@@ -157,30 +159,44 @@ namespace ModelManager.Tabs
             }
 		}
 
-		//public void DisplayOutput<T>(AbstractServiceTab callingService, string callingAction, T output, params string[] extraInfo)
-		//	where T : IOutput
-		//      {
-		//          addOutputHeader(callingAction, extraInfo);
-		//          addCopyOutputButton();
-		//          bool success = false;
-		//          _outputControl = output switch
-		//	{
-		//		SingleOutput single => outputAsSingle(single, out success),
-		//		ListOutput list => outputAsList(list, out success),
-		//		TableOutput table => outputAsTable(table, out success),
-		//		_ => new Control()
-		//	};            
-		//          Canvas.SetTop(_outputControl, 50);
-		//          Canvas.SetLeft(_outputControl, CANVAS_MARGIN);
-		//          if (success)
-		//          {
-		//              _tabCanvas.Children.Add(_outputControl);
-		//              _disposableElements.Add(_outputControl);
-		//          }
-		//          _executingTab = callingService;
-		//      }
+        private async Task OutputActionClickedAsync(Func<object> func, string actionName)
+        {
+            var tab = _tabManager.InitialiseOutputTab(actionName);
+            var actionContext = new ActionContext(actionName, tab, func);
+            try
+            {
+                await actionContext.ExecuteAction();
+            }
+            catch (Exception ex)
+            {
+                _tabManager.DisplayError(ex, null, tab);
+            }
+        }
 
-		private void selectOutputTab(object sender, RoutedEventArgs e)
+        //public void DisplayOutput<T>(AbstractServiceTab callingService, string callingAction, T output, params string[] extraInfo)
+        //	where T : IOutput
+        //      {
+        //          addOutputHeader(callingAction, extraInfo);
+        //          addCopyOutputButton();
+        //          bool success = false;
+        //          _outputControl = output switch
+        //	{
+        //		SingleOutput single => outputAsSingle(single, out success),
+        //		ListOutput list => outputAsList(list, out success),
+        //		TableOutput table => outputAsTable(table, out success),
+        //		_ => new Control()
+        //	};            
+        //          Canvas.SetTop(_outputControl, 50);
+        //          Canvas.SetLeft(_outputControl, CANVAS_MARGIN);
+        //          if (success)
+        //          {
+        //              _tabCanvas.Children.Add(_outputControl);
+        //              _disposableElements.Add(_outputControl);
+        //          }
+        //          _executingTab = callingService;
+        //      }
+
+        private void selectOutputTab(object sender, RoutedEventArgs e)
 		{
 			_tabManager.SelectOutputTab(this);
 		}
@@ -358,12 +374,13 @@ namespace ModelManager.Tabs
 			}
 			try
 			{
+				var actionContext = new ActionContext(_executedAction, this, null);
 				DisplayExecutingMessage();
 				object[] parameters = getInputParameters();
                 if (parameters.Any())
                 {
-                    //_tabManager.CloseTab(this);
-                    var task = Task.Run(() => _executingTab.InvokeAction(_executedAction, parameters));
+                    //actionContext.ExecuteAction(parameters));
+					var task = Task.Run(() => _executingTab.InvokeAction(_executedAction, parameters));
                     await task;
                     DisplayOutput(task.Result, _executingTab, _executedAction);
                 }
@@ -520,7 +537,10 @@ namespace ModelManager.Tabs
 		{
 			foreach (var element in _disposableElements)
 			{
-				_tabCanvas.Children.Remove(element);
+				Application.Current.Dispatcher.Invoke(() =>
+				{
+					_tabCanvas.Children.Remove(element);
+				});
 			}
 		}
 
@@ -539,8 +559,11 @@ namespace ModelManager.Tabs
         public void DisplayOutput(object objectToDisplay, IOutputSource source, string actionName)
         {
             ClearInputElements();
-            DisplayOutput(source, actionName, objectToDisplay ?? "No Output To Display");
-            Focus();
+			Application.Current.Dispatcher?.Invoke(() =>
+			{
+				DisplayOutput(source, actionName, objectToDisplay ?? "No Output To Display");
+				Focus();
+			});
         }
 
         public void DisplayError(Exception exception, IOutputSource source)

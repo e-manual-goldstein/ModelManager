@@ -13,6 +13,7 @@ namespace ModelManager.Tabs.Outputs
         Control GetOutput(double controlWidth, double tabHeight, out bool success);
 
         event ButtonClickedEventHandler ActionClicked;
+        event ButtonClickedAsyncEventHandler ActionClickedAsync;
 
         void copyOutput(object sender, RoutedEventArgs e);
     }

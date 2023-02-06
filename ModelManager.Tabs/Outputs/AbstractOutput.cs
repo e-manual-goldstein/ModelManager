@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -62,7 +63,9 @@ namespace ModelManager.Tabs.Outputs
                                 
                 button.Click += (sender, eventArgs) =>
                 {
-                    ActionClicked(() => ContentActions[key](GetActionableContent()), key);
+                    var actionableContent = GetActionableContent();
+                    ActionClicked(() => ContentActions[key](actionableContent), key);
+                    //Task.Run(async () => await ActionClickedAsync(() => ContentActions[key](GetActionableContent()), key));
                 };
                 Canvas.SetBottom(button, height);
                 ActionButtons.Add(button);
@@ -72,6 +75,7 @@ namespace ModelManager.Tabs.Outputs
         }
 
         public event ButtonClickedEventHandler ActionClicked;
+        public event ButtonClickedAsyncEventHandler ActionClickedAsync;
 
         public void copyOutput(object sender, RoutedEventArgs e)        
         {
@@ -81,4 +85,5 @@ namespace ModelManager.Tabs.Outputs
     }
 
     public delegate void ButtonClickedEventHandler(Func<object> func, string actionName);
+    public delegate Task ButtonClickedAsyncEventHandler(Func<object> func, string actionName);
 }

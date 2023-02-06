@@ -124,7 +124,7 @@ namespace ModelManager.Tabs
                     }
                     else
                     {
-                        await actionContext.ExecuteAction();       
+                        await actionContext.ExecuteAction();
                     }
                 }
             }
