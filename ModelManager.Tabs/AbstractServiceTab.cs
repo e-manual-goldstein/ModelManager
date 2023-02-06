@@ -24,7 +24,7 @@ namespace ModelManager.Tabs
         private TabManager _tabManager;
         private Canvas _tabCanvas = new Canvas();
         private Canvas _buttonCanvas;
-        Dictionary<string, Action<double>> _progressUpdaters = new Dictionary<string, Action<double>>();
+        //Dictionary<string, ProgressUpdater> _progressUpdaters = new Dictionary<string, ProgressUpdater>();
         private Dictionary<string, MethodInfo> _actionMethods = new Dictionary<string, MethodInfo>();
         //private Dictionary<string, string> _actionSummaries = new Dictionary<string, string>();
         private const double BUTTON_HEIGHT = 30;

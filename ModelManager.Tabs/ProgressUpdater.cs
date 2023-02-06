@@ -11,17 +11,22 @@ namespace ModelManager.Tabs
 {
     public class ProgressUpdater : IDisposable
     {
+        private readonly ActionContext _actionContext;
+
         public ProgressUpdater(AbstractServiceTab sourceTab, string actionName = null)
         {
-            actionName ??= ActionContext.GetActionId();            
+            if (actionName == null)
+            {
+                var stackTrace = new StackTrace();
+                var callingAction = stackTrace.GetFrame(1).GetMethod();
+                actionName = $"{callingAction.DeclaringType}.{callingAction.Name}";
+            }
+            _actionContext = ActionContext.GetCurrentContextByActionName(actionName);
         }
 
-        //public event RoutedPropertyChangedEventHandler<double> UpdateProgress;
-
-
-        public void UpdateProgress(double newProgress)
+        public void UpdateProgress(double current, double max)
         {
-
+            _actionContext.UpdateProgress(current, max);
         }
 
         public void Dispose()

@@ -238,11 +238,14 @@ namespace ModelManager.Tabs
             _tabCanvas.Children.Add(_progressBar);
         }
 
-		public void UpdateProgress(double progress)
-		{
-			
-			_progressBar.Value = progress;
-		}
+        public void UpdateProgress(double current, double max)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+				var percentProgress = 100.0 * current / max;
+                _progressBar.Value = percentProgress;
+            });
+        }
 
         #endregion
 
