@@ -12,13 +12,15 @@ namespace AssemblyAnalyser
     {
         private FieldInfo _fieldInfo;
 
-        public FieldSpec(FieldInfo fieldInfo, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        public FieldSpec(FieldInfo fieldInfo, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
         {
             _fieldInfo = fieldInfo;
+            DeclaringType = declaringType;
         }
 
         public TypeSpec FieldType { get; private set; }
-
+        public bool IsSystemProperty { get; set; }
+        public TypeSpec DeclaringType { get; }
 
         protected override void BuildSpec()
         {

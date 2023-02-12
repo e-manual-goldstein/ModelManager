@@ -12,18 +12,19 @@ namespace AssemblyAnalyser
         private ParameterInfo _parameterInfo;
 
         public TypeSpec ParameterType { get; private set; }
-        public MethodSpec Method { get; set; }
+        public MethodSpec Method { get; }
+        public bool IsSystemParameter { get; }
 
-
-        public ParameterSpec(ParameterInfo parameterInfo, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        public ParameterSpec(ParameterInfo parameterInfo, MethodSpec method, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
         {
             _parameterInfo = parameterInfo;
+            IsSystemParameter = method.IsSystemMethod;
+            Method = method;
         }
 
         protected override void BuildSpec()
         {
-            //ParameterType = _specManager.TryLoadTypeSpec(() => _parameterInfo.ParameterType);
-            Method = _specManager.LoadMethodSpec(_parameterInfo.Member as MethodInfo);            
+            //Method = _specManager.LoadMethodSpec(_parameterInfo.Member as MethodInfo);            
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)

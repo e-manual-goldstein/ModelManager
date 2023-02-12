@@ -29,7 +29,7 @@ namespace AssemblyAnalyser
             IsSystemAssembly = AssemblyLoader.IsSystemAssembly(filePath);
         }
 
-        public AssemblySpec(string assemblyFullName, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        AssemblySpec(string assemblyFullName, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
         {
             _representedAssemblyNames.Add(assemblyFullName);
             _specManager = specManager;
@@ -127,6 +127,16 @@ namespace AssemblyAnalyser
                 {
                     yield return $"{@interface}\t{assembly.AssemblyShortName}";
                 }
+            }
+        }
+
+        public IEnumerable<string> GenericTypeReport()
+        {
+            foreach (var typeSpec in TypeSpecs.Where(t => t.IsGenericType))
+            {
+                
+                yield return $"{typeSpec}";
+                
             }
         }
     }

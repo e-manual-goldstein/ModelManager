@@ -7,7 +7,7 @@ namespace AssemblyAnalyser
     public interface IParameterSpecManager
     {
         IReadOnlyDictionary<ParameterInfo, ParameterSpec> Parameters { get; }
-        ParameterSpec[] TryLoadParameterSpecs(Func<ParameterInfo[]> value);
+        ParameterSpec[] TryLoadParameterSpecs(Func<ParameterInfo[]> value, MethodSpec method);
 
     }
 }

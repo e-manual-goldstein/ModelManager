@@ -26,10 +26,13 @@ namespace AssemblyAnalyser
 
         private string _fullTypeName;
         public bool IsInterface { get; }
+        public bool IsSystemType { get; }
 
-        public TypeSpec(string typeName, bool isInterface, ISpecManager specManager, List<IRule> rules) : this(typeName, specManager, rules)
+        public TypeSpec(string typeName, bool isInterface, AssemblySpec assembly, ISpecManager specManager, List<IRule> rules) : this(typeName, specManager, rules)
         {
             IsInterface = isInterface;
+            Assembly = assembly;
+            IsSystemType = AssemblyLoader.IsSystemAssembly(assembly.FilePath);
         }
 
         public TypeSpec(string fullTypeName, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
@@ -46,6 +49,7 @@ namespace AssemblyAnalyser
                 Properties = CreatePropertySpecs(type);
                 Methods = CreateMethodSpecs(type);
                 Fields = CreateFieldSpecs(type);
+                ProcessGenerics(type);
             });
         }
 
@@ -72,7 +76,7 @@ namespace AssemblyAnalyser
 
         private PropertySpec[] CreatePropertySpecs(Type type)
         {
-            var specs = _specManager.TryLoadPropertySpecs(() => type.GetProperties());
+            var specs = _specManager.TryLoadPropertySpecs(() => type.GetProperties().Where(m => m.DeclaringType == type).ToArray(), this);
             return specs;
         }
 
@@ -85,7 +89,7 @@ namespace AssemblyAnalyser
 
         private FieldSpec[] CreateFieldSpecs(Type type)
         {
-            var specs = _specManager.TryLoadFieldSpecs(() => type.GetFields());
+            var specs = _specManager.TryLoadFieldSpecs(() => type.GetFields().Where(m => m.DeclaringType == type).ToArray(), this);
             return specs;
         }
 
@@ -96,7 +100,7 @@ namespace AssemblyAnalyser
             Task properties = AnalyseProperties(analyser);
             Task methods = AnalyseMethods(analyser);
             Task fields = AnalyseFields(analyser);
-            await Task.WhenAll(baseSpec, interfaces, properties, methods, fields);            
+            await Task.WhenAll(baseSpec, interfaces, properties, methods, fields);
         }
 
         private Task AnalyseBaseSpec(Analyser analyser)
@@ -124,7 +128,7 @@ namespace AssemblyAnalyser
             return Task.WhenAll(Fields.Select(f => f.AnalyseAsync(analyser)));
         }
         
-        public AssemblySpec Assembly { get; set; }
+        public AssemblySpec Assembly { get; }
 
         private List<TypeSpec> _implementations = new List<TypeSpec>();
 
@@ -169,6 +173,29 @@ namespace AssemblyAnalyser
         public PropertySpec[] Properties { get; private set; }
         
         public FieldSpec[] Fields { get; private set; }
+
+        #region Generic Type Flags
+
+        private void ProcessGenerics(Type type)
+        {
+            IsGenericType = type.IsGenericType;
+            IsGenericParameter = type.IsGenericParameter;
+            IsGenericTypeDefinition = type.IsGenericTypeDefinition;
+            ContainsGenericParameters = type.ContainsGenericParameters;
+            IsGenericTypeParameter = type.IsGenericTypeParameter;
+        }
+
+        public bool IsGenericType { get; private set; }
+
+        public bool IsGenericParameter { get; private set; }
+
+        public bool IsGenericTypeDefinition { get; private set; }
+
+        public bool ContainsGenericParameters { get; private set; }
+
+        public bool IsGenericTypeParameter { get; private set; }
+
+        #endregion
 
         public bool IsNullSpec { get; private set; }
 

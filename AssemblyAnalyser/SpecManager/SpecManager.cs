@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -37,6 +38,48 @@ namespace AssemblyAnalyser
         public IReadOnlyDictionary<string, AssemblySpec> Assemblies => _assemblySpecs;
 
         ConcurrentDictionary<string, AssemblySpec> _assemblySpecs = new ConcurrentDictionary<string, AssemblySpec>();
+
+        public void ProcessAllAssemblies(bool includeSystem = true, bool parallelProcessing = true)
+        {
+            var list = new List<AssemblySpec>();
+            
+            var assemblySpecs = Assemblies.Values;
+
+            var nonSystemAssemblies = assemblySpecs.Where(a => includeSystem || !a.IsSystemAssembly).ToArray();
+            foreach (var assembly in nonSystemAssemblies)
+            {
+                RecursivelyLoadAssemblies(assembly, list);
+            }
+            list = list.Where(a => includeSystem || !a.IsSystemAssembly).ToList();
+            if (parallelProcessing)
+            {
+                Parallel.ForEach(list, l => l.Process());
+            }
+            else
+            {
+                foreach (var item in list)
+                {
+                    item.Process();
+                }
+            }
+        }
+        
+        private void RecursivelyLoadAssemblies(AssemblySpec assemblySpec, List<AssemblySpec> loaded)
+        {
+            var referencedAssemblies = assemblySpec.LoadReferencedAssemblies(false);
+            if (!loaded.Contains(assemblySpec))
+            {
+                loaded.Add(assemblySpec);
+            }
+            if (referencedAssemblies.Any())
+            {
+                var newAssemblies = referencedAssemblies.Except(loaded);
+                foreach (var newAssembly in newAssemblies)
+                {
+                    RecursivelyLoadAssemblies(newAssembly, loaded);
+                }
+            }
+        }
 
         public AssemblySpec LoadAssemblySpec(Assembly assembly)
         {
@@ -104,6 +147,24 @@ namespace AssemblyAnalyser
 
         ConcurrentDictionary<string, TypeSpec> _typeSpecs = new ConcurrentDictionary<string, TypeSpec>();
 
+        public void ProcessLoadedTypes(bool includeSystem = true, bool parallelProcessing = true)
+        {
+            if (!parallelProcessing)
+            {
+                foreach (var (typename, type) in Types.Where(t => includeSystem || !t.Value.Assembly.IsSystemAssembly))
+                {
+                    type.Process();
+                }
+            }
+            else
+            {
+                Parallel.ForEach(Types.Values, new ParallelOptions() { MaxDegreeOfParallelism = 16 }, (t) =>
+                {
+                    t.Process();
+                });
+            }
+        }
+
         public void TryBuildTypeSpecForAssembly(string fullTypeName, AssemblySpec assemblySpec, Action<Type> buildAction)
         {
             Type type = null;
@@ -153,9 +214,9 @@ namespace AssemblyAnalyser
 
         private TypeSpec CreateFullTypeSpec(Type type)
         {
-            var spec = new TypeSpec(type.FullName, type.IsInterface, this, SpecRules);
-            spec.Logger = _logger;
-            spec.Assembly = _assemblySpecs[type.Assembly.FullName];
+            var assemblySpec = LoadAssemblySpec(type.Assembly);
+            var spec = new TypeSpec(type.FullName, type.IsInterface, assemblySpec, this, SpecRules);
+            spec.Logger = _logger;            
             return spec;
         }
 
@@ -247,6 +308,14 @@ namespace AssemblyAnalyser
         public IReadOnlyDictionary<MethodInfo, MethodSpec> Methods => _methodSpecs;
 
         ConcurrentDictionary<MethodInfo, MethodSpec> _methodSpecs = new ConcurrentDictionary<MethodInfo, MethodSpec>();
+        
+        public void ProcessLoadedMethods(bool includeSystem = true)
+        {
+            foreach (var (methodName, methodSpec) in Methods.Where(t => includeSystem || !t.Value.IsSystemMethod))
+            {
+                methodSpec.Process();
+            }
+        }
 
         public MethodSpec LoadMethodSpec(MethodInfo method)
         {
@@ -259,9 +328,7 @@ namespace AssemblyAnalyser
 
         private MethodSpec CreateMethodSpec(MethodInfo method)
         {
-            var spec = new MethodSpec(method, this, SpecRules);
-            spec.DeclaringType = LoadFullTypeSpec(method.DeclaringType);
-            
+            var spec = new MethodSpec(method, LoadFullTypeSpec(method.DeclaringType), this, SpecRules);
             return spec;
         }
 
@@ -308,22 +375,30 @@ namespace AssemblyAnalyser
 
         ConcurrentDictionary<PropertyInfo, PropertySpec> _propertySpecs = new ConcurrentDictionary<PropertyInfo, PropertySpec>();
 
-        private PropertySpec LoadPropertySpec(PropertyInfo propertyInfo)
+        public void ProcessLoadedProperties(bool includeSystem = true)
+        {
+            foreach (var (propertyName, prop) in Properties.Where(t => includeSystem || !t.Value.IsSystemProperty))
+            {
+                prop.Process();
+            }
+        }
+
+        private PropertySpec LoadPropertySpec(PropertyInfo propertyInfo, TypeSpec declaringType)
         {
             PropertySpec propertySpec;
             if (!_propertySpecs.TryGetValue(propertyInfo, out propertySpec))
             {
-                _propertySpecs[propertyInfo] = propertySpec = new PropertySpec(propertyInfo, this, SpecRules);
+                _propertySpecs[propertyInfo] = propertySpec = new PropertySpec(propertyInfo, declaringType, this, SpecRules);
             }
             return propertySpec;
         }
 
-        public PropertySpec[] LoadPropertySpecs(PropertyInfo[] propertyInfos)
+        public PropertySpec[] LoadPropertySpecs(PropertyInfo[] propertyInfos, TypeSpec declaringType)
         {
-            return propertyInfos.Select(p => LoadPropertySpec(p)).ToArray();
+            return propertyInfos.Select(p => LoadPropertySpec(p, declaringType)).ToArray();
         }
 
-        public PropertySpec[] TryLoadPropertySpecs(Func<PropertyInfo[]> getProperties)
+        public PropertySpec[] TryLoadPropertySpecs(Func<PropertyInfo[]> getProperties, TypeSpec declaringType)
         {
             PropertyInfo[] properties = null;
             try
@@ -350,7 +425,7 @@ namespace AssemblyAnalyser
             {
                 properties ??= Array.Empty<PropertyInfo>();
             }
-            return LoadPropertySpecs(properties);
+            return LoadPropertySpecs(properties, declaringType);
         }
 
         #endregion
@@ -361,17 +436,25 @@ namespace AssemblyAnalyser
 
         ConcurrentDictionary<ParameterInfo, ParameterSpec> _parameterSpecs = new ConcurrentDictionary<ParameterInfo, ParameterSpec>();
 
-        private ParameterSpec LoadParameterSpec(ParameterInfo parameterInfo)
+        public void ProcessLoadedParameters(bool includeSystem = true)
         {
-            return _parameterSpecs.GetOrAdd(parameterInfo, new ParameterSpec(parameterInfo, this, SpecRules));                        
+            foreach (var (parameterName, param) in Parameters.Where(t => includeSystem || !t.Value.IsSystemParameter))
+            {
+                param.Process();
+            }
         }
 
-        public ParameterSpec[] LoadParameterSpecs(ParameterInfo[] parameterInfos)
+        private ParameterSpec LoadParameterSpec(ParameterInfo parameterInfo, MethodSpec method)
         {
-            return parameterInfos?.Select(p => LoadParameterSpec(p)).ToArray();
+            return _parameterSpecs.GetOrAdd(parameterInfo, new ParameterSpec(parameterInfo, method, this, SpecRules));                        
         }
 
-        public ParameterSpec[] TryLoadParameterSpecs(Func<ParameterInfo[]> parameterInfosFunc)
+        public ParameterSpec[] LoadParameterSpecs(ParameterInfo[] parameterInfos, MethodSpec method)
+        {
+            return parameterInfos?.Select(p => LoadParameterSpec(p, method)).ToArray();
+        }
+
+        public ParameterSpec[] TryLoadParameterSpecs(Func<ParameterInfo[]> parameterInfosFunc, MethodSpec method)
         {
             ParameterInfo[] parameterInfos = null;
             try
@@ -386,7 +469,7 @@ namespace AssemblyAnalyser
             {
 
             }
-            return LoadParameterSpecs(parameterInfos);
+            return LoadParameterSpecs(parameterInfos, method);
         }
 
         #endregion
@@ -397,7 +480,15 @@ namespace AssemblyAnalyser
 
         ConcurrentDictionary<FieldInfo, FieldSpec> _fieldSpecs = new ConcurrentDictionary<FieldInfo, FieldSpec>();
 
-        private FieldSpec LoadFieldSpec(FieldInfo fieldInfo)
+        public void ProcessLoadedFields(bool includeSystem = true)
+        {
+            foreach (var (fieldName, field) in Fields.Where(t => includeSystem || !t.Value.IsSystemProperty))
+            {
+                field.Process();
+            }
+        }
+
+        private FieldSpec LoadFieldSpec(FieldInfo fieldInfo, TypeSpec declaringType)
         {
             FieldSpec fieldSpec = null;
             if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
@@ -407,7 +498,7 @@ namespace AssemblyAnalyser
                 {
                     if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
                     {
-                        _fieldSpecs[fieldInfo] = fieldSpec = new FieldSpec(fieldInfo, this, SpecRules);
+                        _fieldSpecs[fieldInfo] = fieldSpec = new FieldSpec(fieldInfo, declaringType, this, SpecRules);
                     }
                 }
                 //Console.WriteLine($"Unlocking for {fieldInfo.Name}");
@@ -415,12 +506,12 @@ namespace AssemblyAnalyser
             return fieldSpec;
         }
 
-        public FieldSpec[] LoadFieldSpecs(FieldInfo[] fieldInfos)
+        public FieldSpec[] LoadFieldSpecs(FieldInfo[] fieldInfos, TypeSpec declaringType)
         {
-            return fieldInfos.Select(f => LoadFieldSpec(f)).ToArray();
+            return fieldInfos.Select(f => LoadFieldSpec(f, declaringType)).ToArray();
         }
 
-        public FieldSpec[] TryLoadFieldSpecs(Func<FieldInfo[]> getFields)
+        public FieldSpec[] TryLoadFieldSpecs(Func<FieldInfo[]> getFields, TypeSpec declaringType)
         {
             FieldInfo[] fields = null;
             try
@@ -447,7 +538,7 @@ namespace AssemblyAnalyser
             {
                 fields ??= Array.Empty<FieldInfo>();
             }
-            return LoadFieldSpecs(fields);
+            return LoadFieldSpecs(fields, declaringType);
         }
 
         #endregion

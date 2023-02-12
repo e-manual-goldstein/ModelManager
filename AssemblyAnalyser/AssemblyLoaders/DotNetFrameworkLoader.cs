@@ -27,6 +27,12 @@ namespace AssemblyAnalyser
             CreateLoadContext(GetBaseFilePathsForLoadContext());
         }
 
+        public DotNetFrameworkLoader() : base()
+        {
+            //CreateLoadContext(GetBaseFilePathsForLoadContext());
+            throw new NotImplementedException();
+        }
+
         protected override void CreateLoadContext(IEnumerable<string> filePaths)
         {
             _filePathsForLoadContext.AddRange(filePaths);

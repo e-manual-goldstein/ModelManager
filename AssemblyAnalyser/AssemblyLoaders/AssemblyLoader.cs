@@ -14,6 +14,7 @@ namespace AssemblyAnalyser
         protected List<string> _filePathsForLoadContext = new List<string>();
         protected MetadataLoadContext _loadContext;
         protected const string BASE_FRAMEWORK_PATH = "C:\\Windows\\Microsoft.NET\\";
+        protected const string GLOBAL_ASSEMBLY_CACHE_PATH = "C:\\Windows\\assembly";
 
         public AssemblyLoader()
         {            
@@ -58,13 +59,13 @@ namespace AssemblyAnalyser
             {
                 return CreateOrGetLoaderForRuntimeVersion("v4.0.30319");
             }
-            if (!string.IsNullOrEmpty(targetFrameworkVersion))
-            {
-                return GetLoaderForFrameworkVersion(targetFrameworkVersion);
-            }
             if (!string.IsNullOrEmpty(imageRuntimeVersion))
             {
                 return GetLoaderForImageRuntimeVersion(imageRuntimeVersion);
+            }
+            if (!string.IsNullOrEmpty(targetFrameworkVersion))
+            {
+                return GetLoaderForFrameworkVersion(targetFrameworkVersion);
             }
             return CreateOrGetLoaderForRuntimeVersion("v4.0.30319");
         }
@@ -96,7 +97,7 @@ namespace AssemblyAnalyser
         {
             if (!_targetFrameworkCache.TryGetValue(targetFrameworkVersion, out AssemblyLoader loader))
             {
-                loader = new DotNetFrameworkLoader(targetFrameworkVersion);
+                loader = new DotNetFrameworkLoader();
                 _targetFrameworkCache.Add(targetFrameworkVersion, loader);
                 loader.OnAssemblySuccessfullyLoaded += AddAssemblyLoaderAsKnownHandler;
             }
@@ -175,7 +176,8 @@ namespace AssemblyAnalyser
 
         public static bool IsSystemAssembly(string assemblyLocation)
         {
-            return assemblyLocation.StartsWith(BASE_FRAMEWORK_PATH);
+            return assemblyLocation.StartsWith(BASE_FRAMEWORK_PATH, StringComparison.CurrentCultureIgnoreCase) 
+                || assemblyLocation.StartsWith(GLOBAL_ASSEMBLY_CACHE_PATH, StringComparison.CurrentCultureIgnoreCase);
         }
 
         delegate void AssemblyLoadEventHandler(object sender, Assembly assembly);
