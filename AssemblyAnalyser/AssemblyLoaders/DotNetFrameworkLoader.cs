@@ -41,7 +41,7 @@ namespace AssemblyAnalyser
             if (basePaths.Length > 1)
             {
                 var version = IntPtr.Size == 8 ? "Framework64" : "Framework64";
-                fxPath = basePaths.SingleOrDefault(p => p.StartsWith($"C:\\Windows\\Microsoft.NET\\{version}"));
+                fxPath = basePaths.SingleOrDefault(p => p.StartsWith($"{BASE_FRAMEWORK_PATH}{version}"));
             }
             else
             {

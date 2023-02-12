@@ -13,7 +13,8 @@ namespace AssemblyAnalyser
     {
         protected List<string> _filePathsForLoadContext = new List<string>();
         protected MetadataLoadContext _loadContext;
-        
+        protected const string BASE_FRAMEWORK_PATH = "C:\\Windows\\Microsoft.NET\\";
+
         public AssemblyLoader()
         {            
         }
@@ -31,14 +32,19 @@ namespace AssemblyAnalyser
 
         protected void InitialiseLoadContext(IEnumerable<string> filePaths)
         {
+            bool shouldReset = false;
             foreach (string filePath in filePaths)
             {
                 if (!_filePathsForLoadContext.Contains(filePath))
                 {
                     _filePathsForLoadContext.Add(filePath);
+                    shouldReset = true;
                 }
             }
-            Reset();
+            if (shouldReset)
+            {
+                Reset();
+            }
         }
 
         public List<string> Faults { get; } = new List<string>();
@@ -165,6 +171,11 @@ namespace AssemblyAnalyser
             var resolver = new PathAssemblyResolver(_filePathsForLoadContext);
             _loadContext = new MetadataLoadContext(resolver);
             ReloadAssemblies(loadedAssemblies);
+        }
+
+        public static bool IsSystemAssembly(string assemblyLocation)
+        {
+            return assemblyLocation.StartsWith(BASE_FRAMEWORK_PATH);
         }
 
         delegate void AssemblyLoadEventHandler(object sender, Assembly assembly);

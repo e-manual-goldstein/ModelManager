@@ -7,8 +7,7 @@ namespace AssemblyAnalyser
     {
         IReadOnlyDictionary<string, AssemblySpec> Assemblies { get; }
         AssemblySpec[] LoadAssemblySpecs(Assembly[] types);
-        AssemblySpec[] LoadAssemblySpecs(AssemblyName[] assemblyNames);
         AssemblySpec LoadAssemblySpec(Assembly assembly);
-        AssemblySpec[] LoadReferencedAssemblies(string assemblyFullName, string assemblyFullPath);
+        AssemblySpec[] LoadReferencedAssemblies(string assemblyFullName, string assemblyFullPath, string targetFrameworkVersion = null, string imageRuntimeVersion = null);
     }
 }

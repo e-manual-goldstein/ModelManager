@@ -68,12 +68,12 @@ namespace AssemblyAnalyser
             return _specManager.LoadAssemblySpec(assembly);            
         }
 
-        public bool CanAnalyse(Assembly assembly)
-        {
-            return _specManager.Assemblies.TryGetValue(assembly.GetName().Name, out AssemblySpec assemblySpec) && !assemblySpec.Skipped
-                && assemblySpec.ReferencedAssemblies.All(s => !s.Skipped);
-                //|| assembly.GetReferencedAssemblies().All(r => _workingFiles.Keys.Contains(r.Name));
-        }
+        //public bool CanAnalyse(Assembly assembly)
+        //{
+        //    return _specManager.Assemblies.TryGetValue(assembly.GetName().Name, out AssemblySpec assemblySpec) && !assemblySpec.Skipped
+        //        && assemblySpec.ReferencedAssemblies.All(s => !s.Skipped);
+        //        //|| assembly.GetReferencedAssemblies().All(r => _workingFiles.Keys.Contains(r.Name));
+        //}
 
         public void BuildAssemblies(IEnumerable<string> assemblyNames)
         {

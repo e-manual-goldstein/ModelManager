@@ -26,6 +26,7 @@ namespace AssemblyAnalyser
             //_assembly = assembly;
             AssemblyShortName = shortName;
             FilePath = filePath;
+            IsSystemAssembly = AssemblyLoader.IsSystemAssembly(filePath);
         }
 
         public AssemblySpec(string assemblyFullName, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
@@ -56,26 +57,20 @@ namespace AssemblyAnalyser
         public TypeSpec[] TypeSpecs => _typeSpecs;
 
         AssemblySpec[] _referencedAssemblies;
-        public AssemblySpec[] ReferencedAssemblies => _referencedAssemblies;
+        
+        public bool IsSystemAssembly { get; }
 
-
-        public AssemblySpec[] LoadReferencedAssemblies()
+        public AssemblySpec[] LoadReferencedAssemblies(bool includeSystem = true)
         {
-            //Assembly assembly = _specManager.ReloadAssembly(AssemblyFullName);
-            return _referencedAssemblies ??= _specManager.LoadReferencedAssemblies(AssemblyFullName, FilePath);
+            return (_referencedAssemblies ??= _specManager.LoadReferencedAssemblies(AssemblyFullName, FilePath, TargetFrameworkVersion, ImageRuntimeVersion))
+                .Where(r => !r.IsSystemAssembly || includeSystem).ToArray();
         }
 
         protected override void BuildSpec()
         {            
             LoadReferencedAssemblies();
             _typeSpecs = _specManager.TryLoadTypesForAssembly(this);
-            //Array.ForEach(_typeSpecs, spec => spec.Process());           
         }
-
-        //private TypeSpec[] CreateTypeSpecs()
-        //{
-        //    _specManager.TryLoadTypesForAssembly(AssemblyFullName);
-        //}
 
         protected override async Task BeginAnalysis(Analyser analyser)
         {
@@ -102,24 +97,6 @@ namespace AssemblyAnalyser
             });
         }
 
-        //private TypeSpec[] LoadTypeSpecs(Analyser analyser)
-        //{
-        //    Type[] types = Array.Empty<Type>();
-        //    try
-        //    {
-        //        if (analyser.CanAnalyse(_assembly))
-        //        {
-        //            types = _assembly.GetTypes();
-        //        }
-        //    }            
-        //    catch (ReflectionTypeLoadException ex)
-        //    {
-        //        Logger.Log(LogLevel.Warning, ex.Message, ex.LoaderExceptions);
-        //        types = ex.Types.Where(t => t != null).ToArray();
-        //    }            
-        //    return types.Select(t => analyser.TryLoadTypeSpec(() => t)).ToArray();
-        //}
-
         public override string ToString()
         {
             return AssemblyFullName;
@@ -142,6 +119,15 @@ namespace AssemblyAnalyser
             }
         }
 
-        
+        public IEnumerable<string> InterfaceReport()
+        {
+            foreach (var @interface in TypeSpecs.Where(t => t.IsInterface))
+            {
+                foreach (var assembly in @interface.GetDependentAssemblies())
+                {
+                    yield return $"{@interface}\t{assembly.AssemblyShortName}";
+                }
+            }
+        }
     }
 }

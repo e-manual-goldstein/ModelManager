@@ -13,8 +13,6 @@ namespace AssemblyAnalyser
 {
     public class SpecManager : ISpecManager
     {
-        //private MetadataLoadContext _metadataLoadContext;
-        //private PathAssemblyResolver _pathResolver;
         Dictionary<string, string> _workingFiles;
         readonly ILogger _logger;
         readonly IExceptionManager _exceptionManager;
@@ -32,30 +30,6 @@ namespace AssemblyAnalyser
         public void SetWorkingDirectory(string workingDirectory)
         {
             _workingFiles = Directory.EnumerateFiles(workingDirectory, "*.dll").ToDictionary(d => Path.GetFileNameWithoutExtension(d), e => e);
-            //_pathResolver = CreatePathResolver();
-            //_metadataLoadContext = CreateMetadataContext();
-        }
-
-        //private MetadataLoadContext CreateMetadataContext()
-        //{
-        //    return new MetadataLoadContext(_pathResolver);
-        //}
-
-        private PathAssemblyResolver CreatePathResolver()
-        {
-            // Get the array of runtime assemblies.
-            string[] runtimeAssemblies = Directory.GetFiles(RuntimeEnvironment.GetRuntimeDirectory(), "*.dll");
-
-            // Create the list of assembly paths consisting of runtime assemblies and the inspected assembly.
-            var paths = new List<string>(runtimeAssemblies);
-            paths.AddRange(_workingFiles.Values);
-            paths.AddRange(Directory.GetFiles("C:\\WINDOWS\\assembly", "*.dll"));
-            var systemFolder = Environment.GetFolderPath(Environment.SpecialFolder.System);
-            var version = IntPtr.Size == 8 ? "64" : string.Empty;
-            var frameworkPaths = Directory.GetFiles(Path.Combine(systemFolder, $@"..\Microsoft.NET\Framework{version}\v2.0.50727\"), "*.dll");
-            paths.AddRange(frameworkPaths);
-            // Create PathAssemblyResolver that can resolve assemblies using the created list.
-            return new PathAssemblyResolver(paths);
         }
 
         #region Assemblies
@@ -71,69 +45,25 @@ namespace AssemblyAnalyser
             {
                 return AssemblySpec.NullSpec;
             }
-            if (!_assemblySpecs.TryGetValue(assembly.GetName().Name, out assemblySpec))
-            {
-                //Console.WriteLine($"Locking for {assembly.FullName}");
-                lock (_lock)
-                {
-                    if (!_assemblySpecs.TryGetValue(assembly.GetName().Name, out assemblySpec))
-                    {
-                        _assemblySpecs[assembly.GetName().Name] = assemblySpec = CreateFullAssemblySpec(assembly);
-                    }
-                }
-                //Console.WriteLine($"Unlocking for {assembly.FullName}");
-            }
-            assemblySpec ??= AssemblySpec.NullSpec;
+            assemblySpec = _assemblySpecs.GetOrAdd(assembly.FullName, (key) => CreateFullAssemblySpec(assembly));            
             return assemblySpec;
         }
 
-        //public AssemblySpec LoadAssemblySpec(AssemblyName assemblyName)
-        //{
-        //    AssemblySpec assemblySpec;
-        //    if (!_assemblySpecs.TryGetValue(assemblyName.Name, out assemblySpec))
-        //    {
-        //        lock (_lock)
-        //        {
-        //            if (!_assemblySpecs.TryGetValue(assemblyName.Name, out assemblySpec))
-        //            {
-        //                if (TryLoadAssembly(assemblyName, out Assembly assembly))
-        //                {
-        //                    _assemblySpecs[assemblyName.Name] = assemblySpec = CreateFullAssemblySpec(assembly);
-        //                }
-        //                else
-        //                {
-        //                    _assemblySpecs[assemblyName.Name] = assemblySpec = CreatePartialAssemblySpec(assemblyName.Name);
-        //                }
-        //            }
-        //        }
-        //    }
-        //    else
-        //    {
-        //        if (assemblyName.ToString() != assemblySpec.AssemblyFullName)
-        //        {
-        //            assemblySpec.AddRepresentedName(assemblyName.FullName);
-        //        }
-        //    }
-        //    return assemblySpec ?? AssemblySpec.NullSpec;
-        //}
-
-        public AssemblySpec[] LoadReferencedAssemblies(string assemblyFullName, string assemblyFilePath)
+        public AssemblySpec[] LoadReferencedAssemblies(string assemblyFullName, string assemblyFilePath, string targetFrameworkVersion = null, string imageRuntimeVersion = null)
         {
             var specs = new List<AssemblySpec>();
-            //using (var loadContext = CreateMetadataContext())
-            //{
-            //    var assembly = loadContext.LoadFromAssemblyName(assemblyFullName);
-            var loader = AssemblyLoader.GetLoader(null, null);
+            var loader = AssemblyLoader.GetLoader(targetFrameworkVersion, imageRuntimeVersion);
             var assemblyNames = loader.PreLoadReferencedAssembliesByRootPath(assemblyFilePath);
-            //var assembly = loader.LoadAssemblyByName(assemblyFullName);
-
             foreach (var assemblyName in assemblyNames)
             {
                 try
                 {
-                    var assembly = loader.LoadAssemblyByName(assemblyName);
-                    _assemblySpecs[assembly.GetName().Name] = CreateFullAssemblySpec(assembly);
-                    specs.Add(_assemblySpecs[assembly.GetName().Name]);
+                    var assemblySpec = _assemblySpecs.GetOrAdd(assemblyName, (name) =>
+                    {
+                        var assembly = loader.LoadAssemblyByName(assemblyName);
+                        return CreateFullAssemblySpec(assembly);
+                    });
+                    specs.Add(assemblySpec);
                 }
                 catch (FileNotFoundException ex)
                 {
@@ -145,19 +75,12 @@ namespace AssemblyAnalyser
                     _logger.LogWarning($"Unable to load assembly {assemblyName}. Required by {assemblyFullName}");
                 }
             }
-            //}
             return specs.OrderBy(s => s.FilePath).ToArray();
         }
 
         public AssemblySpec[] LoadAssemblySpecs(Assembly[] types)
         {
             return types.Select(t => LoadAssemblySpec(t)).ToArray();
-        }
-
-        public AssemblySpec[] LoadAssemblySpecs(AssemblyName[] assemblyNames)
-        {
-            throw new NotImplementedException();
-            //return assemblyNames.Select(a => LoadAssemblySpec(a)).ToArray();
         }
 
         private AssemblySpec CreateFullAssemblySpec(Assembly assembly)
@@ -168,17 +91,7 @@ namespace AssemblyAnalyser
                 ImageRuntimeVersion = assembly.ImageRuntimeVersion,
                 TargetFrameworkVersion = frameworkVersion,
             };
-            spec.Logger = _logger;
-            return spec;
-        }
-
-
-
-        private AssemblySpec CreatePartialAssemblySpec(string assemblyName)
-        {
-            var spec = new AssemblySpec(assemblyName, this, SpecRules);
-            spec.Exclude("Assembly is only partial spec");
-            spec.SkipProcessing("Assembly is only partial spec");
+            
             spec.Logger = _logger;
             return spec;
         }
@@ -190,7 +103,6 @@ namespace AssemblyAnalyser
         public IReadOnlyDictionary<string, TypeSpec> Types => _typeSpecs;
 
         ConcurrentDictionary<string, TypeSpec> _typeSpecs = new ConcurrentDictionary<string, TypeSpec>();
-
 
         public void TryBuildTypeSpecForAssembly(string fullTypeName, AssemblySpec assemblySpec, Action<Type> buildAction)
         {
@@ -209,7 +121,6 @@ namespace AssemblyAnalyser
             {
                 buildAction(type);
             }
-
         }
 
         public TypeSpec[] TryLoadTypesForAssembly(AssemblySpec assemblySpec)
@@ -217,91 +128,65 @@ namespace AssemblyAnalyser
             var specs = new List<TypeSpec>();
             var loader = AssemblyLoader.GetLoader(assemblySpec.TargetFrameworkVersion, assemblySpec.ImageRuntimeVersion);
             var assembly = loader.LoadAssemblyByName(assemblySpec.AssemblyFullName);
-            TryLoadTypeSpecs(() => assembly.DefinedTypes.ToArray(), assemblySpec, out TypeSpec[] typeSpecs);
+            TryLoadTypeSpecs(() => assembly.DefinedTypes.ToArray(), out TypeSpec[] typeSpecs);
             return typeSpecs;
-            
         }
 
-        private TypeSpec LoadTypeSpec(Type type, AssemblySpec assemblySpec)
+        private TypeSpec LoadTypeSpec(Type type)
         {
             if (type == null)
             {
                 return TypeSpec.NullSpec;
             }
-            return LoadFullTypeSpec(type, assemblySpec);
+            return LoadFullTypeSpec(type);
         }
 
-        private TypeSpec LoadFullTypeSpec(Type type, AssemblySpec assemblySpec)
+        private TypeSpec LoadFullTypeSpec(Type type)
         {
             TypeSpec typeSpec = TypeSpec.NullSpec;
             if (!string.IsNullOrEmpty(type.FullName))
             {
-                if (!_typeSpecs.TryGetValue(type.FullName, out typeSpec))
-                {
-                    //Console.WriteLine($"Locking for {type.FullName}");
-                    lock (_lock)
-                    {
-                        if (!_typeSpecs.TryGetValue(type.FullName, out typeSpec))
-                        {
-                            _typeSpecs[type.FullName] = typeSpec = CreateFullTypeSpec(type, assemblySpec);
-                        }
-                    }
-                    //Console.WriteLine($"Unlocking for {type.FullName}");
-                }
+                typeSpec = _typeSpecs.GetOrAdd(type.FullName, (key) => CreateFullTypeSpec(type));                
             }
             return typeSpec;
         }
 
-        private TypeSpec CreateFullTypeSpec(Type type, AssemblySpec assemblySpec)
+        private TypeSpec CreateFullTypeSpec(Type type)
         {
             var spec = new TypeSpec(type.FullName, type.IsInterface, this, SpecRules);
             spec.Logger = _logger;
-            spec.Assembly = assemblySpec;
+            spec.Assembly = _assemblySpecs[type.Assembly.FullName];
             return spec;
         }
 
-        private TypeSpec LoadPartialTypeSpec(string typeName, AssemblySpec assemblySpec)
+        private TypeSpec LoadPartialTypeSpec(string typeName)
         {
-            TypeSpec typeSpec = TypeSpec.NullSpec;
-            if (!_typeSpecs.TryGetValue(typeName, out typeSpec))
-            {
-                //Console.WriteLine($"Locking for {typeName}");
-                lock (_lock)
-                {
-                    if (!_typeSpecs.TryGetValue(typeName, out typeSpec))
-                    {
-                        _typeSpecs[typeName] = typeSpec = CreatePartialTypeSpec(typeName, assemblySpec);
-                    }
-                }
-                //Console.WriteLine($"Unlocking for {typeName}");
-            }
-            return typeSpec;
+            return _typeSpecs.GetOrAdd(typeName, (key) => CreatePartialTypeSpec(typeName));            
         }
 
-        private TypeSpec CreatePartialTypeSpec(string typeName, AssemblySpec assemblySpec)
+        private TypeSpec CreatePartialTypeSpec(string typeName)
         {
             var spec = new TypeSpec(typeName, this, SpecRules);
             spec.Exclude("Type is only partial spec");
             spec.SkipProcessing("Type is only partial spec");
-            spec.Logger = _logger;
-            spec.Assembly = assemblySpec;
+            spec.Logger = _logger;            
             return spec;
         }
 
-        public bool TryLoadTypeSpec(Func<Type> getType, AssemblySpec assemblySpec, out TypeSpec typeSpec)
+        public bool TryLoadTypeSpec(Func<Type> getType, out TypeSpec typeSpec)
         {
             bool success = false;
             typeSpec = TypeSpec.NullSpec;
             try
             {
-                typeSpec = LoadTypeSpec(getType(), assemblySpec);
+                typeSpec = LoadTypeSpec(getType());
                 success = true;
             }
             catch (TypeLoadException ex)
             {
                 if (!string.IsNullOrEmpty(ex.TypeName))
                 {
-                    typeSpec = LoadPartialTypeSpec(ex.TypeName, assemblySpec);
+                    typeSpec = LoadPartialTypeSpec(ex.TypeName);
                     success = true;
                 }                
             }
@@ -317,13 +202,13 @@ namespace AssemblyAnalyser
             return success;
         }
 
-        public bool TryLoadTypeSpecs(Func<Type[]> getTypes, AssemblySpec assemblySpec, out TypeSpec[] typeSpecs)
+        public bool TryLoadTypeSpecs(Func<Type[]> getTypes, out TypeSpec[] typeSpecs)
         {
             typeSpecs = Array.Empty<TypeSpec>();
             bool success = false;
             try
             { 
-                typeSpecs = LoadTypeSpecs(getTypes(), assemblySpec);
+                typeSpecs = LoadTypeSpecs(getTypes());
                 success = true;
             }
             catch (TypeLoadException ex)
@@ -344,15 +229,15 @@ namespace AssemblyAnalyser
                 if (ex.Types.Any())
                 {
                     success = true;
-                    typeSpecs = LoadTypeSpecs(ex.Types, assemblySpec);
+                    typeSpecs = LoadTypeSpecs(ex.Types);
                 }
             }
             return success;
         }
 
-        public TypeSpec[] LoadTypeSpecs(Type[] types, AssemblySpec assemblySpec)
+        public TypeSpec[] LoadTypeSpecs(Type[] types)
         {
-            return types.Select(t => LoadTypeSpec(t, assemblySpec)).ToArray();
+            return types.Select(t => LoadTypeSpec(t)).ToArray();
         }
 
         #endregion
@@ -365,24 +250,19 @@ namespace AssemblyAnalyser
 
         public MethodSpec LoadMethodSpec(MethodInfo method)
         {
-            MethodSpec methodSpec = null;
             if (method == null)
             {
                 return null;
             }
-            if (!_methodSpecs.TryGetValue(method, out methodSpec))
-            {
-                //Console.WriteLine($"Locking for {method.Name}");
-                lock (_lock)
-                {
-                    if (!_methodSpecs.TryGetValue(method, out methodSpec))
-                    {
-                        _methodSpecs[method] = methodSpec = new MethodSpec(method, this, SpecRules);
-                    }
-                }
-                //Console.WriteLine($"Unlocking for {method.Name}");
-            }
-            return methodSpec;
+            return _methodSpecs.GetOrAdd(method, (key) => CreateMethodSpec(method));            
+        }
+
+        private MethodSpec CreateMethodSpec(MethodInfo method)
+        {
+            var spec = new MethodSpec(method, this, SpecRules);
+            spec.DeclaringType = LoadFullTypeSpec(method.DeclaringType);
+            
+            return spec;
         }
 
         public MethodSpec[] LoadMethodSpecs(MethodInfo[] methodInfos)
@@ -433,15 +313,7 @@ namespace AssemblyAnalyser
             PropertySpec propertySpec;
             if (!_propertySpecs.TryGetValue(propertyInfo, out propertySpec))
             {
-                //Console.WriteLine($"Locking for {propertyInfo.Name}");
-                lock (_lock)
-                {
-                    if (!_propertySpecs.TryGetValue(propertyInfo, out propertySpec))
-                    {
-                        _propertySpecs[propertyInfo] = propertySpec = new PropertySpec(propertyInfo, this, SpecRules);
-                    }
-                }
-                //Console.WriteLine($"Unlocking for {propertyInfo.Name}");
+                _propertySpecs[propertyInfo] = propertySpec = new PropertySpec(propertyInfo, this, SpecRules);
             }
             return propertySpec;
         }
@@ -481,7 +353,6 @@ namespace AssemblyAnalyser
             return LoadPropertySpecs(properties);
         }
 
-
         #endregion
 
         #region Parameter Specs
@@ -492,20 +363,7 @@ namespace AssemblyAnalyser
 
         private ParameterSpec LoadParameterSpec(ParameterInfo parameterInfo)
         {
-            ParameterSpec parameterSpec = null;
-            if (!_parameterSpecs.TryGetValue(parameterInfo, out parameterSpec))
-            {
-                //Console.WriteLine($"Locking for {parameterInfo.Name}");
-                lock (_lock)
-                {
-                    if (!_parameterSpecs.TryGetValue(parameterInfo, out parameterSpec))
-                    {
-                        _parameterSpecs[parameterInfo] = parameterSpec = new ParameterSpec(parameterInfo, this, SpecRules);
-                    }
-                }
-                //Console.WriteLine($"Unlocking for {parameterInfo.Name}");
-            }
-            return parameterSpec;
+            return _parameterSpecs.GetOrAdd(parameterInfo, new ParameterSpec(parameterInfo, this, SpecRules));                        
         }
 
         public ParameterSpec[] LoadParameterSpecs(ParameterInfo[] parameterInfos)

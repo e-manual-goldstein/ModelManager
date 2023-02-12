@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
+using System.Reflection;
 
 namespace AssemblyAnalyser
 {
@@ -24,11 +25,11 @@ namespace AssemblyAnalyser
         #endregion
 
         private string _fullTypeName;
-        bool _isInterface;
+        public bool IsInterface { get; }
 
         public TypeSpec(string typeName, bool isInterface, ISpecManager specManager, List<IRule> rules) : this(typeName, specManager, rules)
         {
-            _isInterface = isInterface;
+            IsInterface = isInterface;
         }
 
         public TypeSpec(string fullTypeName, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
@@ -46,22 +47,11 @@ namespace AssemblyAnalyser
                 Methods = CreateMethodSpecs(type);
                 Fields = CreateFieldSpecs(type);
             });
-
         }
-
-        //public void BuildTypeSpec(Type type)
-        //{
-        //    Assembly = _specManager.LoadAssemblySpec(type.Assembly);
-        //    Interfaces = CreateInterfaceSpecs(type);
-        //    BaseSpec = CreateBaseSpec(type);
-        //    Properties = CreatePropertySpecs(type);
-        //    Methods = CreateMethodSpecs(type);
-        //    Fields = CreateFieldSpecs(type);
-        //}
 
         private TypeSpec CreateBaseSpec(Type type)
         {
-            if (_specManager.TryLoadTypeSpec(() => type.BaseType, Assembly, out TypeSpec typeSpec))
+            if (_specManager.TryLoadTypeSpec(() => type.BaseType, out TypeSpec typeSpec))
             {
                 typeSpec.AddSubType(this);
             }
@@ -70,7 +60,7 @@ namespace AssemblyAnalyser
 
         private TypeSpec[] CreateInterfaceSpecs(Type type)
         {
-            if (_specManager.TryLoadTypeSpecs(() => type.GetInterfaces(), Assembly, out TypeSpec[] specs))
+            if (_specManager.TryLoadTypeSpecs(() => type.GetInterfaces(), out TypeSpec[] specs))
             {
                 foreach (var interfaceSpec in specs.Where(s => !s.IsNullSpec))
                 {
@@ -88,8 +78,8 @@ namespace AssemblyAnalyser
 
         private MethodSpec[] CreateMethodSpecs(Type type)
         {
-            var specs = _specManager.TryLoadMethodSpecs(() => 
-                type.GetMethods().Except(Properties.SelectMany(p => p.InnerMethods())).ToArray());
+            var specs = _specManager.TryLoadMethodSpecs(() => type.GetMethods().Where(m => m.DeclaringType == type)
+                .Except(Properties.SelectMany(p => p.InnerMethods())).ToArray());
             return specs;
         }
 
@@ -138,9 +128,17 @@ namespace AssemblyAnalyser
 
         private List<TypeSpec> _implementations = new List<TypeSpec>();
 
+        public TypeSpec[] Implementations => _implementations.ToArray();
+
+        public AssemblySpec[] GetDependentAssemblies()
+        {
+            return Implementations.Select(i => i.Assembly)
+                .Concat(ReturnTypeSpecs.Select(r => r.DeclaringType.Assembly)).Distinct().ToArray();
+        }
+
         public void AddImplementation(TypeSpec typeSpec)
         {
-            if (!_isInterface)
+            if (!IsInterface)
             {
                 throw new InvalidOperationException("Cannot implement a non-interface Type");
             }
@@ -177,6 +175,17 @@ namespace AssemblyAnalyser
         public override string ToString()
         {
             return _fullTypeName;
+        }
+
+        List<IMemberSpec> _returnTypeSpecs = new List<IMemberSpec>();
+        public IMemberSpec[] ReturnTypeSpecs => _returnTypeSpecs.ToArray();
+
+        public void RegisterAsReturnType(IMemberSpec methodSpec)
+        {
+            if (!_returnTypeSpecs.Contains(methodSpec))
+            {
+                _returnTypeSpecs.Add(methodSpec);
+            }
         }
     }
 }
