@@ -85,7 +85,7 @@ namespace SOAPBox.Model
 
         public async static Task<string> GetPushesFromApiAsync(string collectionUri, string repositoryName, string pusherId)
         {
-            //http://vssdmlivetfs:8080/tfs/BOMiLiveTFS/INTEG_MIRROR/_apis/git/repositories/Trunk/refs?filter=heads/&filterContains=bomi
+            
             var pushesQueryString = $"{collectionUri}/_apis/git/repositories/{repositoryName}/pushes?searchCriteria.pusherId={pusherId}&searchCriteria.includeRefUpdates=true";
             return await GetInfoFromGitApiAsync($"{pushesQueryString}");
             //return CreateJObjectFromRESTData(diffsResponse);
