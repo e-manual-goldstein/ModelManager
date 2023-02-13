@@ -6,16 +6,13 @@ namespace AssemblyAnalyser
     public interface ITypeSpecManager
     {
         IReadOnlyDictionary<string, TypeSpec> Types { get; }
-        bool TryLoadTypeSpec(Func<Type> getType, out TypeSpec typeSpec);
-        bool TryLoadTypeSpecs(Func<Type[]> value, out TypeSpec[] typeSpecs);
+        bool TryLoadTypeSpec(Func<Type> getType, out TypeSpec typeSpec, AssemblySpec assemblySpec = null);
+        bool TryLoadTypeSpecs(Func<Type[]> value, out TypeSpec[] typeSpecs, AssemblySpec assemblySpec = null);
         //TypeSpec[] TryLoadTypesForAssembly(string assemblyFullName);
         TypeSpec[] TryLoadTypesForAssembly(AssemblySpec assemblySpec);
         void TryBuildTypeSpecForAssembly(string fullTypeName, AssemblySpec assemblySpec, Action<Type> buildAction);
         void ProcessAllAssemblies(bool includeSystem = true, bool parallelProcessing = true);
-        void ProcessLoadedTypes(bool includeSystem = true, bool parallelProcessing = true);
-        void ProcessLoadedMethods(bool includeSystem = true);
-        void ProcessLoadedProperties(bool includeSystem = true);
-        void ProcessLoadedFields(bool includeSystem = true);
-        void ProcessLoadedParameters(bool includeSystem = true);
+        void ProcessAllLoadedTypes(bool includeSystem = true, bool parallelProcessing = true);
+        //void ProcessTypes(IEnumerable<TypeSpec> typeSpecs, bool parallelProcessing = true);
     }
 }

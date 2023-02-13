@@ -10,5 +10,9 @@ namespace AssemblyAnalyser
         MethodSpec LoadMethodSpec(MethodInfo getter);
 
         MethodSpec[] TryLoadMethodSpecs(Func<MethodInfo[]> value);
+
+        void ProcessLoadedMethods(bool includeSystem = true, bool parallelProcessing = true);
+        //void ProcessMethods(IEnumerable<MethodSpec> methods, bool includeSystem = true);
+
     }
 }

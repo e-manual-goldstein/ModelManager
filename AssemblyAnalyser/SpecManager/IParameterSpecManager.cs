@@ -9,5 +9,6 @@ namespace AssemblyAnalyser
         IReadOnlyDictionary<ParameterInfo, ParameterSpec> Parameters { get; }
         ParameterSpec[] TryLoadParameterSpecs(Func<ParameterInfo[]> value, MethodSpec method);
 
+        void ProcessLoadedParameters(bool includeSystem = true);
     }
 }

@@ -24,10 +24,10 @@ namespace AssemblyAnalyser
 
         #endregion
 
-        private string _fullTypeName;
+        public string FullTypeName { get; }
         public bool IsInterface { get; }
         public bool IsSystemType { get; }
-
+        
         public TypeSpec(string typeName, bool isInterface, AssemblySpec assembly, ISpecManager specManager, List<IRule> rules) : this(typeName, specManager, rules)
         {
             IsInterface = isInterface;
@@ -35,14 +35,14 @@ namespace AssemblyAnalyser
             IsSystemType = AssemblyLoader.IsSystemAssembly(assembly.FilePath);
         }
 
-        public TypeSpec(string fullTypeName, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        TypeSpec(string fullTypeName, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
         {
-            _fullTypeName = fullTypeName;
+            FullTypeName = fullTypeName;
         }
 
         protected override void BuildSpec()
         {
-            _specManager.TryBuildTypeSpecForAssembly(_fullTypeName, Assembly, type =>
+            _specManager.TryBuildTypeSpecForAssembly(FullTypeName, Assembly, type =>
             {
                 BaseSpec = CreateBaseSpec(type);
                 Interfaces = CreateInterfaceSpecs(type);
@@ -137,7 +137,7 @@ namespace AssemblyAnalyser
         public AssemblySpec[] GetDependentAssemblies()
         {
             return Implementations.Select(i => i.Assembly)
-                .Concat(ReturnTypeSpecs.Select(r => r.DeclaringType.Assembly)).Distinct().ToArray();
+                .Concat(ResultTypeSpecs.Select(r => r.DeclaringType.Assembly)).Distinct().ToArray();
         }
 
         public void AddImplementation(TypeSpec typeSpec)
@@ -179,9 +179,15 @@ namespace AssemblyAnalyser
         private void ProcessGenerics(Type type)
         {
             IsGenericType = type.IsGenericType;
+            IsGenericTypeDefinition = type.IsGenericTypeDefinition; // This seems to be never unequal to IsGenericType
+            if (type.ContainsGenericParameters)
+            {
+                foreach (var argument in type.GetGenericArguments())
+                {
+                    //TODO: Finish this part
+                }
+            }
             IsGenericParameter = type.IsGenericParameter;
-            IsGenericTypeDefinition = type.IsGenericTypeDefinition;
-            ContainsGenericParameters = type.ContainsGenericParameters;
             IsGenericTypeParameter = type.IsGenericTypeParameter;
         }
 
@@ -193,6 +199,8 @@ namespace AssemblyAnalyser
 
         public bool ContainsGenericParameters { get; private set; }
 
+
+
         public bool IsGenericTypeParameter { get; private set; }
 
         #endregion
@@ -201,17 +209,28 @@ namespace AssemblyAnalyser
 
         public override string ToString()
         {
-            return _fullTypeName;
+            return FullTypeName;
         }
 
-        List<IMemberSpec> _returnTypeSpecs = new List<IMemberSpec>();
-        public IMemberSpec[] ReturnTypeSpecs => _returnTypeSpecs.ToArray();
+        List<IMemberSpec> _resultTypeSpecs = new List<IMemberSpec>();
+        public IMemberSpec[] ResultTypeSpecs => _resultTypeSpecs.ToArray();
 
         public void RegisterAsReturnType(IMemberSpec methodSpec)
         {
-            if (!_returnTypeSpecs.Contains(methodSpec))
+            if (!_resultTypeSpecs.Contains(methodSpec))
             {
-                _returnTypeSpecs.Add(methodSpec);
+                _resultTypeSpecs.Add(methodSpec);
+            }
+        }
+
+        List<ParameterSpec> _dependentParameterSpecs = new List<ParameterSpec>();
+        public ParameterSpec[] DependentParameterSpecs => _dependentParameterSpecs.ToArray();
+
+        public void RegisterAsDependentParameterSpec(ParameterSpec parameterSpec)
+        {
+            if (!_dependentParameterSpecs.Contains(parameterSpec))
+            {
+                _dependentParameterSpecs.Add(parameterSpec);
             }
         }
     }

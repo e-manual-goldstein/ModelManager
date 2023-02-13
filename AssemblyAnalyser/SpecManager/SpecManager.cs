@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using AssemblyAnalyser.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -31,6 +32,35 @@ namespace AssemblyAnalyser
         public void SetWorkingDirectory(string workingDirectory)
         {
             _workingFiles = Directory.EnumerateFiles(workingDirectory, "*.dll").ToDictionary(d => Path.GetFileNameWithoutExtension(d), e => e);
+        }
+
+        public void Reset()
+        {
+            _assemblySpecs.Clear();
+            _typeSpecs.Clear();
+            _methodSpecs.Clear();
+            _parameterSpecs.Clear();
+            _propertySpecs.Clear();
+            _fieldSpecs.Clear();
+        }
+
+        public void ProcessSpecs<TSpec>(IEnumerable<TSpec> specs, bool parallelProcessing = true) where TSpec : AbstractSpec
+        {
+            if (!parallelProcessing)
+            {
+                foreach (var type in specs)
+                {
+                    type.Process();
+                }
+            }
+            else
+            {
+                Parallel.ForEach(specs,
+                    new ParallelOptions() { MaxDegreeOfParallelism = 16 }, (t) =>
+                    {
+                        t.Process();
+                    });
+            }
         }
 
         #region Assemblies
@@ -147,22 +177,9 @@ namespace AssemblyAnalyser
 
         ConcurrentDictionary<string, TypeSpec> _typeSpecs = new ConcurrentDictionary<string, TypeSpec>();
 
-        public void ProcessLoadedTypes(bool includeSystem = true, bool parallelProcessing = true)
+        public void ProcessAllLoadedTypes(bool includeSystem = true, bool parallelProcessing = true)
         {
-            if (!parallelProcessing)
-            {
-                foreach (var (typename, type) in Types.Where(t => includeSystem || !t.Value.Assembly.IsSystemAssembly))
-                {
-                    type.Process();
-                }
-            }
-            else
-            {
-                Parallel.ForEach(Types.Values, new ParallelOptions() { MaxDegreeOfParallelism = 16 }, (t) =>
-                {
-                    t.Process();
-                });
-            }
+            ProcessSpecs(Types.Values.Where(t => includeSystem || !t.Assembly.IsSystemAssembly).ToArray(), parallelProcessing);            
         }
 
         public void TryBuildTypeSpecForAssembly(string fullTypeName, AssemblySpec assemblySpec, Action<Type> buildAction)
@@ -189,87 +206,88 @@ namespace AssemblyAnalyser
             var specs = new List<TypeSpec>();
             var loader = AssemblyLoader.GetLoader(assemblySpec.TargetFrameworkVersion, assemblySpec.ImageRuntimeVersion);
             var assembly = loader.LoadAssemblyByName(assemblySpec.AssemblyFullName);
-            TryLoadTypeSpecs(() => assembly.DefinedTypes.ToArray(), out TypeSpec[] typeSpecs);
+            TryLoadTypeSpecs(() => assembly.DefinedTypes.ToArray(), out TypeSpec[] typeSpecs, assemblySpec);
             return typeSpecs;
         }
 
-        private TypeSpec LoadTypeSpec(Type type)
+        private TypeSpec LoadTypeSpec(Type type, AssemblySpec assemblySpec)
         {
             if (type == null)
             {
                 return TypeSpec.NullSpec;
             }
-            return LoadFullTypeSpec(type);
+            return LoadFullTypeSpec(type, assemblySpec);
         }
 
-        private TypeSpec LoadFullTypeSpec(Type type)
+        private TypeSpec LoadFullTypeSpec(Type type, AssemblySpec assemblySpec = null)
         {
-            TypeSpec typeSpec = TypeSpec.NullSpec;
             if (!string.IsNullOrEmpty(type.FullName))
             {
-                typeSpec = _typeSpecs.GetOrAdd(type.FullName, (key) => CreateFullTypeSpec(type));                
+                return _typeSpecs.GetOrAdd(type.ToUniqueTypeName(), (key) => CreateFullTypeSpec(type, assemblySpec));
             }
-            return typeSpec;
+            return TypeSpec.NullSpec;
         }
 
-        private TypeSpec CreateFullTypeSpec(Type type)
+        
+
+        private TypeSpec CreateFullTypeSpec(Type type, AssemblySpec assemblySpec)
         {
-            var assemblySpec = LoadAssemblySpec(type.Assembly);
+            assemblySpec ??= LoadAssemblySpec(type.Assembly);
             var spec = new TypeSpec(type.FullName, type.IsInterface, assemblySpec, this, SpecRules);
             spec.Logger = _logger;            
             return spec;
         }
 
-        private TypeSpec LoadPartialTypeSpec(string typeName)
-        {
-            return _typeSpecs.GetOrAdd(typeName, (key) => CreatePartialTypeSpec(typeName));            
-        }
+        //private TypeSpec LoadPartialTypeSpec(string typeName)
+        //{
+        //    return _typeSpecs.GetOrAdd(typeName, (key) => CreatePartialTypeSpec(typeName));            
+        //}
 
-        private TypeSpec CreatePartialTypeSpec(string typeName)
-        {
-            var spec = new TypeSpec(typeName, this, SpecRules);
-            spec.Exclude("Type is only partial spec");
-            spec.SkipProcessing("Type is only partial spec");
-            spec.Logger = _logger;            
-            return spec;
-        }
+        //private TypeSpec CreatePartialTypeSpec(string typeName)
+        //{
+        //    var spec = new TypeSpec(typeName, this, SpecRules);
+        //    spec.Exclude("Type is only partial spec");
+        //    spec.SkipProcessing("Type is only partial spec");
+        //    spec.Logger = _logger;            
+        //    return spec;
+        //}
 
-        public bool TryLoadTypeSpec(Func<Type> getType, out TypeSpec typeSpec)
+        public bool TryLoadTypeSpec(Func<Type> getType, out TypeSpec typeSpec, AssemblySpec assemblySpec = null)
         {
             bool success = false;
-            typeSpec = TypeSpec.NullSpec;
             try
             {
-                typeSpec = LoadTypeSpec(getType());
+                typeSpec = LoadTypeSpec(getType(), assemblySpec);
                 success = true;
             }
             catch (TypeLoadException ex)
             {
                 if (!string.IsNullOrEmpty(ex.TypeName))
                 {
-                    typeSpec = LoadPartialTypeSpec(ex.TypeName);
-                    success = true;
-                }                
+                    throw new NotImplementedException();
+                }
+                typeSpec = TypeSpec.NullSpec;
             }
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
-                _logger.LogError(ex, "File Not Found");            
+                _logger.LogError(ex, "File Not Found");
+                typeSpec = TypeSpec.NullSpec;
             }
             catch (Exception ex)
             {
-                
+                typeSpec = TypeSpec.NullSpec;                
             }
             return success;
         }
 
-        public bool TryLoadTypeSpecs(Func<Type[]> getTypes, out TypeSpec[] typeSpecs)
+        public bool TryLoadTypeSpecs(Func<Type[]> getTypes, out TypeSpec[] typeSpecs, AssemblySpec assemblySpec = null)
         {
             typeSpecs = Array.Empty<TypeSpec>();
             bool success = false;
             try
             { 
-                typeSpecs = LoadTypeSpecs(getTypes());
+                typeSpecs = LoadTypeSpecs(getTypes(), assemblySpec);
                 success = true;
             }
             catch (TypeLoadException ex)
@@ -290,15 +308,15 @@ namespace AssemblyAnalyser
                 if (ex.Types.Any())
                 {
                     success = true;
-                    typeSpecs = LoadTypeSpecs(ex.Types);
+                    typeSpecs = LoadTypeSpecs(ex.Types, assemblySpec);
                 }
             }
             return success;
         }
 
-        public TypeSpec[] LoadTypeSpecs(Type[] types)
+        public TypeSpec[] LoadTypeSpecs(Type[] types, AssemblySpec assemblySpec)
         {
-            return types.Select(t => LoadTypeSpec(t)).ToArray();
+            return types.Select(t => LoadTypeSpec(t, assemblySpec)).ToArray();
         }
 
         #endregion
@@ -309,12 +327,9 @@ namespace AssemblyAnalyser
 
         ConcurrentDictionary<MethodInfo, MethodSpec> _methodSpecs = new ConcurrentDictionary<MethodInfo, MethodSpec>();
         
-        public void ProcessLoadedMethods(bool includeSystem = true)
+        public void ProcessLoadedMethods(bool includeSystem = true, bool parallelProcessing = true)
         {
-            foreach (var (methodName, methodSpec) in Methods.Where(t => includeSystem || !t.Value.IsSystemMethod))
-            {
-                methodSpec.Process();
-            }
+            ProcessSpecs(Methods.Values.Where(t => includeSystem || !t.IsSystemMethod), parallelProcessing);
         }
 
         public MethodSpec LoadMethodSpec(MethodInfo method)

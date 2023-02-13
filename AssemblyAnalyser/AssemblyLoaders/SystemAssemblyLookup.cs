@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AssemblyAnalyser.Extensions;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -34,14 +35,14 @@ namespace AssemblyAnalyser.AssemblyLoaders
         private static string FindAssemblyInGAC(string assemblyFullName)
         {
             var gacFiles = Directory.GetFiles("C:\\Windows\\assembly\\", "*.dll", SearchOption.AllDirectories);
-            var assemblyMatch = ParseAssemblyName(assemblyFullName);
+            var asemblyShortName = assemblyFullName.ParseShortName();
             var matchingFiles = gacFiles.Where(d => Path.GetFileNameWithoutExtension(d)
-                .Equals(assemblyMatch.Groups["ShortName"].Value,StringComparison.CurrentCultureIgnoreCase));
+                .Equals(asemblyShortName,StringComparison.CurrentCultureIgnoreCase));
             if (matchingFiles.Any())
             {
                 foreach (var match in matchingFiles)
                 {
-                    if (match.Contains(assemblyMatch.Groups["Version"].Value))
+                    if (match.Contains(assemblyFullName.ParseVersion()))
                     {
                         return match;
                     }
@@ -49,10 +50,5 @@ namespace AssemblyAnalyser.AssemblyLoaders
             }
             return null;
         }
-
-        private static Match ParseAssemblyName(string assemblyFullName)
-        {
-            return Regex.Match(assemblyFullName, @"^(?'ShortName'.*),\s*Version=(?'Version'[\d\.]+)");
-        }  
     }
 }

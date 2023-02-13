@@ -12,5 +12,7 @@ namespace AssemblyAnalyser
         IReadOnlyDictionary<FieldInfo, FieldSpec> Fields { get; }
 
         FieldSpec[] TryLoadFieldSpecs(Func<FieldInfo[]> value, TypeSpec declaringType);
+
+        void ProcessLoadedFields(bool includeSystem = true);
     }
 }

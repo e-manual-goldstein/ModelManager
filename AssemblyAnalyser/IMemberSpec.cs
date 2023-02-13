@@ -3,6 +3,6 @@
     public interface IMemberSpec
     {
         TypeSpec DeclaringType { get; }
-        TypeSpec ReturnType { get; }
+        TypeSpec ResultType { get; }
     }
 }

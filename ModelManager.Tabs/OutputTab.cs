@@ -113,7 +113,7 @@ namespace ModelManager.Tabs
                         typedOutput = new SingleOutput((string)output);
                         break;
                     case OutputType.List:
-                        typedOutput = new ListOutput((List<string>)output);
+                        typedOutput = new ListOutput((IEnumerable<string>)output);
                         break;
                     case OutputType.Table:
                         typedOutput = new TableOutput((IDictionary<string, IEnumerable<string>>)output);

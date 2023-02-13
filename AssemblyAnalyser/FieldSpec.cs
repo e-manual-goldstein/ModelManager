@@ -18,6 +18,7 @@ namespace AssemblyAnalyser
             DeclaringType = declaringType;
         }
 
+        public string FieldName => _fieldInfo.Name;
         public TypeSpec FieldType { get; private set; }
         public bool IsSystemProperty { get; set; }
         public TypeSpec DeclaringType { get; }

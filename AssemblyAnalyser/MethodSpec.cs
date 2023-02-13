@@ -18,7 +18,7 @@ namespace AssemblyAnalyser
             DeclaringType = declaringType;
         }
 
-        public TypeSpec ReturnType { get; private set; }
+        public TypeSpec ResultType { get; private set; }
         public TypeSpec DeclaringType { get; }
         public ParameterSpec[] ParameterTypes { get; private set; }
         public bool IsSystemMethod { get; }
@@ -27,7 +27,7 @@ namespace AssemblyAnalyser
         {
             if (_specManager.TryLoadTypeSpec(() => _methodInfo.ReturnType, out TypeSpec returnTypeSpec))
             {
-                ReturnType = returnTypeSpec;
+                ResultType = returnTypeSpec;
                 returnTypeSpec.RegisterAsReturnType(this);
             }
             ParameterTypes = _specManager.TryLoadParameterSpecs(() => _methodInfo.GetParameters(), this);            
@@ -35,7 +35,7 @@ namespace AssemblyAnalyser
 
         protected override async Task BeginAnalysis(Analyser analyser)
         {
-            Task returnType = ReturnType?.AnalyseAsync(analyser) ?? Task.CompletedTask;
+            Task returnType = ResultType?.AnalyseAsync(analyser) ?? Task.CompletedTask;
             Task parameterTypes = Task.WhenAll(ParameterTypes?.Select(p => p.AnalyseAsync(analyser)) ?? new Task[] { Task.CompletedTask });
             await Task.WhenAll(returnType, parameterTypes);
         }

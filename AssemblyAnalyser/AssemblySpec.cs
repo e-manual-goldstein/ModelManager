@@ -132,11 +132,9 @@ namespace AssemblyAnalyser
 
         public IEnumerable<string> GenericTypeReport()
         {
-            foreach (var typeSpec in TypeSpecs.Where(t => t.IsGenericType))
-            {
-                
-                yield return $"{typeSpec}";
-                
+            foreach (var typeSpec in TypeSpecs.Where(t => t.IsGenericType != t.IsGenericTypeDefinition))
+            {                
+                yield return $"{this}\t{typeSpec}";                
             }
         }
     }

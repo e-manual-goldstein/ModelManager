@@ -24,7 +24,11 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            //Method = _specManager.LoadMethodSpec(_parameterInfo.Member as MethodInfo);            
+            if (_specManager.TryLoadTypeSpec(() => _parameterInfo.ParameterType, out TypeSpec returnTypeSpec))
+            {
+                ParameterType = returnTypeSpec;
+                returnTypeSpec.RegisterAsDependentParameterSpec(this);
+            }            
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AssemblyAnalyser.Extensions;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;

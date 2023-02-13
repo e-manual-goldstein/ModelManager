@@ -118,12 +118,12 @@ namespace AssemblyAnalyser
 
         public static InclusionRule<MethodSpec> IncludeMethodByType()
         {
-            return new InclusionRule<MethodSpec>(spec => spec.ReturnType.IsIncluded());
+            return new InclusionRule<MethodSpec>(spec => spec.ResultType.IsIncluded());
         }
 
         public static ExclusionRule<MethodSpec> ExclusionMethodByType()
         {
-            return new ExclusionRule<MethodSpec>(spec => spec.ReturnType.IsExcluded());
+            return new ExclusionRule<MethodSpec>(spec => spec.ResultType.IsExcluded());
         }
 
         public static InclusionRule<PropertySpec> IncludePropertyByType()
