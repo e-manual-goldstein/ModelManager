@@ -311,6 +311,10 @@ namespace AssemblyAnalyser
                     typeSpecs = LoadTypeSpecs(ex.Types, assemblySpec);
                 }
             }
+            catch (InvalidOperationException ex)
+            {
+                //TODO Ignore For Now
+            }
             return success;
         }
 
@@ -343,7 +347,10 @@ namespace AssemblyAnalyser
 
         private MethodSpec CreateMethodSpec(MethodInfo method)
         {
-            var spec = new MethodSpec(method, LoadFullTypeSpec(method.DeclaringType), this, SpecRules);
+            var spec = new MethodSpec(method, LoadFullTypeSpec(method.DeclaringType), this, SpecRules)
+            {
+                Logger = _logger
+            };
             return spec;
         }
 

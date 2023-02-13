@@ -199,8 +199,6 @@ namespace AssemblyAnalyser
 
         public bool ContainsGenericParameters { get; private set; }
 
-
-
         public bool IsGenericTypeParameter { get; private set; }
 
         #endregion
@@ -231,6 +229,17 @@ namespace AssemblyAnalyser
             if (!_dependentParameterSpecs.Contains(parameterSpec))
             {
                 _dependentParameterSpecs.Add(parameterSpec);
+            }
+        }
+
+        List<MethodSpec> _dependentMethodBodies = new List<MethodSpec>();
+        public MethodSpec[] DependentMethodBodies => _dependentMethodBodies.ToArray();
+
+        public void RegisterDependentMethodSpec(MethodSpec methodSpec)
+        {
+            if (!_dependentMethodBodies.Contains(methodSpec))
+            {
+                _dependentMethodBodies.Add(methodSpec);
             }
         }
     }
