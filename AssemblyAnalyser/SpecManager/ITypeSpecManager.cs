@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace AssemblyAnalyser
 {
@@ -10,7 +11,7 @@ namespace AssemblyAnalyser
         bool TryLoadTypeSpecs(Func<Type[]> value, out TypeSpec[] typeSpecs, AssemblySpec assemblySpec = null);
         //TypeSpec[] TryLoadTypesForAssembly(string assemblyFullName);
         TypeSpec[] TryLoadTypesForAssembly(AssemblySpec assemblySpec);
-        void TryBuildTypeSpecForAssembly(string fullTypeName, AssemblySpec assemblySpec, Action<Type> buildAction);
+        void TryBuildTypeSpecForAssembly(string fullTypeName, string @namespace, string name, AssemblySpec assemblySpec, Action<TypeInfo> buildAction);
         void ProcessAllAssemblies(bool includeSystem = true, bool parallelProcessing = true);
         void ProcessAllLoadedTypes(bool includeSystem = true, bool parallelProcessing = true);
         //void ProcessTypes(IEnumerable<TypeSpec> typeSpecs, bool parallelProcessing = true);

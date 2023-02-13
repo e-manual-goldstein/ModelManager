@@ -17,6 +17,7 @@ namespace AssemblyAnalyser
         {
             _methodInfo = methodInfo;
             IsSystemMethod = declaringType.IsSystemType;
+            IsConstructor = methodInfo.IsConstructor;
             DeclaringType = declaringType;
         }
 
@@ -28,6 +29,7 @@ namespace AssemblyAnalyser
         List<TypeSpec> _exceptionCatchTypes = new List<TypeSpec>();
         public TypeSpec[] ExceptionCatchTypes => _exceptionCatchTypes.ToArray();
         public bool IsSystemMethod { get; }
+        public bool IsConstructor { get; }
 
         protected override void BuildSpec()
         {
@@ -63,8 +65,10 @@ namespace AssemblyAnalyser
 
         private void ProcessLocalVariables(MethodBody body)
         {
-            if (_specManager.TryLoadTypeSpecs(() => body.LocalVariables.Select(d => d.LocalType).ToArray(), 
-                out TypeSpec[] localVariableTypes))
+            if (_specManager.TryLoadTypeSpecs(() => 
+            {
+                return body.LocalVariables.Select(d => d.LocalType).ToArray();
+            }, out TypeSpec[] localVariableTypes))
             {
                 foreach (var localVariableType in localVariableTypes)
                 {

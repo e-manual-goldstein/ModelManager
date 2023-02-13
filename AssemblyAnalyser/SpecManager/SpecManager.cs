@@ -182,23 +182,37 @@ namespace AssemblyAnalyser
             ProcessSpecs(Types.Values.Where(t => includeSystem || !t.Assembly.IsSystemAssembly).ToArray(), parallelProcessing);            
         }
 
-        public void TryBuildTypeSpecForAssembly(string fullTypeName, AssemblySpec assemblySpec, Action<Type> buildAction)
+        public void TryBuildTypeSpecForAssembly(string fullTypeName, string @namespace, string name, AssemblySpec assemblySpec, Action<TypeInfo> buildAction)
         {
-            Type type = null;
+            TypeInfo type = null;
             var loader = AssemblyLoader.GetLoader(assemblySpec.TargetFrameworkVersion, assemblySpec.ImageRuntimeVersion);
             var assembly = loader.LoadAssemblyByName(assemblySpec.AssemblyFullName);
             try
             {
-                type = assembly.DefinedTypes.SingleOrDefault(t => t.FullName == fullTypeName);
+                var definedTypes = assembly.DefinedTypes;
+                type = definedTypes.SingleOrDefault(t => t.FullName == fullTypeName);
+                if (type == null)
+                {
+                    var matches = definedTypes.Where(t => t.Name == name && t.Namespace == @namespace);
+                    if (matches.Count() == 1)
+                    {
+                        type = matches.Single();
+                    }
+                    else
+                    {
+
+                    }
+                }
             }
             catch (ReflectionTypeLoadException ex)
             {
-                type = ex.Types.SingleOrDefault(t => t.FullName == fullTypeName);
+                type = ex.Types.SingleOrDefault(t => t.FullName == fullTypeName) as TypeInfo;
             }
-            if (type != null)
+            if (type == null)
             {
-                buildAction(type);
+                _logger.LogError($"Could not find Type {fullTypeName}");
             }
+            buildAction(type);
         }
 
         public TypeSpec[] TryLoadTypesForAssembly(AssemblySpec assemblySpec)
@@ -221,11 +235,7 @@ namespace AssemblyAnalyser
 
         private TypeSpec LoadFullTypeSpec(Type type, AssemblySpec assemblySpec = null)
         {
-            if (!string.IsNullOrEmpty(type.FullName))
-            {
-                return _typeSpecs.GetOrAdd(type.ToUniqueTypeName(), (key) => CreateFullTypeSpec(type, assemblySpec));
-            }
-            return TypeSpec.NullSpec;
+            return _typeSpecs.GetOrAdd(type.ToUniqueTypeName(), (key) => CreateFullTypeSpec(type, assemblySpec));
         }
 
         
@@ -233,7 +243,11 @@ namespace AssemblyAnalyser
         private TypeSpec CreateFullTypeSpec(Type type, AssemblySpec assemblySpec)
         {
             assemblySpec ??= LoadAssemblySpec(type.Assembly);
-            var spec = new TypeSpec(type.FullName, type.IsInterface, assemblySpec, this, SpecRules);
+            var spec = new TypeSpec(type.FullName, type.ToUniqueTypeName(), type.IsInterface, assemblySpec, this, SpecRules)
+            {
+                Name = type.Name,
+                Namespace = type.Namespace,
+            };
             spec.Logger = _logger;            
             return spec;
         }
@@ -266,17 +280,17 @@ namespace AssemblyAnalyser
                 {
                     throw new NotImplementedException();
                 }
-                typeSpec = TypeSpec.NullSpec;
+                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
             }
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
                 _logger.LogError(ex, "File Not Found");
-                typeSpec = TypeSpec.NullSpec;
+                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
             }
             catch (Exception ex)
             {
-                typeSpec = TypeSpec.NullSpec;                
+                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
             }
             return success;
         }
@@ -320,6 +334,10 @@ namespace AssemblyAnalyser
 
         public TypeSpec[] LoadTypeSpecs(Type[] types, AssemblySpec assemblySpec)
         {
+            if (types.Any(t => t == null))
+            {
+
+            }
             return types.Select(t => LoadTypeSpec(t, assemblySpec)).ToArray();
         }
 
@@ -336,30 +354,31 @@ namespace AssemblyAnalyser
             ProcessSpecs(Methods.Values.Where(t => includeSystem || !t.IsSystemMethod), parallelProcessing);
         }
 
-        public MethodSpec LoadMethodSpec(MethodInfo method)
+        public MethodSpec LoadMethodSpec(MethodInfo method, TypeSpec declaringType)
         {
             if (method == null)
             {
                 return null;
             }
-            return _methodSpecs.GetOrAdd(method, (key) => CreateMethodSpec(method));            
+            return _methodSpecs.GetOrAdd(method, (key) => CreateMethodSpec(method, declaringType));            
         }
 
-        private MethodSpec CreateMethodSpec(MethodInfo method)
+        private MethodSpec CreateMethodSpec(MethodInfo method, TypeSpec declaringType)
         {
-            var spec = new MethodSpec(method, LoadFullTypeSpec(method.DeclaringType), this, SpecRules)
+            declaringType ??= LoadFullTypeSpec(method.DeclaringType);
+            var spec = new MethodSpec(method, declaringType, this, SpecRules)
             {
                 Logger = _logger
             };
             return spec;
         }
 
-        public MethodSpec[] LoadMethodSpecs(MethodInfo[] methodInfos)
+        public MethodSpec[] LoadMethodSpecs(MethodInfo[] methodInfos, TypeSpec declaringType)
         {
-            return methodInfos.Select(m => LoadMethodSpec(m)).ToArray();
+            return methodInfos.Select(m => LoadMethodSpec(m, declaringType)).ToArray();
         }
 
-        public MethodSpec[] TryLoadMethodSpecs(Func<MethodInfo[]> getMethods)
+        public MethodSpec[] TryLoadMethodSpecs(Func<MethodInfo[]> getMethods, TypeSpec declaringType)
         {
             MethodInfo[] methods = null;
             try
@@ -386,7 +405,7 @@ namespace AssemblyAnalyser
             {
                 methods ??= Array.Empty<MethodInfo>();
             }
-            return LoadMethodSpecs(methods);
+            return LoadMethodSpecs(methods, declaringType);
         }
 
         #endregion

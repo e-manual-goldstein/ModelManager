@@ -29,7 +29,7 @@ namespace AssemblyAnalyser
         TypeSpec IMemberSpec.ResultType => PropertyType;
         public TypeSpec PropertyType { get; private set; }
                 
-        public TypeSpec DeclaringType { get; private set; }
+        public TypeSpec DeclaringType { get; }
         public bool IsSystemProperty { get; }
 
         public IEnumerable<MethodInfo> InnerMethods()
@@ -39,8 +39,8 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            Getter = _specManager.LoadMethodSpec(_getter);
-            Setter = _specManager.LoadMethodSpec(_setter);
+            Getter = _specManager.LoadMethodSpec(_getter, DeclaringType);
+            Setter = _specManager.LoadMethodSpec(_setter, DeclaringType);
             if (_specManager.TryLoadTypeSpec(() => _propertyInfo.PropertyType, out TypeSpec typeSpec))
             {
                 PropertyType = typeSpec;
