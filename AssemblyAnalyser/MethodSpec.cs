@@ -36,7 +36,7 @@ namespace AssemblyAnalyser
             if (_specManager.TryLoadTypeSpec(() => _methodInfo.ReturnType, out TypeSpec returnTypeSpec))
             {
                 ResultType = returnTypeSpec;
-                returnTypeSpec.RegisterAsReturnType(this);
+                returnTypeSpec.RegisterAsResultType(this);
             }
             ParameterTypes = _specManager.TryLoadParameterSpecs(() => _methodInfo.GetParameters(), this);
             if (_methodInfo.GetMethodBody() is MethodBody body)

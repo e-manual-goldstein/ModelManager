@@ -44,7 +44,7 @@ namespace AssemblyAnalyser
             if (_specManager.TryLoadTypeSpec(() => _propertyInfo.PropertyType, out TypeSpec typeSpec))
             {
                 PropertyType = typeSpec;
-                typeSpec.RegisterAsReturnType(this);
+                typeSpec.RegisterAsResultType(this);
                 
             }           
         }

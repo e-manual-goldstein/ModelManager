@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System;
 using System.Runtime.CompilerServices;
 using System.Reflection;
+using Microsoft.Extensions.Logging;
 
 namespace AssemblyAnalyser
 {
@@ -128,7 +129,7 @@ namespace AssemblyAnalyser
             {
                 foreach (var nestedType in specs.Where(s => !s.IsNullSpec))
                 {
-                    nestedType.SetNestingType(this);
+                    nestedType.SetNestedIn(this);
                     nestedType.Process();
                 }
             }
@@ -246,7 +247,7 @@ namespace AssemblyAnalyser
         {
             IsGenericType = type.IsGenericType;
             IsGenericTypeDefinition = type.IsGenericTypeDefinition; // This seems to be never unequal to IsGenericType
-            if (IsGenericTypeDefinition)
+            if (IsGenericType)
             {
                 var genericTypes = new List<TypeSpec>();
                 foreach (var parameterType in type.GenericTypeParameters)
@@ -258,15 +259,12 @@ namespace AssemblyAnalyser
                     }
                 }
                 GenericTypeParameters = genericTypes.ToArray();
-            }
-            if (type.ContainsGenericParameters)
-            {
-                foreach (var argument in type.GetGenericArguments())
-                {
-                    //TODO: Finish this part
-                }
-            }
+            }            
             if (type.IsGenericParameter)
+            {
+
+            }
+            if (type.IsGenericTypeParameter)
             {
 
             }
@@ -293,18 +291,14 @@ namespace AssemblyAnalyser
 
         public override string ToString()
         {
-            return FullTypeName;
+            return FullTypeName ?? UniqueTypeName;
         }
 
         List<IMemberSpec> _resultTypeSpecs = new List<IMemberSpec>();
         public IMemberSpec[] ResultTypeSpecs => _resultTypeSpecs.ToArray();
 
-        public void RegisterAsReturnType(IMemberSpec methodSpec)
+        public void RegisterAsResultType(IMemberSpec methodSpec)
         {
-            if (IsNullSpec)
-            {
-
-            }
             if (!_resultTypeSpecs.Contains(methodSpec))
             {
                 _resultTypeSpecs.Add(methodSpec);
@@ -333,15 +327,15 @@ namespace AssemblyAnalyser
             }
         }
 
-        public List<TypeSpec> NestingTypes { get; private set; } = new List<TypeSpec>();
+        public TypeSpec NestedIn { get; private set; }
 
-        private void SetNestingType(TypeSpec typeSpec)
+        private void SetNestedIn(TypeSpec typeSpec)
         {
-            if (NestingTypes.Any())
+            if (NestedIn != null)
             {
-                
+                Logger.LogError($"NestedIn already set for Type {this}");
             }
-            NestingTypes.Add(typeSpec);
+            NestedIn = typeSpec;
         }
 
         public string DecribeFields()

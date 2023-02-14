@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
-    public class FieldSpec : AbstractSpec
+    public class FieldSpec : AbstractSpec, IMemberSpec
     {
         private FieldInfo _fieldInfo;
 
@@ -23,9 +23,15 @@ namespace AssemblyAnalyser
         public bool IsSystemProperty { get; set; }
         public TypeSpec DeclaringType { get; }
 
+        TypeSpec IMemberSpec.ResultType => FieldType;
+
         protected override void BuildSpec()
         {
-            //FieldType = _specManager.TryLoadTypeSpec(() => _fieldInfo.FieldType);            
+            if (_specManager.TryLoadTypeSpec(() => _fieldInfo.FieldType, out TypeSpec typeSpec))
+            {
+                FieldType = typeSpec;
+                FieldType.RegisterAsResultType(this);
+            }
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)
