@@ -18,12 +18,14 @@ namespace AssemblyAnalyser
         protected ISpecManager _specManager;
         public ILogger Logger { get; internal set; }
 
-        public AbstractSpec(List<IRule> rules, ISpecManager specManager) 
+        public AbstractSpec(List<IRule> rules, ISpecManager specManager)
         {
             _specManager = specManager;
             InclusionRules = rules.OfType<InclusionRule>().ToList();
-            ExclusionRules = rules.OfType<ExclusionRule>().ToList();
+            ExclusionRules = rules.OfType<ExclusionRule>().ToList();            
         }
+
+        public TypeSpec[] Attributes { get; protected set; }
 
         public void Process()
         {

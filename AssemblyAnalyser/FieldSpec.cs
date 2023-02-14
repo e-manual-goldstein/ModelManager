@@ -16,6 +16,7 @@ namespace AssemblyAnalyser
         {
             _fieldInfo = fieldInfo;
             DeclaringType = declaringType;
+            IsSystemProperty = declaringType.IsSystemType;
         }
 
         public string FieldName => _fieldInfo.Name;
@@ -32,7 +33,14 @@ namespace AssemblyAnalyser
                 FieldType = typeSpec;
                 FieldType.RegisterAsResultType(this);
             }
+            Attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }
+
+        private CustomAttributeData[] GetAttributes()
+        {
+            return _fieldInfo.GetCustomAttributesData().ToArray();
+        }
+
 
         protected override async Task BeginAnalysis(Analyser analyser)
         {

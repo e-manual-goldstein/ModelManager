@@ -15,7 +15,8 @@ namespace AssemblyAnalyser
         public MethodSpec Method { get; }
         public bool IsSystemParameter { get; }
 
-        public ParameterSpec(ParameterInfo parameterInfo, MethodSpec method, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        public ParameterSpec(ParameterInfo parameterInfo, MethodSpec method, ISpecManager specManager, List<IRule> rules) 
+            : base(rules, specManager)
         {
             _parameterInfo = parameterInfo;
             IsSystemParameter = method.IsSystemMethod;

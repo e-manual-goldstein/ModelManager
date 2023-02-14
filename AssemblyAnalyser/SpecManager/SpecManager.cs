@@ -150,7 +150,7 @@ namespace AssemblyAnalyser
             }
             return specs.OrderBy(s => s.FilePath).ToArray();
         }
-
+        
         public AssemblySpec[] LoadAssemblySpecs(Assembly[] types)
         {
             return types.Select(t => LoadAssemblySpec(t)).ToArray();
@@ -164,7 +164,6 @@ namespace AssemblyAnalyser
                 ImageRuntimeVersion = assembly.ImageRuntimeVersion,
                 TargetFrameworkVersion = frameworkVersion,
             };
-            
             spec.Logger = _logger;
             return spec;
         }
@@ -237,8 +236,6 @@ namespace AssemblyAnalyser
         {
             return _typeSpecs.GetOrAdd(type.ToUniqueTypeName(), (key) => CreateFullTypeSpec(type, assemblySpec));
         }
-
-        
 
         private TypeSpec CreateFullTypeSpec(Type type, AssemblySpec assemblySpec)
         {
@@ -429,9 +426,14 @@ namespace AssemblyAnalyser
             PropertySpec propertySpec;
             if (!_propertySpecs.TryGetValue(propertyInfo, out propertySpec))
             {
-                _propertySpecs[propertyInfo] = propertySpec = new PropertySpec(propertyInfo, declaringType, this, SpecRules);
+                _propertySpecs[propertyInfo] = propertySpec = CreatePropertySpec(propertyInfo, declaringType);
             }
             return propertySpec;
+        }
+
+        private PropertySpec CreatePropertySpec(PropertyInfo propertyInfo, TypeSpec declaringType)
+        {
+            return new PropertySpec(propertyInfo, declaringType, this, SpecRules);
         }
 
         public PropertySpec[] LoadPropertySpecs(PropertyInfo[] propertyInfos, TypeSpec declaringType)
@@ -487,7 +489,13 @@ namespace AssemblyAnalyser
 
         private ParameterSpec LoadParameterSpec(ParameterInfo parameterInfo, MethodSpec method)
         {
-            return _parameterSpecs.GetOrAdd(parameterInfo, new ParameterSpec(parameterInfo, method, this, SpecRules));                        
+            return _parameterSpecs.GetOrAdd(parameterInfo, CreateParameterSpec(parameterInfo, method));
+        }
+
+        private ParameterSpec CreateParameterSpec(ParameterInfo parameterInfo, MethodSpec method)
+        {
+            TryLoadTypeSpecs(() => parameterInfo.GetCustomAttributesData().Select(t => t.AttributeType).ToArray(), out TypeSpec[] typeSpecs);
+            return new ParameterSpec(parameterInfo, method, this, SpecRules);
         }
 
         public ParameterSpec[] LoadParameterSpecs(ParameterInfo[] parameterInfos, MethodSpec method)
@@ -539,12 +547,17 @@ namespace AssemblyAnalyser
                 {
                     if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
                     {
-                        _fieldSpecs[fieldInfo] = fieldSpec = new FieldSpec(fieldInfo, declaringType, this, SpecRules);
+                        _fieldSpecs[fieldInfo] = fieldSpec = CreateFieldSpec(fieldInfo, declaringType);
                     }
                 }
                 //Console.WriteLine($"Unlocking for {fieldInfo.Name}");
             }
             return fieldSpec;
+        }
+
+        private FieldSpec CreateFieldSpec(FieldInfo fieldInfo, TypeSpec declaringType)
+        {
+            return new FieldSpec(fieldInfo, declaringType, this, SpecRules);
         }
 
         public FieldSpec[] LoadFieldSpecs(FieldInfo[] fieldInfos, TypeSpec declaringType)
@@ -584,6 +597,77 @@ namespace AssemblyAnalyser
 
         #endregion
 
+        #region Attribute Specs
+
+        public IReadOnlyDictionary<string, TypeSpec> Attributes => _attributeSpecs;
+
+        ConcurrentDictionary<string, TypeSpec> _attributeSpecs = new ConcurrentDictionary<string, TypeSpec>();
+
+        public TypeSpec[] TryLoadAttributeSpecs(Func<CustomAttributeData[]> getAttributes, AbstractSpec decoratedSpec)
+        {
+            CustomAttributeData[] attributes = null;
+            try
+            {
+                attributes = getAttributes();
+            }
+            catch (TypeLoadException ex)
+            {
+                _logger.LogError(ex.Message);
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                foreach (var loaderException in ex.LoaderExceptions)
+                {
+                    Console.WriteLine(loaderException.Message);
+                }
+            }
+            catch (FileNotFoundException ex)
+            {
+                _exceptionManager.Handle(ex);
+                _logger.LogError(ex, "File Not Found");
+            }
+            finally
+            {
+                attributes ??= Array.Empty<CustomAttributeData>();
+            }
+            return LoadAttributeSpecs(attributes, decoratedSpec);
+        }
+
+        public TypeSpec[] LoadAttributeSpecs(CustomAttributeData[] attibutes, AbstractSpec decoratedSpec)
+        {
+            return attibutes.Select(f => LoadAttributeSpec(f, decoratedSpec)).ToArray();
+        }
+
+        private TypeSpec LoadAttributeSpec(CustomAttributeData attribute, AbstractSpec decoratedSpec)
+        {
+            var attributeSpec = LoadFullTypeSpec(attribute.AttributeType);
+            _attributeSpecs.GetOrAdd(attributeSpec.FullTypeName, attributeSpec);
+            attributeSpec.RegisterAsDecorator(decoratedSpec);
+            return attributeSpec;
+        }
+
+        private TypeSpec CreateAttributeSpec(CustomAttributeData attributeData, AbstractSpec decoratedSpec)
+        {
+            TypeSpec attributeSpec = null;
+            try
+            {
+                var attributeType = attributeData.AttributeType;
+                attributeSpec = LoadFullTypeSpec(attributeType);
+            }
+            catch (Exception ex)
+            {
+
+            }
+            return attributeSpec;
+        }
+
+        public void ProcessLoadedAttributes(bool includeSystem = true)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
         #region IDisposable
         protected virtual void Dispose(bool disposing)
         {
@@ -598,6 +682,8 @@ namespace AssemblyAnalyser
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
+
+
         #endregion
 
     }

@@ -13,7 +13,8 @@ namespace AssemblyAnalyser
     {
         MethodInfo _methodInfo;
 
-        public MethodSpec(MethodInfo methodInfo, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        public MethodSpec(MethodInfo methodInfo, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules) 
+            : base(rules, specManager)
         {
             _methodInfo = methodInfo;
             IsSystemMethod = declaringType.IsSystemType;
@@ -30,7 +31,7 @@ namespace AssemblyAnalyser
         public TypeSpec[] ExceptionCatchTypes => _exceptionCatchTypes.ToArray();
         public bool IsSystemMethod { get; }
         public bool IsConstructor { get; }
-
+        
         protected override void BuildSpec()
         {
             if (_specManager.TryLoadTypeSpec(() => _methodInfo.ReturnType, out TypeSpec returnTypeSpec))
@@ -44,6 +45,12 @@ namespace AssemblyAnalyser
                 ProcessLocalVariables(body);
                 ProcessExceptionClauseCatchTypes(body);
             }
+            Attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
+        }
+
+        private CustomAttributeData[] GetAttributes()
+        {
+            return _methodInfo.GetCustomAttributesData().ToArray();
         }
 
         private void ProcessExceptionClauseCatchTypes(MethodBody body)

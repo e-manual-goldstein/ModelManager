@@ -55,7 +55,8 @@ namespace AssemblyAnalyser
             IsSystemType = AssemblyLoader.IsSystemAssembly(assembly.FilePath);
         }
 
-        TypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        TypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager, List<IRule> rules) 
+            : base(rules, specManager)
         {
             UniqueTypeName = uniqueTypeName;
             FullTypeName = fullTypeName;
@@ -77,8 +78,14 @@ namespace AssemblyAnalyser
             Fields = CreateFieldSpecs(type);
             Methods = CreateMethodSpecs(type);
             Properties = CreatePropertySpecs(type);
+            Attributes = _specManager.TryLoadAttributeSpecs(() => GetAttributes(type), this);
             ProcessCompilerGenerated(type);
             ProcessGenerics(type);
+        }
+
+        private CustomAttributeData[] GetAttributes(Type type)
+        {
+            return type.GetCustomAttributesData().ToArray();
         }
 
         private void ProcessCompilerGenerated(TypeInfo type)
@@ -336,6 +343,18 @@ namespace AssemblyAnalyser
                 Logger.LogError($"NestedIn already set for Type {this}");
             }
             NestedIn = typeSpec;
+        }
+
+        List<AbstractSpec> _decoratorForSpecs = new List<AbstractSpec>();
+
+        public AbstractSpec[] DecoratorForSpecs => _decoratorForSpecs.ToArray();
+
+        public void RegisterAsDecorator(AbstractSpec decoratedSpec)
+        {
+            if (!_decoratorForSpecs.Contains(decoratedSpec))
+            {
+                _decoratorForSpecs.Add(decoratedSpec);
+            }
         }
 
         public string DecribeFields()

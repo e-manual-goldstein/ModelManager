@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
@@ -70,6 +70,14 @@ namespace AssemblyAnalyser
         {            
             LoadReferencedAssemblies();
             _typeSpecs = _specManager.TryLoadTypesForAssembly(this);
+            Attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
+        }
+
+        private CustomAttributeData[] GetAttributes()
+        {
+            var loader = AssemblyLoader.GetLoader(TargetFrameworkVersion, ImageRuntimeVersion);
+            var assembly = loader.LoadAssemblyByPath(FilePath);
+            return assembly.GetCustomAttributesData().ToArray();
         }
 
         protected override async Task BeginAnalysis(Analyser analyser)

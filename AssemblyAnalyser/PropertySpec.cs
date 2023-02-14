@@ -14,7 +14,8 @@ namespace AssemblyAnalyser
         private MethodInfo _getter;
         private MethodInfo _setter;
 
-        public PropertySpec(PropertyInfo propertyInfo, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        public PropertySpec(PropertyInfo propertyInfo, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules) 
+            : base(rules, specManager)
         {
             _propertyInfo = propertyInfo;
             _getter = propertyInfo.GetGetMethod();
@@ -46,8 +47,15 @@ namespace AssemblyAnalyser
                 PropertyType = typeSpec;
                 typeSpec.RegisterAsResultType(this);
                 
-            }           
+            }
+            Attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }
+
+        private CustomAttributeData[] GetAttributes()
+        {
+            return _propertyInfo.GetCustomAttributesData().ToArray();
+        }
+
 
         protected override async Task BeginAnalysis(Analyser analyser)
         {
