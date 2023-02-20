@@ -51,7 +51,7 @@ namespace AssemblyAnalyser
             if (_specManager.TryLoadTypeSpec(() => _eventInfo.EventHandlerType, out TypeSpec typeSpec))
             {
                 EventType = typeSpec;
-                EventType.RegisterAsResultType(this);
+                EventType.RegisterAsDelegateFor(this);
             }
             Attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }

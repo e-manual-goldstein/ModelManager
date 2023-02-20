@@ -79,7 +79,7 @@ namespace AssemblyAnalyser
             Methods = CreateMethodSpecs(type);
             Properties = CreatePropertySpecs(type);
             Events = CreateEventSpecs(type);
-            Attributes = _specManager.TryLoadAttributeSpecs(() => GetAttributes(type), this);
+            Attributes = _specManager.TryLoadAttributeSpecs(() => GetAttributes(type), this);            
             ProcessCompilerGenerated(type);
             ProcessGenerics(type);
         }
@@ -373,6 +373,18 @@ namespace AssemblyAnalyser
                 return string.Empty;
             }
             return Fields.Select(f => f.FieldName).Aggregate((a, b) => a + ";" + b);
+        }
+
+        List<EventSpec> _delegateFor = new List<EventSpec>();
+
+        public EventSpec[] DelegateForSpecs => _delegateFor.ToArray();
+
+        public void RegisterAsDelegateFor(EventSpec eventSpec)
+        {
+            if (!_delegateFor.Contains(eventSpec))
+            {
+                _delegateFor.Add(eventSpec);
+            }
         }
     }
 }
