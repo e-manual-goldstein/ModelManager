@@ -646,21 +646,6 @@ namespace AssemblyAnalyser
             return attributeSpec;
         }
 
-        private TypeSpec CreateAttributeSpec(CustomAttributeData attributeData, AbstractSpec decoratedSpec)
-        {
-            TypeSpec attributeSpec = null;
-            try
-            {
-                var attributeType = attributeData.AttributeType;
-                attributeSpec = LoadFullTypeSpec(attributeType);
-            }
-            catch (Exception ex)
-            {
-
-            }
-            return attributeSpec;
-        }
-
         public void ProcessLoadedAttributes(bool includeSystem = true)
         {
             throw new NotImplementedException();

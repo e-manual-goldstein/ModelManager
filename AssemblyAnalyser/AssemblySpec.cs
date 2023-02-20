@@ -66,9 +66,25 @@ namespace AssemblyAnalyser
                 .Where(r => !r.IsSystemAssembly || includeSystem).ToArray();
         }
 
+        List<AssemblySpec> _referencedBy = new List<AssemblySpec>();
+
+        public AssemblySpec[] ReferencedBy => _referencedBy.ToArray();
+
+        private void RegisterAsReferencedAssemblyFor(AssemblySpec assemblySpec)
+        {
+            if (!_referencedBy.Contains(assemblySpec))
+            {
+                _referencedBy.Add(assemblySpec);
+            }
+        }
+
         protected override void BuildSpec()
         {            
             LoadReferencedAssemblies();
+            foreach (var referencedAssembly in _referencedAssemblies)
+            {
+                referencedAssembly.RegisterAsReferencedAssemblyFor(this);
+            }
             _typeSpecs = _specManager.TryLoadTypesForAssembly(this);
             Attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }

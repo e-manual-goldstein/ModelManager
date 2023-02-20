@@ -9,13 +9,15 @@ using System.Reflection;
 namespace AssemblyAnalyser.Tests
 {
     [TestClass]
-    public class BasicClassTests
+    public class BasicTypeTests
     {
         ISpecManager _specManager;
         ILoggerProvider _loggerProvider;
         IExceptionManager _exceptionManager;
         AssemblySpec _assemblySpec;
         TypeSpec _basicClassSpec;
+        TypeSpec _basicInterfaceSpec;
+        TypeSpec _basicAttribute;
 
         [TestInitialize] 
         public void Initialize() 
@@ -36,26 +38,32 @@ namespace AssemblyAnalyser.Tests
             _specManager.ProcessLoadedFields();
             _specManager.ProcessLoadedParameters();
             _specManager.ProcessLoadedEvents();
+            //_specManager.ProcessLoadedAttributes();
             _basicClassSpec = _assemblySpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.BasicClass");
+            _basicInterfaceSpec = _assemblySpec.TypeSpecs
+                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.IBasicInterface");
+            _basicAttribute = _assemblySpec.TypeSpecs
+                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.BasicAttribute");
         }
-        
+
+        #region Basic Class Tests
         [TestMethod]
         public void BasicClassSpecIsNotErrorSpec_Test()
         {
-            Assert.IsFalse(_basicClassSpec.IsErrorSpec);            
+            Assert.IsFalse(_basicClassSpec.IsErrorSpec);
         }
 
         [TestMethod]
         public void BasicClassSpecIsNotInterface_Test()
         {
-            Assert.IsFalse(_basicClassSpec.IsInterface);            
+            Assert.IsFalse(_basicClassSpec.IsInterface);
         }
 
         [TestMethod]
         public void BasicClassSpecIsNotNullSpec_Test()
         {
-            Assert.IsFalse(_basicClassSpec.IsNullSpec);            
+            Assert.IsFalse(_basicClassSpec.IsNullSpec);
         }
 
         [TestMethod]
@@ -101,7 +109,7 @@ namespace AssemblyAnalyser.Tests
         }
 
         [TestMethod]
-        public void BasicClassSpecHasTwoNonPropertyMethods_Test() 
+        public void BasicClassSpecHasTwoNonPropertyMethods_Test()
         {
             var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.InnerSpecs());
             var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
@@ -137,7 +145,7 @@ namespace AssemblyAnalyser.Tests
             var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
             var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods).Except(eventMethods);
             var parameteredMethod = nonPropertyMethods.Single(d => d.Parameters.Any());
-            
+
             Assert.AreEqual(2, parameteredMethod.Parameters.Length);
         }
 
@@ -146,5 +154,36 @@ namespace AssemblyAnalyser.Tests
         {
             Assert.AreEqual(1, _basicClassSpec.Events.Length);
         }
+        #endregion
+
+        #region Basic Interface Tests
+
+        [TestMethod]
+        public void IBasicInterfaceIsInterface_Test()
+        {
+            Assert.IsTrue(_basicInterfaceSpec.IsInterface);
+        }
+
+        [TestMethod]
+        public void IBasicInterfaceHasExactlyOneImplementation_Test()
+        {
+            Assert.AreEqual(1, _basicInterfaceSpec.Implementations.Length);
+        }
+
+        #endregion
+
+        #region Basic Attribute Tests
+        
+        [TestMethod]
+        public void BasicAttributeDecoratesExactlyOneType_Test()
+        {
+            Assert.AreEqual(1, _basicAttribute.DecoratorForSpecs.OfType<TypeSpec>().Count());
+        }
+
+        #endregion
+
+        #region Basic Delegate Tests
+
+        #endregion
     }
 }
