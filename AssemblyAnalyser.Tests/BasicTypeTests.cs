@@ -35,6 +35,7 @@ namespace AssemblyAnalyser.Tests
             _specManager.ProcessLoadedMethods();
             _specManager.ProcessLoadedFields();
             _specManager.ProcessLoadedParameters();
+            _specManager.ProcessLoadedEvents();
             _basicClassSpec = _assemblySpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.BasicClass");
         }
@@ -103,15 +104,19 @@ namespace AssemblyAnalyser.Tests
         public void BasicClassSpecHasTwoNonPropertyMethods_Test() 
         {
             var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.InnerSpecs());
-            Assert.AreEqual(2, _basicClassSpec.Methods.Except(propertyMethods).Count());
+            var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
+            var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods).Except(eventMethods);
+
+            Assert.AreEqual(2, nonPropertyMethods.Count());
         }
 
         [TestMethod]
         public void BasicClassSpecHasOneParameterlessMethod_Test()
         {
             var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.InnerSpecs());
-            var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods);
-            
+            var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
+            var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods).Except(eventMethods);
+
             Assert.AreEqual(1, nonPropertyMethods.Where(d => !d.Parameters.Any()).Count());
         }
 
@@ -119,7 +124,8 @@ namespace AssemblyAnalyser.Tests
         public void BasicClassSpecHasOneParameteredMethod_Test()
         {
             var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.InnerSpecs());
-            var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods);
+            var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
+            var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods).Except(eventMethods);
 
             Assert.AreEqual(1, nonPropertyMethods.Where(d => d.Parameters.Any()).Count());
         }
@@ -128,10 +134,17 @@ namespace AssemblyAnalyser.Tests
         public void BasicClassSpecParameteredMethodHasTwoParameters_Test()
         {
             var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.InnerSpecs());
-            var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods);
+            var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
+            var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods).Except(eventMethods);
             var parameteredMethod = nonPropertyMethods.Single(d => d.Parameters.Any());
             
             Assert.AreEqual(2, parameteredMethod.Parameters.Length);
+        }
+
+        [TestMethod]
+        public void BasicClassSpecHasExactlyOneEvent_Test()
+        {
+            Assert.AreEqual(1, _basicClassSpec.Events.Length);
         }
     }
 }

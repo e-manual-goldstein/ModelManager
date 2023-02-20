@@ -24,6 +24,6 @@ namespace AssemblyAnalyser.TestData
 
         public int PublicField;
 
-
+        public event BasicDelegate BasicEvent;
     }
 }

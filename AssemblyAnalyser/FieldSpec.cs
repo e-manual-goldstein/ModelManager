@@ -16,12 +16,12 @@ namespace AssemblyAnalyser
         {
             _fieldInfo = fieldInfo;
             DeclaringType = declaringType;
-            IsSystemProperty = declaringType.IsSystemType;
+            IsSystemField = declaringType.IsSystemType;
         }
 
         public string FieldName => _fieldInfo.Name;
         public TypeSpec FieldType { get; private set; }
-        public bool IsSystemProperty { get; set; }
+        public bool IsSystemField { get; set; }
         public TypeSpec DeclaringType { get; }
 
         TypeSpec IMemberSpec.ResultType => FieldType;

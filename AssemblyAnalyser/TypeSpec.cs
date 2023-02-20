@@ -78,6 +78,7 @@ namespace AssemblyAnalyser
             Fields = CreateFieldSpecs(type);
             Methods = CreateMethodSpecs(type);
             Properties = CreatePropertySpecs(type);
+            Events = CreateEventSpecs(type);
             Attributes = _specManager.TryLoadAttributeSpecs(() => GetAttributes(type), this);
             ProcessCompilerGenerated(type);
             ProcessGenerics(type);
@@ -158,6 +159,12 @@ namespace AssemblyAnalyser
         private FieldSpec[] CreateFieldSpecs(TypeInfo type)
         {
             var specs = _specManager.TryLoadFieldSpecs(() => type.GetFields().Where(m => m.DeclaringType == type).ToArray(), this);
+            return specs;
+        }
+
+        private EventSpec[] CreateEventSpecs(TypeInfo type)
+        {
+            var specs = _specManager.TryLoadEventSpecs(() => type.GetEvents().Where(m => m.DeclaringType == type).ToArray(), this);
             return specs;
         }
 
@@ -247,6 +254,8 @@ namespace AssemblyAnalyser
         public FieldSpec[] Fields { get; private set; }
 
         public TypeSpec[] GenericTypeParameters { get; private set; }
+
+        public EventSpec[] Events { get; private set; }
 
         #region Generic Type Flags
 
@@ -347,7 +356,7 @@ namespace AssemblyAnalyser
 
         List<AbstractSpec> _decoratorForSpecs = new List<AbstractSpec>();
 
-        public AbstractSpec[] DecoratorForSpecs => _decoratorForSpecs.ToArray();
+        public AbstractSpec[] DecoratorForSpecs => _decoratorForSpecs.ToArray();        
 
         public void RegisterAsDecorator(AbstractSpec decoratedSpec)
         {

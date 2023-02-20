@@ -531,7 +531,7 @@ namespace AssemblyAnalyser
 
         public void ProcessLoadedFields(bool includeSystem = true)
         {
-            foreach (var (fieldName, field) in Fields.Where(t => includeSystem || !t.Value.IsSystemProperty))
+            foreach (var (fieldName, field) in Fields.Where(t => includeSystem || !t.Value.IsSystemField))
             {
                 field.Process();
             }
@@ -668,6 +668,68 @@ namespace AssemblyAnalyser
 
         #endregion
 
+        #region Event Specs
+
+        public IReadOnlyDictionary<EventInfo, EventSpec> Events => _eventSpecs;
+
+        ConcurrentDictionary<EventInfo, EventSpec> _eventSpecs = new ConcurrentDictionary<EventInfo, EventSpec>();
+
+        public void ProcessLoadedEvents(bool includeSystem = true)
+        {
+            foreach (var (fieldName, field) in Events.Where(t => includeSystem || !t.Value.IsSystemEvent))
+            {
+                field.Process();
+            }
+        }
+
+        public EventSpec[] TryLoadEventSpecs(Func<EventInfo[]> getEvents, TypeSpec declaringType)
+        {
+            EventInfo[] events = null;
+            try
+            {
+                events = getEvents();
+            }
+            catch (TypeLoadException ex)
+            {
+                _logger.LogError(ex.Message);
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                foreach (var loaderException in ex.LoaderExceptions)
+                {
+                    Console.WriteLine(loaderException.Message);
+                }
+            }
+            catch (FileNotFoundException ex)
+            {
+                _exceptionManager.Handle(ex);
+                _logger.LogError(ex, "File Not Found");
+            }
+            finally
+            {
+                events ??= Array.Empty<EventInfo>();
+            }
+            return LoadEventSpecs(events, declaringType);
+        }
+
+        private EventSpec LoadEventSpec(EventInfo eventInfo, TypeSpec declaringType)
+        {
+            EventSpec fieldSpec = _eventSpecs.GetOrAdd(eventInfo, (e) => CreateEventSpec(eventInfo, declaringType));
+            return fieldSpec;
+        }
+
+        private EventSpec CreateEventSpec(EventInfo eventInfo, TypeSpec declaringType)
+        {
+            return new EventSpec(eventInfo, declaringType, this, SpecRules);
+        }
+
+        public EventSpec[] LoadEventSpecs(EventInfo[] eventInfos, TypeSpec declaringType)
+        {
+            return eventInfos.Select(e => LoadEventSpec(e, declaringType)).ToArray();
+        }
+
+        #endregion
+
         #region IDisposable
         protected virtual void Dispose(bool disposing)
         {
@@ -682,7 +744,6 @@ namespace AssemblyAnalyser
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
-
 
         #endregion
 
