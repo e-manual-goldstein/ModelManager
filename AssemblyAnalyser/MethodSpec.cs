@@ -24,7 +24,7 @@ namespace AssemblyAnalyser
 
         public TypeSpec ResultType { get; private set; }
         public TypeSpec DeclaringType { get; }
-        public ParameterSpec[] ParameterTypes { get; private set; }
+        public ParameterSpec[] Parameters { get; private set; }
         List<TypeSpec> _localVariableTypes = new List<TypeSpec>();
         public TypeSpec[] LocalVariableTypes => _localVariableTypes.ToArray();
         List<TypeSpec> _exceptionCatchTypes = new List<TypeSpec>();
@@ -39,7 +39,7 @@ namespace AssemblyAnalyser
                 ResultType = returnTypeSpec;
                 returnTypeSpec.RegisterAsResultType(this);
             }
-            ParameterTypes = _specManager.TryLoadParameterSpecs(() => _methodInfo.GetParameters(), this);
+            Parameters = _specManager.TryLoadParameterSpecs(() => _methodInfo.GetParameters(), this);
             if (_methodInfo.GetMethodBody() is MethodBody body)
             {
                 ProcessLocalVariables(body);
@@ -91,7 +91,7 @@ namespace AssemblyAnalyser
         protected override async Task BeginAnalysis(Analyser analyser)
         {
             Task returnType = ResultType?.AnalyseAsync(analyser) ?? Task.CompletedTask;
-            Task parameterTypes = Task.WhenAll(ParameterTypes?.Select(p => p.AnalyseAsync(analyser)) ?? new Task[] { Task.CompletedTask });
+            Task parameterTypes = Task.WhenAll(Parameters?.Select(p => p.AnalyseAsync(analyser)) ?? new Task[] { Task.CompletedTask });
             await Task.WhenAll(returnType, parameterTypes);
         }
 

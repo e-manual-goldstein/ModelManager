@@ -38,6 +38,11 @@ namespace AssemblyAnalyser
             return new[] { _getter, _setter };
         }
 
+        public IEnumerable<MethodSpec> InnerSpecs()
+        {
+            return new[] { Getter, Setter }.Where(c => c != null);
+        }
+
         protected override void BuildSpec()
         {
             Getter = _specManager.LoadMethodSpec(_getter, DeclaringType);
