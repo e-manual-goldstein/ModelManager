@@ -226,6 +226,7 @@ namespace AssemblyAnalyser
             if (!_implementations.Contains(typeSpec))
             {
                 _implementations.Add(typeSpec);
+                Assembly.RegisterDependentType(typeSpec);
             }
         }
 
@@ -242,6 +243,7 @@ namespace AssemblyAnalyser
             if (!_subTypes.Contains(typeSpec))
             {
                 _subTypes.Add(typeSpec);
+                Assembly.RegisterDependentType(typeSpec);
             }
         }
 
@@ -318,6 +320,7 @@ namespace AssemblyAnalyser
             if (!_resultTypeSpecs.Contains(methodSpec))
             {
                 _resultTypeSpecs.Add(methodSpec);
+                Assembly.RegisterDependentType(methodSpec.DeclaringType);
             }
         }
 
@@ -329,6 +332,7 @@ namespace AssemblyAnalyser
             if (!_dependentParameterSpecs.Contains(parameterSpec))
             {
                 _dependentParameterSpecs.Add(parameterSpec);
+                Assembly.RegisterDependentType(parameterSpec.Method.DeclaringType);
             }
         }
 
@@ -340,6 +344,7 @@ namespace AssemblyAnalyser
             if (!_dependentMethodBodies.Contains(methodSpec))
             {
                 _dependentMethodBodies.Add(methodSpec);
+                Assembly.RegisterDependentType(methodSpec.DeclaringType);
             }
         }
 
@@ -363,6 +368,8 @@ namespace AssemblyAnalyser
             if (!_decoratorForSpecs.Contains(decoratedSpec))
             {
                 _decoratorForSpecs.Add(decoratedSpec);
+                //TODO Finish this part
+                //Assembly.RegisterDependentType(decoratedSpec);
             }
         }
 
@@ -384,6 +391,7 @@ namespace AssemblyAnalyser
             if (!_delegateFor.Contains(eventSpec))
             {
                 _delegateFor.Add(eventSpec);
+                Assembly.RegisterDependentType(eventSpec.DeclaringType);
             }
         }
     }

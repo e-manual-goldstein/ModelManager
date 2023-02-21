@@ -89,6 +89,18 @@ namespace AssemblyAnalyser
             Attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }
 
+        List<TypeSpec> _dependentTypes = new List<TypeSpec>();
+
+        public TypeSpec[] DependentTypes => _dependentTypes.ToArray(); 
+
+        public void RegisterDependentType(TypeSpec typeSpec)
+        {
+            if (!_dependentTypes.Contains(typeSpec))
+            {
+                _dependentTypes.Add(typeSpec);
+            }
+        }
+        
         private CustomAttributeData[] GetAttributes()
         {
             var loader = AssemblyLoader.GetLoader(TargetFrameworkVersion, ImageRuntimeVersion);
