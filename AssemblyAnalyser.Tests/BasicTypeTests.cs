@@ -18,6 +18,7 @@ namespace AssemblyAnalyser.Tests
         TypeSpec _basicClassSpec;
         TypeSpec _basicInterfaceSpec;
         TypeSpec _basicAttribute;
+        TypeSpec _basicDelegate;
 
         [TestInitialize] 
         public void Initialize() 
@@ -45,6 +46,8 @@ namespace AssemblyAnalyser.Tests
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.IBasicInterface");
             _basicAttribute = _assemblySpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.BasicAttribute");
+            _basicDelegate = _assemblySpec.TypeSpecs
+                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.BasicDelegate");
         }
 
         #region Basic Class Tests
@@ -183,6 +186,12 @@ namespace AssemblyAnalyser.Tests
         #endregion
 
         #region Basic Delegate Tests
+
+        [TestMethod]
+        public void BasicDelegateIsDelegateForExactlyOneType_Test()
+        {
+            Assert.AreEqual(1, _basicDelegate.DelegateForSpecs.Count());
+        }
 
         #endregion
     }
