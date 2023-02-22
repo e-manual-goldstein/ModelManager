@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace ModelManager.Tabs
 {
@@ -20,7 +21,11 @@ namespace ModelManager.Tabs
         {
             HasParameters = actionMethod.GetParameters().Any();
             _actionName = actionMethod.Name;
-            _func = () => actionMethod.Invoke(_actionSource, new object[] { });// InvokeAction(_actionMethod, new object[] { });
+            _func = () =>
+            {
+                //Application.Current.Dispatcher.Invoke(actionMethod, new object[] {})
+                return actionMethod.Invoke(_actionSource, new object[] { });// InvokeAction(_actionMethod, new object[] { });
+            };
             _tab = tab;
             _actionSource = actionSource;
             _actionContextsById.Add(GetNewActionId($"{actionMethod.DeclaringType}.{actionMethod.Name}"), this);
@@ -41,7 +46,7 @@ namespace ModelManager.Tabs
             try
             {
                 //_tab.DisplayExecutingMessage();
-                var task = Task.Run(_func);
+                var task = Application.Current.Dispatcher.InvokeAsync(_func);
                 await task;
                 _tab.DisplayOutput(task.Result, this, _actionName);
             }

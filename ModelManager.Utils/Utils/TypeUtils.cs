@@ -138,7 +138,8 @@ namespace ModelManager.Utils
 	{
 		Single = 0,
 		List = 1,
-		Table = 2
+		Table = 2,
+		Tree = 3
 	}
 
 }

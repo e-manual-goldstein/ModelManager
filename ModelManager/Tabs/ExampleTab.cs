@@ -10,6 +10,8 @@ using System.Windows;
 using ModelManager.Core;
 using ModelManager.Types;
 using System.Threading;
+using ModelManager.Tabs.Outputs;
+using Microsoft.Extensions.Logging;
 
 namespace ModelManager.Tabs
 {
@@ -34,6 +36,20 @@ namespace ModelManager.Tabs
 			return randomList(5);
 		}
 
+		public string LongRunningTaskExample(int wait, int loops)
+		{
+			using (var progressUpdater = new ProgressUpdater(this))
+			{ 
+				var logger = LoggerProvider.CreateLogger("Example Tab");
+				for (int i = 0; i < loops; i++)
+				{
+					logger.LogInformation($"Waited {i} seconds");
+                    Task.Delay(wait).Wait();
+					progressUpdater.UpdateProgress(i + 1, loops);
+				}
+				return "Complete";
+			}
+		}
 		public void DisplayErrorExample()
 		{
 			throw new Exception("This is an example of an error");
@@ -44,17 +60,24 @@ namespace ModelManager.Tabs
 			return new List<string>() { inputString, numberField.ToString(), anotherInputStringWithAVeryLongName };
 		}
 
-		//public void DisplayBranches()
-		//{
-		//	var section = ConfigurationManager.GetSection("LocalBranches") as NameValueCollection;
-		//	var sdmDevBranch = section["SDM_DEV"];
-			
+		public ListOutput GetListExample()
+		{
+			var output = new ListOutput(randomList(5));
+            output.ContentActions.Add("Example", ExampleOutputAction);
+			return output;
+        }
 		//}
-
-		//public void AddNewLocalBranch(string branchName, string branchPath)
-		//{
-		//	TFUtils.AddNewLocalBranch(branchName, branchPath);
-		//}
+		public ListOutput ExampleOutputAction(IEnumerable<string> inputs)
+		{
+			var outputList = new List<string>();
+			foreach (var input in inputs)
+			{
+				outputList.Add(input.Substring(0, input.Length - 1));
+			}
+			var output = new ListOutput(outputList);
+			output.ContentActions.Add("Example", ExampleOutputAction);
+			return output;
+        }
 
 		#region DEBUG
 
@@ -63,14 +86,14 @@ namespace ModelManager.Tabs
 			
 		}
 
-		private void updateMargin(Thickness newMargin)
-		{
+		//private void updateMargin(Thickness newMargin)
+		//{
 			//var tabs = App.Manager.TabManager.OutputTabs;
 			//foreach (var tab in tabs)
 			//{
 			//	tab.TabItemControl.Padding = newMargin;
 			//}
-		}
+		//}
 
         private Random random = new Random();
 
