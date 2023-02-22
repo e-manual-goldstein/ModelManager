@@ -33,7 +33,7 @@ namespace ModelManager.Tabs.Outputs
             
             PopulateTreeView(treeView);
             
-            _clipboardReady = ContentAsString();
+            //_clipboardReady = ContentAsString();
             success = true;
             Control = treeView;
             SetControlLayout(controlWidth, tabHeight);
@@ -65,21 +65,21 @@ namespace ModelManager.Tabs.Outputs
             {
                 if (content is IEnumerable enumerable)
                 {
-                    var elementType = enumerable.GetType().GetGenericArguments()[0];
-                    if (elementType != null)
-                    {
+                    //var elementType = enumerable.GetType().GetGenericArguments()[0];
+                    //if (elementType != null)
+                    //{
 
-                    }
-                    if (enumerable.GetType().GetGenericTypeDefinition() != null
-                        && enumerable.GetType().GetGenericTypeDefinition().GetInterfaces()
-                        .Contains(typeof(IEnumerable<>).GetGenericTypeDefinition()))
-                    {
-                        return null;
-                    }
-                    else
-                    {
+                    //}
+                    //if (enumerable.GetType().GetGenericTypeDefinition() != null
+                    //    && enumerable.GetType().GetGenericTypeDefinition().GetInterfaces()
+                    //    .Contains(typeof(IEnumerable<>).GetGenericTypeDefinition()))
+                    //{
+                    //    return null;
+                    //}
+                    //else
+                    //{
                         return CreateTreeOutputItemsForEnumerable(enumerable);
-                    }
+                    //}
                 }                                
                 else
                 {
@@ -137,7 +137,10 @@ namespace ModelManager.Tabs.Outputs
                 };
                 Label = CreateItemName(member, content);
                 SourceContent = content;
-                TreeViewItem = CreateTreeViewItem(member);
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    TreeViewItem = CreateTreeViewItem(member);
+                });
             }
 
             public TreeOutputItem(int index, Type elementType, IEnumerable enumerable)
@@ -160,6 +163,7 @@ namespace ModelManager.Tabs.Outputs
 
             private TreeViewItem CreateTreeViewItem(MemberInfo member)
             {
+            
                 var treeViewItem = new TreeViewItem();
                 treeViewItem.Header = Label;
                 treeViewItem.IsExpanded = false;
@@ -250,7 +254,7 @@ namespace ModelManager.Tabs.Outputs
 
             public string Label { get; set; }
 
-            public TreeViewItem TreeViewItem { get; }
+            public TreeViewItem TreeViewItem { get; set; }
 
             public object SourceContent { get; }
 

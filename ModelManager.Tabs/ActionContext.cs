@@ -46,7 +46,7 @@ namespace ModelManager.Tabs
             try
             {
                 //_tab.DisplayExecutingMessage();
-                var task = Application.Current.Dispatcher.InvokeAsync(_func);
+                var task = Task.Run(_func);
                 await task;
                 _tab.DisplayOutput(task.Result, this, _actionName);
             }
