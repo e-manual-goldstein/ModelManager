@@ -63,23 +63,13 @@ namespace ModelManager.Tabs.Outputs
         {
             public static IEnumerable<TreeOutputItem> CreateTreeOutputItems(object content)
             {
+                if (content is IDictionary dictionary) 
+                {
+                    return CreateTreeOutputItemsForDictionary(dictionary);
+                }
                 if (content is IEnumerable enumerable)
                 {
-                    //var elementType = enumerable.GetType().GetGenericArguments()[0];
-                    //if (elementType != null)
-                    //{
-
-                    //}
-                    //if (enumerable.GetType().GetGenericTypeDefinition() != null
-                    //    && enumerable.GetType().GetGenericTypeDefinition().GetInterfaces()
-                    //    .Contains(typeof(IEnumerable<>).GetGenericTypeDefinition()))
-                    //{
-                    //    return null;
-                    //}
-                    //else
-                    //{
-                        return CreateTreeOutputItemsForEnumerable(enumerable);
-                    //}
+                    return CreateTreeOutputItemsForEnumerable(enumerable);                    
                 }                                
                 else
                 {
@@ -103,101 +93,95 @@ namespace ModelManager.Tabs.Outputs
                 int index = 0;
                 foreach (var element in enumerable)
                 {
-                    yield return new TreeOutputItem(index++, element.GetType(), enumerable);
+                    yield return new TreeOutputItem(index++, element, enumerable);
                 }
             }
 
-            private static IEnumerable<TreeOutputItem> CreateTreeOutputItemsForGenericEnumerable<TElement>(IEnumerable<TElement> enumerable)
+            private static IEnumerable<TreeOutputItem> CreateTreeOutputItemsForDictionary(IDictionary dictionary)
             {
                 int index = 0;
-                foreach (var element in enumerable)
+                foreach (DictionaryEntry kvp in dictionary)
                 {
-                    yield return new TreeOutputItem(index++, typeof(TElement), enumerable);
+                    yield return new TreeOutputItem(kvp.Key.ToString(), kvp.Value, IsExpandable(kvp.Value.GetType()));
                 }
             }
 
             private TreeOutputItem[] _treeOutputItems;
-
-
             bool _loaded;
-            public TreeOutputItem(MemberInfo member, object content)
+
+            public TreeOutputItem(MemberInfo member, object content) : this(CreateItemName(member, content), content, IsExpandable(member))
             {
-                Member = member;
-                GetMemberValue = () =>
-                {
+                //GetMemberValue = () =>
+                //{
                     if (member is PropertyInfo propertyInfo)
                     {
-                        return propertyInfo.GetValue(content);
+                        Value = propertyInfo.GetValue(content);
                     }
                     else if (member is FieldInfo fieldInfo)
                     {
-                        return fieldInfo.GetValue(content);
+                        Value = fieldInfo.GetValue(content);
                     }
-                    throw new NotSupportedException();
-                };
-                Label = CreateItemName(member, content);
-                SourceContent = content;
+                    //throw new NotSupportedException();
+                //};                
+            }
+
+            public TreeOutputItem(int index, object value, IEnumerable enumerable) 
+                : this(CreateItemName(index, value.GetType(), enumerable), enumerable, IsExpandable(value.GetType()))
+            {
+                //GetMemberValue = () =>
+                //{
+                //    return enumerable.Cast<object>().ElementAt(index);
+                //};
+                Value = value;
+            }
+
+            TreeOutputItem(string label, object value, bool expandable)
+            {
+                Label = label;
+                //SourceContent = sourceContent;
+                Value = value;
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    TreeViewItem = CreateTreeViewItem(member);
+                    TreeViewItem = CreateTreeViewItem(expandable);
                 });
             }
 
-            public TreeOutputItem(int index, Type elementType, IEnumerable enumerable)
+            private TreeViewItem CreateTreeViewItem(bool isExpandable)
             {
-                Label = CreateItemName(index, elementType, enumerable);
-                GetMemberValue = () =>
-                {
-                    return enumerable.Cast<object>().ElementAt(index);
-                };
-                SourceContent = enumerable;
-                TreeViewItem = CreateTreeViewItem(index, elementType);
-            }
-
-            public TreeOutputItem(int index, Type elementType, IEnumerable<object> enumerable)
-            {
-                Label = CreateItemName(index, elementType, enumerable);
-                SourceContent = enumerable;
-                TreeViewItem = CreateTreeViewItem(index, elementType);
-            }
-
-            private TreeViewItem CreateTreeViewItem(MemberInfo member)
-            {
-            
                 var treeViewItem = new TreeViewItem();
                 treeViewItem.Header = Label;
                 treeViewItem.IsExpanded = false;
                 treeViewItem.Expanded += TreeViewItem_Expanded;
-                if (IsExpandable(member))
+                if (isExpandable)
                 {
                     treeViewItem.Items.Add("Loading...");
                 }
                 return treeViewItem;
             }
 
-            private TreeViewItem CreateTreeViewItem(int index, Type elementType)
-            {
-                var treeViewItem = new TreeViewItem();
-                treeViewItem.Header = Label;
-                treeViewItem.IsExpanded = false;
-                treeViewItem.Expanded += TreeViewItem_Expanded;
-                if (IsExpandable(elementType))
-                {
-                    treeViewItem.Items.Add("Loading...");
-                }
-                return treeViewItem;
-            }
-
-            private string CreateItemName(MemberInfo member, object content)
+            private static string CreateItemName(MemberInfo member, object content)
             {
                 if (!IsExpandable(member))
                 {
-                    return $"{member.Name}: {GetMemberValue()}";
+                    return $"{member.Name}: {GetScalarValue(member, content)}";
                 }
                 return $"{member.Name}";
             }
 
-            private string CreateItemName(int index, Type elementType, IEnumerable content)
+            private static object GetScalarValue(MemberInfo member, object content)
+            {
+                if (member is PropertyInfo propertyInfo)
+                {
+                    return propertyInfo.GetValue(content);
+                }
+                else if (member is FieldInfo fieldInfo)
+                {
+                    return fieldInfo.GetValue(content);
+                }
+                throw new NotSupportedException();
+            }
+
+            private static string CreateItemName(int index, Type elementType, IEnumerable content)
             {
                 if (!IsExpandable(elementType))
                 {
@@ -206,9 +190,21 @@ namespace ModelManager.Tabs.Outputs
                 return $"{index}";
             }
 
-            private Func<object> GetMemberValue { get; }
+            private object Value { get; }
 
-            private bool IsExpandable(MemberInfo member)
+            //private Func<object> GetMemberValue { get; }
+
+            private static Type MemberType(MemberInfo member)
+            {
+                return member switch
+                {
+                    PropertyInfo propertyInfo => propertyInfo.PropertyType,
+                    FieldInfo fieldInfo => fieldInfo.FieldType,
+                    _ => throw new NotSupportedException()
+                };
+            }
+
+            private static bool IsExpandable(MemberInfo member)
             {
                 var resultType = member switch
                 {
@@ -219,7 +215,7 @@ namespace ModelManager.Tabs.Outputs
                 return IsExpandable(resultType);
             }
 
-            private bool IsExpandable(Type type)
+            private static bool IsExpandable(Type type)
             {
                 if (type.IsPrimitive || typeof(string).Equals(type)) //for now
                 {
@@ -236,8 +232,7 @@ namespace ModelManager.Tabs.Outputs
                     item.Items.Clear();
                     try
                     {
-                        
-                        var propertyValue = GetMemberValue();
+                        var propertyValue = Value;
                         if (propertyValue != null)
                         {
                             _treeOutputItems = CreateTreeOutputItems(propertyValue).ToArray();
@@ -256,9 +251,8 @@ namespace ModelManager.Tabs.Outputs
 
             public TreeViewItem TreeViewItem { get; set; }
 
-            public object SourceContent { get; }
-
-            public MemberInfo Member { get; }
+            //public object SourceContent { get; }
+            
         }
     }
 }
