@@ -108,31 +108,6 @@ namespace AssemblyAnalyser
             return assembly.GetCustomAttributesData().ToArray();
         }
 
-        protected override async Task BeginAnalysis(Analyser analyser)
-        {
-            var typeTasks = Task.WhenAll(GetTypeTasks(analyser));
-            var assemblyTasks = Task.WhenAll(GetAssemblyTasks(analyser));
-            await Task.WhenAll(typeTasks, assemblyTasks);                        
-        }
-
-        private IEnumerable<Task> GetTypeTasks(Analyser analyser)
-        {
-            return _typeSpecs.Select(async t =>
-            {
-                await t.AnalyseAsync(analyser);
-                UpdateProgress();
-            });
-        }
-
-        private IEnumerable<Task> GetAssemblyTasks(Analyser analyser)
-        {
-            return _referencedAssemblies.Select(async a =>
-            {
-                await a.AnalyseAsync(analyser);
-                UpdateProgress();                
-            });
-        }
-
         public override string ToString()
         {
             return AssemblyFullName;
@@ -145,16 +120,7 @@ namespace AssemblyAnalyser
 
         double _assemblyProgress = 0f;
         double _typesProgress = 0f;
-        private void UpdateProgress()
-        {
-            _assemblyProgress = 100.0 * _referencedAssemblies.Count(d => d.Analysed) / _referencedAssemblies.Length;
-            _typesProgress = 100.0 * _typeSpecs.Count(d => d.Analysed) / _typeSpecs.Length;
-            if (_typesProgress % 1 == 0 || _assemblyProgress % 1 == 0)
-            {
-                //Logger.Log(LogLevel.Information, $"Types Progress: {_typesProgress}%\tAssembly Progress: {_assemblyProgress}");
-            }
-        }
-
+        
         public IEnumerable<string> InterfaceReport()
         {
             foreach (var @interface in TypeSpecs.Where(t => t.IsInterface))

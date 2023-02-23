@@ -41,13 +41,6 @@ namespace AssemblyAnalyser
             return _fieldInfo.GetCustomAttributesData().ToArray();
         }
 
-
-        protected override async Task BeginAnalysis(Analyser analyser)
-        {
-            Task fieldType = FieldType?.AnalyseAsync(analyser) ?? Task.CompletedTask;
-            await Task.WhenAll(fieldType);
-        }
-
         public override string ToString()
         {
             return _fieldInfo.Name;

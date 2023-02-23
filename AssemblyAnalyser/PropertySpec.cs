@@ -61,16 +61,6 @@ namespace AssemblyAnalyser
             return _propertyInfo.GetCustomAttributesData().ToArray();
         }
 
-
-        protected override async Task BeginAnalysis(Analyser analyser)
-        {
-            Task getter = Getter?.AnalyseAsync(analyser) ?? Task.CompletedTask;
-            Task setter = Setter?.AnalyseAsync(analyser) ?? Task.CompletedTask;
-            Task propertyType = PropertyType?.AnalyseAsync(analyser) ?? Task.CompletedTask;
-            Task declaringType = DeclaringType?.AnalyseAsync(analyser) ?? Task.CompletedTask;
-            await Task.WhenAll(getter, setter, propertyType, declaringType);
-        }
-
         public override string ToString()
         {
             return _propertyInfo.Name;

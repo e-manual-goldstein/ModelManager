@@ -88,13 +88,6 @@ namespace AssemblyAnalyser
             }
         }
 
-        protected override async Task BeginAnalysis(Analyser analyser)
-        {
-            Task returnType = ResultType?.AnalyseAsync(analyser) ?? Task.CompletedTask;
-            Task parameterTypes = Task.WhenAll(Parameters?.Select(p => p.AnalyseAsync(analyser)) ?? new Task[] { Task.CompletedTask });
-            await Task.WhenAll(returnType, parameterTypes);
-        }
-
         public override string ToString()
         {
             return _methodInfo.Name;

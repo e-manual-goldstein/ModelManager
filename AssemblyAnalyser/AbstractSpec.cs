@@ -35,29 +35,6 @@ namespace AssemblyAnalyser
             }
         }
 
-        public async Task AnalyseAsync(Analyser analyser)
-        {
-            await BeginAnalysisBase(analyser);
-        }
-
-        protected abstract Task BeginAnalysis(Analyser analyser);
-
-        protected async Task BeginAnalysisBase(Analyser analyser)
-        {
-            if (ShouldAnalyse())
-            {
-                _analysing = true;
-                await BeginAnalysis(analyser);
-                _analysed = true;
-            }
-            else
-            {
-                Logger.LogWarning(SkipReason);
-            }
-        }
-
-        public bool Analysed => _analysed;
-
         protected abstract void BuildSpec();
 
         protected void Build()
@@ -70,11 +47,6 @@ namespace AssemblyAnalyser
         private bool ShouldProcess()
         {
             return !_processing && !_processed;
-        }
-
-        private bool ShouldAnalyse()
-        {
-            return Included && _processed && !_analysed && !_analysing;
         }
 
         public bool IsExcluded()

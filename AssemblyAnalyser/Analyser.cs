@@ -35,12 +35,6 @@ namespace AssemblyAnalyser
             
         }
 
-        public async Task BeginAsync()
-        {
-            RegisterSpecs();
-            await AnalyseAsync();
-        }
-
         public void RegisterSpecs()
         {
             foreach (var (_, filePath) in _workingFiles)
@@ -49,16 +43,6 @@ namespace AssemblyAnalyser
                 //var assemblySpec = _specManager.LoadAssemblySpec(assembly);
                 //assemblySpec.Process(_specManager);
             }
-        }
-
-        public async Task AnalyseAsync()
-        {
-            var taskList = new List<Task>();
-            foreach (var (_, spec) in _specManager.Assemblies)
-            {
-                taskList.Add(spec.AnalyseAsync(this));
-            }
-            await Task.WhenAll(taskList);
         }
 
         #region Assembly Specs
@@ -108,17 +92,6 @@ namespace AssemblyAnalyser
                 $"Methods {_specManager.Methods.Count()}",
                 $"Fields {_specManager.Fields.Count()}"
             };
-        }
-
-        public List<string> AssemblyReport()
-        {
-            var groups = _specManager.Assemblies.Values.Where(spec => spec != AssemblySpec.NullSpec && !spec.Skipped && spec.Analysed)
-                .OrderByDescending(c => c.TypeSpecs.Count()).ThenBy(c => c.AssemblyShortName);
-            return groups.Select(s => $"{s.AssemblyShortName}: {s.TypeSpecs.Count()}").ToList();
-            //    $"Types: {_typeSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
-            //    $"Properties {_propertySpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
-            //    $"Methods {_methodSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}\n" +
-            //    $"Fields {_fieldSpecs.Where(key => !key.Value.IsExcluded() && key.Value.IsIncluded()).Count()}";
         }
 
         public List<string> MissingFileReport()

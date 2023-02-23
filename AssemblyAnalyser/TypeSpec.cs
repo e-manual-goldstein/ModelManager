@@ -168,43 +168,6 @@ namespace AssemblyAnalyser
             return specs;
         }
 
-        #region Defunct
-        protected override async Task BeginAnalysis(Analyser analyser)
-        {
-            Task baseSpec = AnalyseBaseSpec(analyser);
-            Task interfaces = AnalyseInterfaces(analyser);
-            Task properties = AnalyseProperties(analyser);
-            Task methods = AnalyseMethods(analyser);
-            Task fields = AnalyseFields(analyser);
-            await Task.WhenAll(baseSpec, interfaces, properties, methods, fields);
-        }
-
-        private Task AnalyseBaseSpec(Analyser analyser)
-        {
-            return Task.Run(() => (BaseSpec != null) ? BaseSpec.AnalyseAsync(analyser) : Task.CompletedTask);
-        }
-
-        private Task AnalyseInterfaces(Analyser analyser)
-        {
-            return Task.WhenAll(Interfaces.Select(i => i.AnalyseAsync(analyser)));
-        }
-
-        private Task AnalyseProperties(Analyser analyser)
-        {
-            return Task.WhenAll(Properties.Select(p => p.AnalyseAsync(analyser)));
-        }
-
-        private Task AnalyseMethods(Analyser analyser)
-        {
-            return Task.WhenAll(Methods.Select(m => m.AnalyseAsync(analyser)));
-        }
-
-        private Task AnalyseFields(Analyser analyser)
-        {
-            return Task.WhenAll(Fields.Select(f => f.AnalyseAsync(analyser)));
-        } 
-        #endregion
-
         public AssemblySpec Assembly { get; }
 
         private List<TypeSpec> _implementations = new List<TypeSpec>();

@@ -31,11 +31,5 @@ namespace AssemblyAnalyser
                 returnTypeSpec.RegisterAsDependentParameterSpec(this);
             }            
         }
-
-        protected override async Task BeginAnalysis(Analyser analyser)
-        {
-            Task parameterType = ParameterType?.AnalyseAsync(analyser) ?? Task.CompletedTask;
-            await Task.WhenAll(parameterType);
-        }
     }
 }
