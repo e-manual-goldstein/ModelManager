@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -50,13 +51,28 @@ namespace SOAPBox.Model
             {
                 try
                 {
-                    //http://vssdmlivetfs:8080/tfs/BOMiLiveTFS/INTEG_MIRROR/_apis/git/repositories/Trunk/refs?filter=heads/&filterContains=bomi
-                    //
                     return await client.GetStringAsync(pushUrl);                    
                 }
                 catch (Exception ex)
                 {
                     throw new Exception(pushUrl, ex);
+                }
+            }
+        }
+
+        public async static Task<string> Post(string postUrl, string postContent)
+        {
+            using (HttpMessageHandler messageHandler = CreateMessageHandler())
+            using (HttpClient client = new HttpClient(messageHandler))
+            {
+                try
+                {
+                    var response = await client.PostAsync(postUrl, JsonContent.Create(postContent));
+                    return await response.Content.ReadAsStringAsync();
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception(postUrl, ex);
                 }
             }
         }
@@ -68,7 +84,7 @@ namespace SOAPBox.Model
                 UseDefaultCredentials = true,
                 AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip,
                 AllowAutoRedirect = true,
-                CookieContainer = new CookieContainer()
+                CookieContainer = new CookieContainer()                
             };
         }
 

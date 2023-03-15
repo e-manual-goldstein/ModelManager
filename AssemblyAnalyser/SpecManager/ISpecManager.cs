@@ -10,6 +10,6 @@ namespace AssemblyAnalyser
         void SetWorkingDirectory(string workingDirectory);
         void ProcessSpecs<TSpec>(IEnumerable<TSpec> specs, bool parallelProcessing = true) where TSpec : AbstractSpec;
         void Reset();
-        
+        void ProcessAll(bool includeSystem = true, bool parallelProcessing = true);
     }
 }

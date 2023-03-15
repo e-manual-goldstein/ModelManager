@@ -88,10 +88,9 @@ namespace ModelManager.Tabs.Outputs
 
             private static IEnumerable<TreeOutputItem> CreateTreeOutputItemsForEnumerable(IEnumerable enumerable)
             {
-                int index = 0;
                 foreach (var element in enumerable)
                 {
-                    yield return new TreeOutputItem(CreateItemName(index++, element.GetType(), enumerable), enumerable, IsExpandable(element.GetType()));
+                    yield return new TreeOutputItem($"{element}", element, IsExpandable(element.GetType()));
                 }
             }
 
@@ -109,7 +108,6 @@ namespace ModelManager.Tabs.Outputs
             TreeOutputItem(string label, object value, bool expandable)
             {
                 Label = label;
-                //SourceContent = sourceContent;
                 Value = value;
                 Application.Current.Dispatcher.Invoke(() =>
                 {
@@ -120,7 +118,7 @@ namespace ModelManager.Tabs.Outputs
             private TreeViewItem CreateTreeViewItem(bool isExpandable)
             {
                 var treeViewItem = new TreeViewItem();
-                treeViewItem.Header = Label;
+                treeViewItem.Header = $"{Label}";
                 treeViewItem.IsExpanded = false;
                 treeViewItem.Expanded += TreeViewItem_Expanded;
                 if (isExpandable)
@@ -135,8 +133,13 @@ namespace ModelManager.Tabs.Outputs
                 if (!IsExpandable(member))
                 {
                     return $"{member.Name}: {GetScalarValue(member, content)}";
-                }
+                }                
                 return $"{member.Name}";
+            }
+
+            private static bool IsAlreadyCounted(MemberInfo member, object content)
+            {
+                throw new NotImplementedException();
             }
 
             private static object GetScalarValue(MemberInfo member, object content)
@@ -150,15 +153,6 @@ namespace ModelManager.Tabs.Outputs
                     return fieldInfo.GetValue(content);
                 }
                 throw new NotSupportedException();
-            }
-
-            private static string CreateItemName(int index, Type elementType, IEnumerable content)
-            {
-                if (!IsExpandable(elementType))
-                {
-                    return $"{index}: {content}";
-                }
-                return $"{index}";
             }
 
             private object Value { get; }
@@ -195,8 +189,10 @@ namespace ModelManager.Tabs.Outputs
                         if (propertyValue != null)
                         {
                             _treeOutputItems = CreateTreeOutputItems(propertyValue).ToArray();
-                            foreach (var outputItem in _treeOutputItems)
+                            int index = 0;
+                            foreach (var outputItem in _treeOutputItems.OrderBy(r => r.Label))
                             {
+                                outputItem.TreeViewItem.Header = $"{index++}. {outputItem.Label}";
                                 item.Items.Add(outputItem.TreeViewItem);
                             }
                         }
@@ -207,7 +203,7 @@ namespace ModelManager.Tabs.Outputs
             }
 
             public string Label { get; set; }
-
+            
             public TreeViewItem TreeViewItem { get; set; }
                         
         }

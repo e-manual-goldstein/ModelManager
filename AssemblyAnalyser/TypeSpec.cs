@@ -64,10 +64,17 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            _specManager.TryBuildTypeSpecForAssembly(FullTypeName, Namespace, Name, Assembly, type =>
+            if (FullTypeName != null)
             {
-                BuildSpec(type);
-            });
+                _specManager.TryBuildTypeSpecForAssembly(FullTypeName, Namespace, Name, Assembly, type =>
+                {
+                    BuildSpec(type);
+                });
+            }
+            else
+            {
+                Logger.LogError("Cannot build Spec with null FullTypeName");
+            }
         }
 
         protected void BuildSpec(TypeInfo type)

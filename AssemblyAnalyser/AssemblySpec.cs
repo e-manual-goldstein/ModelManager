@@ -58,6 +58,8 @@ namespace AssemblyAnalyser
 
         AssemblySpec[] _referencedAssemblies;
         
+        public AssemblySpec[] ReferencedAssemblies => _referencedAssemblies;
+
         public bool IsSystemAssembly { get; }
 
         public AssemblySpec[] LoadReferencedAssemblies(bool includeSystem = true)

@@ -63,6 +63,19 @@ namespace AssemblyAnalyser
             }
         }
 
+
+        public void ProcessAll(bool includeSystem = true, bool parallelProcessing = true)
+        {
+            ProcessAllAssemblies(includeSystem, parallelProcessing);
+            ProcessAllLoadedTypes(includeSystem, parallelProcessing);
+            ProcessLoadedMethods(includeSystem, parallelProcessing);
+            ProcessLoadedProperties(includeSystem);
+            ProcessLoadedParameters(includeSystem);
+            ProcessLoadedFields(includeSystem);
+            ProcessLoadedEvents(includeSystem);
+            ProcessLoadedAttributes(includeSystem);
+        }
+
         #region Assemblies
 
         public IReadOnlyDictionary<string, AssemblySpec> Assemblies => _assemblySpecs;
@@ -539,19 +552,19 @@ namespace AssemblyAnalyser
 
         private FieldSpec LoadFieldSpec(FieldInfo fieldInfo, TypeSpec declaringType)
         {
-            FieldSpec fieldSpec = null;
-            if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
-            {
-                //Console.WriteLine($"Locking for {fieldInfo.Name}");
-                lock (_lock)
-                {
-                    if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
-                    {
-                        _fieldSpecs[fieldInfo] = fieldSpec = CreateFieldSpec(fieldInfo, declaringType);
-                    }
-                }
-                //Console.WriteLine($"Unlocking for {fieldInfo.Name}");
-            }
+            FieldSpec fieldSpec = _fieldSpecs.GetOrAdd(fieldInfo, (spec) => CreateFieldSpec(fieldInfo, declaringType));
+            //if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
+            //{
+            //    //Console.WriteLine($"Locking for {fieldInfo.Name}");
+            //    lock (_lock)
+            //    {
+            //        if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
+            //        {
+            //            _fieldSpecs[fieldInfo] = fieldSpec = CreateFieldSpec(fieldInfo, declaringType);
+            //        }
+            //    }
+            //    //Console.WriteLine($"Unlocking for {fieldInfo.Name}");
+            //}
             return fieldSpec;
         }
 
