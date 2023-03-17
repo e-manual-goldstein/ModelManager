@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Mono.Cecil;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.Metrics;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -10,15 +10,15 @@ namespace AssemblyAnalyser
 {
     public class EventSpec : AbstractSpec, IMemberSpec
     {
-        private EventInfo _eventInfo;
-        private MethodInfo _adder;
-        private MethodInfo _remover;
+        private EventDefinition _eventInfo;
+        private MethodDefinition _adder;
+        private MethodDefinition _remover;
 
-        public EventSpec(EventInfo eventInfo, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        public EventSpec(EventDefinition eventInfo, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
         {
             _eventInfo = eventInfo;
-            _adder = eventInfo.GetAddMethod();
-            _remover = eventInfo.GetRemoveMethod();
+            _adder = eventInfo.AddMethod;
+            _remover = eventInfo.RemoveMethod;
             DeclaringType = declaringType;
             IsSystemEvent = declaringType.IsSystemType;
         }
@@ -26,7 +26,7 @@ namespace AssemblyAnalyser
         public MethodSpec Adder { get; private set; }
         public MethodSpec Remover { get; private set; }
 
-        public IEnumerable<MethodInfo> InnerMethods()
+        public IEnumerable<MethodDefinition> InnerMethods()
         {
             return new[] { _adder, _remover };
         }
@@ -48,7 +48,7 @@ namespace AssemblyAnalyser
         {
             Adder = _specManager.LoadMethodSpec(_adder, DeclaringType);
             Remover = _specManager.LoadMethodSpec(_remover, DeclaringType);
-            if (_specManager.TryLoadTypeSpec(() => _eventInfo.EventHandlerType, out TypeSpec typeSpec))
+            if (_specManager.TryLoadTypeSpec(() => _eventInfo.EventType, out TypeSpec typeSpec))
             {
                 EventType = typeSpec;
                 EventType.RegisterAsDelegateFor(this);
@@ -56,9 +56,9 @@ namespace AssemblyAnalyser
             Attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }
 
-        private CustomAttributeData[] GetAttributes()
+        private CustomAttribute[] GetAttributes()
         {
-            return _eventInfo.GetCustomAttributesData().ToArray();
+            return _eventInfo.CustomAttributes.ToArray();
         }
                 
         public override string ToString()

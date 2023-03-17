@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Mono.Cecil;
 
 namespace AssemblyAnalyser
 {
@@ -339,6 +340,15 @@ namespace AssemblyAnalyser
             return typeSpecs;
         }
 
+        public TypeSpec[] TryLoadTypesForModule(ModuleDefinition module)
+        {
+            var specs = new List<TypeSpec>();
+            var types = module.GetTypes();
+            TryLoadTypeSpecs(() => types.ToArray(), out TypeSpec[] typeSpecs);
+            
+            return typeSpecs;
+        }
+
         private TypeSpec LoadTypeSpec(Type type, AssemblySpec assemblySpec)
         {
             if (type == null)
@@ -348,9 +358,42 @@ namespace AssemblyAnalyser
             return LoadFullTypeSpec(type, assemblySpec);
         }
 
+        private TypeSpec LoadTypeSpec(TypeReference type)
+        {
+            if (type == null)
+            {
+                return TypeSpec.NullSpec;
+            }
+            return LoadFullTypeSpec(type);
+        }
+
+        private TypeSpec LoadTypeSpec(TypeDefinition type)
+        {
+            if (type == null)
+            {
+                return TypeSpec.NullSpec;
+            }
+            return LoadFullTypeSpec(type);
+        }
+
         private TypeSpec LoadFullTypeSpec(Type type, AssemblySpec assemblySpec = null)
         {
             return _typeSpecs.GetOrAdd(type.ToUniqueTypeName(), (key) => CreateFullTypeSpec(type, assemblySpec));
+        }
+
+        private TypeSpec LoadFullTypeSpec(TypeDefinition type)
+        {
+            var typeSpec = _typeSpecs.GetOrAdd(type.FullName, (key) => CreateFullTypeSpec(type));
+            if (!typeSpec.HasDefinition)
+            {
+                typeSpec.AddDefinition(type);
+            }
+            return typeSpec;
+        }
+
+        private TypeSpec LoadFullTypeSpec(TypeReference type)
+        {
+            return _typeSpecs.GetOrAdd(type.FullName, (key) => CreateFullTypeSpec(type));
         }
 
         private TypeSpec CreateFullTypeSpec(Type type, AssemblySpec assemblySpec)
@@ -362,6 +405,18 @@ namespace AssemblyAnalyser
                 Namespace = type.Namespace,
             };
             spec.Logger = _logger;            
+            return spec;
+        }
+
+        private TypeSpec CreateFullTypeSpec(TypeReference type)
+        {
+            var moduleSpec = LoadModuleSpec(type.Module);
+            var spec = new TypeSpec(type, moduleSpec, this, SpecRules)
+            {
+                Name = type.Name,
+                Namespace = type.Namespace,
+            };
+            spec.Logger = _logger;
             return spec;
         }
 
@@ -385,6 +440,35 @@ namespace AssemblyAnalyser
             try
             {
                 typeSpec = LoadTypeSpec(getType(), assemblySpec);
+                success = true;
+            }
+            catch (TypeLoadException ex)
+            {
+                if (!string.IsNullOrEmpty(ex.TypeName))
+                {
+                    throw new NotImplementedException();
+                }
+                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
+            }
+            catch (FileNotFoundException ex)
+            {
+                _exceptionManager.Handle(ex);
+                _logger.LogError(ex, "File Not Found");
+                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
+            }
+            return success;
+        }
+
+        public bool TryLoadTypeSpec(Func<TypeReference> getType, out TypeSpec typeSpec)
+        {
+            bool success = false;
+            try
+            {
+                typeSpec = LoadTypeSpec(getType());
                 success = true;
             }
             catch (TypeLoadException ex)
@@ -445,6 +529,39 @@ namespace AssemblyAnalyser
             return success;
         }
 
+        public bool TryLoadTypeSpecs(Func<TypeReference[]> getTypes, out TypeSpec[] typeSpecs)
+        {
+            typeSpecs = Array.Empty<TypeSpec>();
+            bool success = false;
+            try
+            {
+                typeSpecs = LoadTypeSpecs(getTypes());
+                success = true;
+            }
+            catch (TypeLoadException ex)
+            {
+                _logger.LogError(ex.Message);
+            }
+            catch (FileNotFoundException ex)
+            {
+                _exceptionManager.Handle(ex);
+                _logger.LogError(ex.Message);
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                foreach (var loaderException in ex.LoaderExceptions)
+                {
+                    Console.WriteLine(loaderException.Message);
+                }                
+            }
+            catch (InvalidOperationException ex)
+            {
+                //TODO Ignore For Now
+            }
+            return success;
+        }
+
+
         public TypeSpec[] LoadTypeSpecs(Type[] types, AssemblySpec assemblySpec)
         {
             if (types.Any(t => t == null))
@@ -454,29 +571,58 @@ namespace AssemblyAnalyser
             return types.Select(t => LoadTypeSpec(t, assemblySpec)).ToArray();
         }
 
+        public TypeSpec[] LoadTypeSpecs(TypeReference[] types)
+        {
+            if (types.Any(t => t == null))
+            {
+
+            }
+            return types.Select(t => LoadTypeSpec(t)).ToArray();
+        }
+
+
         #endregion
 
         #region Method Specs
 
-        public IReadOnlyDictionary<MethodInfo, MethodSpec> Methods => _methodSpecs;
+        public IReadOnlyDictionary<MethodDefinition, MethodSpec> Methods => _methodSpecs;
 
-        ConcurrentDictionary<MethodInfo, MethodSpec> _methodSpecs = new ConcurrentDictionary<MethodInfo, MethodSpec>();
+        ConcurrentDictionary<MethodDefinition, MethodSpec> _methodSpecs = new ConcurrentDictionary<MethodDefinition, MethodSpec>();
         
         public void ProcessLoadedMethods(bool includeSystem = true, bool parallelProcessing = true)
         {
             ProcessSpecs(Methods.Values.Where(t => includeSystem || !t.IsSystemMethod), parallelProcessing);
         }
 
-        public MethodSpec LoadMethodSpec(MethodInfo method, TypeSpec declaringType)
+        //public MethodSpec LoadMethodSpec(MethodInfo method, TypeSpec declaringType)
+        //{
+        //    if (method == null)
+        //    {
+        //        return null;
+        //    }
+        //    return _methodSpecs.GetOrAdd(method, (key) => CreateMethodSpec(method, declaringType));            
+        //}
+
+        public MethodSpec LoadMethodSpec(MethodDefinition method, TypeSpec declaringType)
         {
             if (method == null)
             {
                 return null;
             }
-            return _methodSpecs.GetOrAdd(method, (key) => CreateMethodSpec(method, declaringType));            
+            return _methodSpecs.GetOrAdd(method, (key) => CreateMethodSpec(method, declaringType));
         }
 
-        private MethodSpec CreateMethodSpec(MethodInfo method, TypeSpec declaringType)
+        //private MethodSpec CreateMethodSpec(MethodInfo method, TypeSpec declaringType)
+        //{
+        //    declaringType ??= LoadFullTypeSpec(method.DeclaringType);
+        //    var spec = new MethodSpec(method, declaringType, this, SpecRules)
+        //    {
+        //        Logger = _logger
+        //    };
+        //    return spec;
+        //}
+
+        private MethodSpec CreateMethodSpec(MethodDefinition method, TypeSpec declaringType)
         {
             declaringType ??= LoadFullTypeSpec(method.DeclaringType);
             var spec = new MethodSpec(method, declaringType, this, SpecRules)
@@ -486,14 +632,49 @@ namespace AssemblyAnalyser
             return spec;
         }
 
-        public MethodSpec[] LoadMethodSpecs(MethodInfo[] methodInfos, TypeSpec declaringType)
+        //public MethodSpec[] LoadMethodSpecs(MethodInfo[] methodInfos, TypeSpec declaringType)
+        //{
+        //    return methodInfos.Select(m => LoadMethodSpec(m, declaringType)).ToArray();
+        //}
+
+        public MethodSpec[] LoadMethodSpecs(MethodDefinition[] methodDefinitions, TypeSpec declaringType)
         {
-            return methodInfos.Select(m => LoadMethodSpec(m, declaringType)).ToArray();
+            return methodDefinitions.Select(m => LoadMethodSpec(m, declaringType)).ToArray();
         }
 
-        public MethodSpec[] TryLoadMethodSpecs(Func<MethodInfo[]> getMethods, TypeSpec declaringType)
+        //public MethodSpec[] TryLoadMethodSpecs(Func<MethodInfo[]> getMethods, TypeSpec declaringType)
+        //{
+        //    MethodInfo[] methods = null;
+        //    try
+        //    {
+        //        methods = getMethods();
+        //    }
+        //    catch (TypeLoadException ex)
+        //    {
+        //        _logger.LogError(ex.Message);
+        //    }
+        //    catch (FileNotFoundException ex)
+        //    {
+        //        _exceptionManager.Handle(ex);
+        //        _logger.LogError(ex.Message);
+        //    }
+        //    catch (ReflectionTypeLoadException ex)
+        //    {
+        //        foreach (var loaderException in ex.LoaderExceptions)
+        //        {
+        //            Console.WriteLine(loaderException.Message);
+        //        }
+        //    }
+        //    finally
+        //    {
+        //        methods ??= Array.Empty<MethodInfo>();
+        //    }
+        //    return LoadMethodSpecs(methods, declaringType);
+        //}
+
+        public MethodSpec[] TryLoadMethodSpecs(Func<MethodDefinition[]> getMethods, TypeSpec declaringType)
         {
-            MethodInfo[] methods = null;
+            MethodDefinition[] methods = null;
             try
             {
                 methods = getMethods();
@@ -516,18 +697,19 @@ namespace AssemblyAnalyser
             }
             finally
             {
-                methods ??= Array.Empty<MethodInfo>();
+                methods ??= Array.Empty<MethodDefinition>();
             }
             return LoadMethodSpecs(methods, declaringType);
         }
 
+
         #endregion
 
         #region Property Specs
-        
-        public IReadOnlyDictionary<PropertyInfo, PropertySpec> Properties => _propertySpecs;
 
-        ConcurrentDictionary<PropertyInfo, PropertySpec> _propertySpecs = new ConcurrentDictionary<PropertyInfo, PropertySpec>();
+        public IReadOnlyDictionary<PropertyDefinition, PropertySpec> Properties => _propertySpecs;
+
+        ConcurrentDictionary<PropertyDefinition, PropertySpec> _propertySpecs = new ConcurrentDictionary<PropertyDefinition, PropertySpec>();
 
         public void ProcessLoadedProperties(bool includeSystem = true)
         {
@@ -537,7 +719,7 @@ namespace AssemblyAnalyser
             }
         }
 
-        private PropertySpec LoadPropertySpec(PropertyInfo propertyInfo, TypeSpec declaringType)
+        private PropertySpec LoadPropertySpec(PropertyDefinition propertyInfo, TypeSpec declaringType)
         {
             PropertySpec propertySpec;
             if (!_propertySpecs.TryGetValue(propertyInfo, out propertySpec))
@@ -547,19 +729,19 @@ namespace AssemblyAnalyser
             return propertySpec;
         }
 
-        private PropertySpec CreatePropertySpec(PropertyInfo propertyInfo, TypeSpec declaringType)
+        private PropertySpec CreatePropertySpec(PropertyDefinition propertyInfo, TypeSpec declaringType)
         {
             return new PropertySpec(propertyInfo, declaringType, this, SpecRules);
         }
 
-        public PropertySpec[] LoadPropertySpecs(PropertyInfo[] propertyInfos, TypeSpec declaringType)
+        public PropertySpec[] LoadPropertySpecs(PropertyDefinition[] propertyInfos, TypeSpec declaringType)
         {
             return propertyInfos.Select(p => LoadPropertySpec(p, declaringType)).ToArray();
         }
 
-        public PropertySpec[] TryLoadPropertySpecs(Func<PropertyInfo[]> getProperties, TypeSpec declaringType)
+        public PropertySpec[] TryLoadPropertySpecs(Func<PropertyDefinition[]> getProperties, TypeSpec declaringType)
         {
-            PropertyInfo[] properties = null;
+            PropertyDefinition[] properties = null;
             try
             {
                 properties = getProperties();
@@ -582,7 +764,7 @@ namespace AssemblyAnalyser
             }
             finally
             {
-                properties ??= Array.Empty<PropertyInfo>();
+                properties ??= Array.Empty<PropertyDefinition>();
             }
             return LoadPropertySpecs(properties, declaringType);
         }
@@ -591,9 +773,9 @@ namespace AssemblyAnalyser
 
         #region Parameter Specs
 
-        public IReadOnlyDictionary<ParameterInfo, ParameterSpec> Parameters => _parameterSpecs;
+        public IReadOnlyDictionary<ParameterDefinition, ParameterSpec> Parameters => _parameterSpecs;
 
-        ConcurrentDictionary<ParameterInfo, ParameterSpec> _parameterSpecs = new ConcurrentDictionary<ParameterInfo, ParameterSpec>();
+        ConcurrentDictionary<ParameterDefinition, ParameterSpec> _parameterSpecs = new ConcurrentDictionary<ParameterDefinition, ParameterSpec>();
 
         public void ProcessLoadedParameters(bool includeSystem = true)
         {
@@ -603,9 +785,14 @@ namespace AssemblyAnalyser
             }
         }
 
-        private ParameterSpec LoadParameterSpec(ParameterInfo parameterInfo, MethodSpec method)
+        //private ParameterSpec LoadParameterSpec(ParameterInfo parameterInfo, MethodSpec method)
+        //{
+        //    return _parameterSpecs.GetOrAdd(parameterInfo, CreateParameterSpec(parameterInfo, method));
+        //}
+
+        private ParameterSpec LoadParameterSpec(ParameterDefinition parameterDefinition, MethodSpec method)
         {
-            return _parameterSpecs.GetOrAdd(parameterInfo, CreateParameterSpec(parameterInfo, method));
+            return _parameterSpecs.GetOrAdd(parameterDefinition, CreateParameterSpec(parameterDefinition, method));
         }
 
         private ParameterSpec CreateParameterSpec(ParameterInfo parameterInfo, MethodSpec method)
@@ -614,17 +801,46 @@ namespace AssemblyAnalyser
             return new ParameterSpec(parameterInfo, method, this, SpecRules);
         }
 
-        public ParameterSpec[] LoadParameterSpecs(ParameterInfo[] parameterInfos, MethodSpec method)
+        private ParameterSpec CreateParameterSpec(ParameterDefinition parameterDefinition, MethodSpec method)
         {
-            return parameterInfos?.Select(p => LoadParameterSpec(p, method)).ToArray();
+            TryLoadTypeSpecs(() => parameterDefinition.CustomAttributes.Select(t => t.AttributeType).ToArray(), out TypeSpec[] typeSpecs);
+            return new ParameterSpec(parameterDefinition, method, this, SpecRules);
         }
 
-        public ParameterSpec[] TryLoadParameterSpecs(Func<ParameterInfo[]> parameterInfosFunc, MethodSpec method)
+        //public ParameterSpec[] LoadParameterSpecs(ParameterInfo[] parameterInfos, MethodSpec method)
+        //{
+        //    return parameterInfos?.Select(p => LoadParameterSpec(p, method)).ToArray();
+        //}
+
+        public ParameterSpec[] LoadParameterSpecs(ParameterDefinition[] parameterDefinitions, MethodSpec method)
         {
-            ParameterInfo[] parameterInfos = null;
+            return parameterDefinitions?.Select(p => LoadParameterSpec(p, method)).ToArray();
+        }
+
+        //public ParameterSpec[] TryLoadParameterSpecs(Func<ParameterInfo[]> parameterInfosFunc, MethodSpec method)
+        //{
+        //    ParameterInfo[] parameterInfos = null;
+        //    try
+        //    {
+        //        parameterInfos = parameterInfosFunc();
+        //    }
+        //    catch (TypeLoadException typeLoadException)
+        //    {
+
+        //    }
+        //    catch (Exception)
+        //    {
+
+        //    }
+        //    return LoadParameterSpecs(parameterInfos, method);
+        //}
+
+        public ParameterSpec[] TryLoadParameterSpecs(Func<ParameterDefinition[]> parameterDefinitions, MethodSpec method)
+        {
+            ParameterDefinition[] parameterInfos = null;
             try
             {
-                parameterInfos = parameterInfosFunc();
+                parameterInfos = parameterDefinitions();
             }
             catch (TypeLoadException typeLoadException)
             {
@@ -719,9 +935,9 @@ namespace AssemblyAnalyser
 
         ConcurrentDictionary<string, TypeSpec> _attributeSpecs = new ConcurrentDictionary<string, TypeSpec>();
 
-        public TypeSpec[] TryLoadAttributeSpecs(Func<CustomAttributeData[]> getAttributes, AbstractSpec decoratedSpec)
+        public TypeSpec[] TryLoadAttributeSpecs(Func<CustomAttribute[]> getAttributes, AbstractSpec decoratedSpec)
         {
-            CustomAttributeData[] attributes = null;
+            CustomAttribute[] attributes = null;
             try
             {
                 attributes = getAttributes();
@@ -744,17 +960,17 @@ namespace AssemblyAnalyser
             }
             finally
             {
-                attributes ??= Array.Empty<CustomAttributeData>();
+                attributes ??= Array.Empty<CustomAttribute>();
             }
             return LoadAttributeSpecs(attributes, decoratedSpec);
         }
 
-        public TypeSpec[] LoadAttributeSpecs(CustomAttributeData[] attibutes, AbstractSpec decoratedSpec)
+        public TypeSpec[] LoadAttributeSpecs(CustomAttribute[] attibutes, AbstractSpec decoratedSpec)
         {
             return attibutes.Select(f => LoadAttributeSpec(f, decoratedSpec)).ToArray();
         }
 
-        private TypeSpec LoadAttributeSpec(CustomAttributeData attribute, AbstractSpec decoratedSpec)
+        private TypeSpec LoadAttributeSpec(CustomAttribute attribute, AbstractSpec decoratedSpec)
         {
             var attributeSpec = LoadFullTypeSpec(attribute.AttributeType);
             _attributeSpecs.GetOrAdd(attributeSpec.FullTypeName, attributeSpec);
@@ -771,9 +987,9 @@ namespace AssemblyAnalyser
 
         #region Event Specs
 
-        public IReadOnlyDictionary<EventInfo, EventSpec> Events => _eventSpecs;
+        public IReadOnlyDictionary<EventDefinition, EventSpec> Events => _eventSpecs;
 
-        ConcurrentDictionary<EventInfo, EventSpec> _eventSpecs = new ConcurrentDictionary<EventInfo, EventSpec>();
+        ConcurrentDictionary<EventDefinition, EventSpec> _eventSpecs = new ConcurrentDictionary<EventDefinition, EventSpec>();
 
         public void ProcessLoadedEvents(bool includeSystem = true)
         {
@@ -783,9 +999,9 @@ namespace AssemblyAnalyser
             }
         }
 
-        public EventSpec[] TryLoadEventSpecs(Func<EventInfo[]> getEvents, TypeSpec declaringType)
+        public EventSpec[] TryLoadEventSpecs(Func<EventDefinition[]> getEvents, TypeSpec declaringType)
         {
-            EventInfo[] events = null;
+            EventDefinition[] events = null;
             try
             {
                 events = getEvents();
@@ -808,23 +1024,23 @@ namespace AssemblyAnalyser
             }
             finally
             {
-                events ??= Array.Empty<EventInfo>();
+                events ??= Array.Empty<EventDefinition>();
             }
             return LoadEventSpecs(events, declaringType);
         }
 
-        private EventSpec LoadEventSpec(EventInfo eventInfo, TypeSpec declaringType)
+        private EventSpec LoadEventSpec(EventDefinition eventInfo, TypeSpec declaringType)
         {
             EventSpec fieldSpec = _eventSpecs.GetOrAdd(eventInfo, (e) => CreateEventSpec(eventInfo, declaringType));
             return fieldSpec;
         }
 
-        private EventSpec CreateEventSpec(EventInfo eventInfo, TypeSpec declaringType)
+        private EventSpec CreateEventSpec(EventDefinition eventInfo, TypeSpec declaringType)
         {
             return new EventSpec(eventInfo, declaringType, this, SpecRules);
         }
 
-        public EventSpec[] LoadEventSpecs(EventInfo[] eventInfos, TypeSpec declaringType)
+        public EventSpec[] LoadEventSpecs(EventDefinition[] eventInfos, TypeSpec declaringType)
         {
             return eventInfos.Select(e => LoadEventSpec(e, declaringType)).ToArray();
         }
@@ -844,6 +1060,11 @@ namespace AssemblyAnalyser
         {
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
+        }
+
+        public TypeSpec[] TryLoadAttributeSpecs(Func<CustomAttributeData[]> value, AbstractSpec decoratedSpec)
+        {
+            throw new NotImplementedException();
         }
 
         #endregion

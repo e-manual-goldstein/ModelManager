@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Mono.Cecil;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -9,8 +10,8 @@ namespace AssemblyAnalyser
 {
     public interface IEventSpecManager
     {
-        EventSpec[] TryLoadEventSpecs(Func<EventInfo[]> value, TypeSpec typeSpec);
-        IReadOnlyDictionary<EventInfo, EventSpec> Events { get; }
+        EventSpec[] TryLoadEventSpecs(Func<EventDefinition[]> value, TypeSpec typeSpec);
+        IReadOnlyDictionary<EventDefinition, EventSpec> Events { get; }
         
 
         void ProcessLoadedEvents(bool includeSystem = true);

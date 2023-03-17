@@ -1,25 +1,22 @@
-﻿using HtmlAgilityPack;
-using System;
+﻿using Mono.Cecil;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace AssemblyAnalyser
 {
     public class PropertySpec : AbstractSpec, IMemberSpec
     {
-        private PropertyInfo _propertyInfo;
-        private MethodInfo _getter;
-        private MethodInfo _setter;
+        private PropertyDefinition _propertyDefinition;
+        private MethodDefinition _getter;
+        private MethodDefinition _setter;
 
-        public PropertySpec(PropertyInfo propertyInfo, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules) 
+        public PropertySpec(PropertyDefinition propertyInfo, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules) 
             : base(rules, specManager)
         {
-            _propertyInfo = propertyInfo;
-            _getter = propertyInfo.GetGetMethod();
-            _setter = propertyInfo.GetSetMethod();
+            _propertyDefinition = propertyInfo;
+            _getter = propertyInfo.GetMethod;
+            _setter = propertyInfo.SetMethod;
             DeclaringType = declaringType;
             IsSystemProperty = declaringType.IsSystemType;
         }
@@ -33,7 +30,7 @@ namespace AssemblyAnalyser
         public TypeSpec DeclaringType { get; }
         public bool IsSystemProperty { get; }
 
-        public IEnumerable<MethodInfo> InnerMethods()
+        public IEnumerable<MethodDefinition> InnerMethods()
         {
             return new[] { _getter, _setter };
         }
@@ -47,7 +44,7 @@ namespace AssemblyAnalyser
         {
             Getter = _specManager.LoadMethodSpec(_getter, DeclaringType);
             Setter = _specManager.LoadMethodSpec(_setter, DeclaringType);
-            if (_specManager.TryLoadTypeSpec(() => _propertyInfo.PropertyType, out TypeSpec typeSpec))
+            if (_specManager.TryLoadTypeSpec(() => _propertyDefinition.PropertyType, out TypeSpec typeSpec))
             {
                 PropertyType = typeSpec;
                 typeSpec.RegisterAsResultType(this);
@@ -56,14 +53,14 @@ namespace AssemblyAnalyser
             Attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }
 
-        private CustomAttributeData[] GetAttributes()
+        private CustomAttribute[] GetAttributes()
         {
-            return _propertyInfo.GetCustomAttributesData().ToArray();
+            return _propertyDefinition.CustomAttributes.ToArray();
         }
 
         public override string ToString()
         {
-            return _propertyInfo.Name;
+            return _propertyDefinition.Name;
         }
     }
 }

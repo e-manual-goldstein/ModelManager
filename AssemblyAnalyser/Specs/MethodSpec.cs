@@ -1,24 +1,20 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
+﻿using Mono.Cecil;
+using Mono.Cecil.Cil;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Reflection.Metadata;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
     public class MethodSpec : AbstractSpec, IMemberSpec
     {
-        MethodInfo _methodInfo;
+        MethodDefinition _methodDefinition;
 
-        public MethodSpec(MethodInfo methodInfo, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules) 
+        public MethodSpec(MethodDefinition methodDefinition, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules)
             : base(rules, specManager)
         {
-            _methodInfo = methodInfo;
+            _methodDefinition = methodDefinition;
             IsSystemMethod = declaringType.IsSystemType;
-            IsConstructor = methodInfo.IsConstructor;
+            IsConstructor = methodDefinition.IsConstructor;
             DeclaringType = declaringType;
         }
 
@@ -34,13 +30,13 @@ namespace AssemblyAnalyser
         
         protected override void BuildSpec()
         {
-            if (_specManager.TryLoadTypeSpec(() => _methodInfo.ReturnType, out TypeSpec returnTypeSpec))
+            if (_specManager.TryLoadTypeSpec(() => _methodDefinition.ReturnType, out TypeSpec returnTypeSpec))
             {
                 ResultType = returnTypeSpec;
                 returnTypeSpec.RegisterAsResultType(this);
             }
-            Parameters = _specManager.TryLoadParameterSpecs(() => _methodInfo.GetParameters(), this);
-            if (_methodInfo.GetMethodBody() is MethodBody body)
+            Parameters = _specManager.TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray(), this);
+            if (_methodDefinition.Body is MethodBody body)
             {
                 ProcessLocalVariables(body);
                 ProcessExceptionClauseCatchTypes(body);
@@ -48,33 +44,33 @@ namespace AssemblyAnalyser
             Attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }
 
-        private CustomAttributeData[] GetAttributes()
+        private CustomAttribute[] GetAttributes()
         {
-            return _methodInfo.GetCustomAttributesData().ToArray();
+            return _methodDefinition.CustomAttributes.ToArray();
         }
 
         private void ProcessExceptionClauseCatchTypes(MethodBody body)
         {
-            if (_specManager.TryLoadTypeSpecs(() => body.ExceptionHandlingClauses
-                .Where(d => d.Flags == ExceptionHandlingClauseOptions.Clause).Select(d => d.CatchType).ToArray(), 
-                out TypeSpec[] exceptionCatchTypes))
-            {
-                foreach (var catchType in exceptionCatchTypes)
-                {
-                    if (!_exceptionCatchTypes.Contains(catchType))
-                    {
-                        _exceptionCatchTypes.Add(catchType);
-                        catchType.RegisterDependentMethodSpec(this);
-                    }
-                }
-            }
+            //if (_specManager.TryLoadTypeSpecs(() => body.ExceptionHandlers
+            //    .Where(d => d.Flags == ExceptionHandlingClauseOptions.Clause).Select(d => d.CatchType).ToArray(), 
+            //    out TypeSpec[] exceptionCatchTypes))
+            //{
+            //    foreach (var catchType in exceptionCatchTypes)
+            //    {
+            //        if (!_exceptionCatchTypes.Contains(catchType))
+            //        {
+            //            _exceptionCatchTypes.Add(catchType);
+            //            catchType.RegisterDependentMethodSpec(this);
+            //        }
+            //    }
+            //}
         }
 
         private void ProcessLocalVariables(MethodBody body)
         {
             if (_specManager.TryLoadTypeSpecs(() => 
             {
-                return body.LocalVariables.Select(d => d.LocalType).ToArray();
+                return body.Variables.Select(d => d.VariableType).ToArray();
             }, out TypeSpec[] localVariableTypes))
             {
                 foreach (var localVariableType in localVariableTypes)
@@ -90,7 +86,7 @@ namespace AssemblyAnalyser
 
         public override string ToString()
         {
-            return _methodInfo.Name;
+            return _methodDefinition.Name;
         }        
     }
 }

@@ -6,6 +6,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
+using Mono.Cecil;
 
 namespace AssemblyAnalyser
 {
@@ -40,13 +41,24 @@ namespace AssemblyAnalyser
 
         #endregion
 
+        TypeDefinition _typeDefinition;
+
         public string UniqueTypeName { get; }
         public string FullTypeName { get; }
         public string Namespace { get; set; }
         public string Name { get; set; }
-        public bool IsInterface { get; }
+        public bool IsInterface { get; private set; }
         public bool IsSystemType { get; }
-        
+
+        public TypeSpec(TypeReference typeReference, ModuleSpec module, ISpecManager specManager, List<IRule> rules)
+            : this(typeReference.Name, typeReference.FullName, specManager, rules)
+        {
+            _typeDefinition = (typeReference is TypeDefinition typeDefinition) ? typeDefinition : module.GetTypeDefinition(typeReference);
+            IsInterface = _typeDefinition.IsInterface;            
+            Module = module;
+            IsSystemType = module.IsSystem;
+        }
+
         public TypeSpec(string typeName, string uniqueTypeName, bool isInterface, AssemblySpec assembly, ISpecManager specManager, List<IRule> rules)
             : this(typeName, uniqueTypeName, specManager, rules)
         {
@@ -83,17 +95,17 @@ namespace AssemblyAnalyser
             Interfaces = CreateInterfaceSpecs(type);
             NestedTypes = CreateNestedTypeSpecs(type);
             Fields = CreateFieldSpecs(type);
-            Methods = CreateMethodSpecs(type);
-            Properties = CreatePropertySpecs(type);
-            Events = CreateEventSpecs(type);
-            Attributes = _specManager.TryLoadAttributeSpecs(() => GetAttributes(type), this);            
+            _methods = CreateMethodSpecs();
+            Properties = CreatePropertySpecs();
+            Events = CreateEventSpecs();
+            Attributes = _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this);
             ProcessCompilerGenerated(type);
             ProcessGenerics(type);
         }
 
-        private CustomAttributeData[] GetAttributes(Type type)
+        private CustomAttribute[] GetAttributes()
         {
-            return type.GetCustomAttributesData().ToArray();
+            return _typeDefinition.CustomAttributes.ToArray();
         }
 
         private void ProcessCompilerGenerated(TypeInfo type)
@@ -151,15 +163,29 @@ namespace AssemblyAnalyser
             return specs;
         }
 
-        private MethodSpec[] CreateMethodSpecs(TypeInfo type)
+        //private MethodSpec[] CreateMethodSpecs(TypeInfo type)
+        //{
+        //    var specs = _specManager.TryLoadMethodSpecs(() => type.GetMethods().Where(m => m.DeclaringType == type).ToArray(), this);
+        //    return specs;
+        //}
+
+        private MethodSpec[] CreateMethodSpecs()
         {
-            var specs = _specManager.TryLoadMethodSpecs(() => type.GetMethods().Where(m => m.DeclaringType == type).ToArray(), this);
+            if (_typeDefinition == null)
+            {
+                return null;
+            }
+            var specs = _specManager.TryLoadMethodSpecs(() => _typeDefinition.Methods.Where(m => m.DeclaringType == _typeDefinition).ToArray(), this);
             return specs;
         }
 
-        private PropertySpec[] CreatePropertySpecs(TypeInfo type)
+        private PropertySpec[] CreatePropertySpecs()
         {
-            var specs = _specManager.TryLoadPropertySpecs(() => type.GetProperties().Where(m => m.DeclaringType == type).ToArray(), this);
+            if (_typeDefinition == null)
+            {
+                return null;
+            }
+            var specs = _specManager.TryLoadPropertySpecs(() => _typeDefinition.Properties.Where(m => m.DeclaringType == _typeDefinition).ToArray(), this);
             return specs;
         }
 
@@ -169,13 +195,14 @@ namespace AssemblyAnalyser
             return specs;
         }
 
-        private EventSpec[] CreateEventSpecs(TypeInfo type)
+        private EventSpec[] CreateEventSpecs()
         {
-            var specs = _specManager.TryLoadEventSpecs(() => type.GetEvents().Where(m => m.DeclaringType == type).ToArray(), this);
+            var specs = _specManager.TryLoadEventSpecs(() => _typeDefinition.Events.Where(m => m.DeclaringType == _typeDefinition).ToArray(), this);
             return specs;
         }
 
         public AssemblySpec Assembly { get; }
+        public ModuleSpec Module { get; }
 
         private List<TypeSpec> _implementations = new List<TypeSpec>();
 
@@ -219,7 +246,8 @@ namespace AssemblyAnalyser
 
         public TypeSpec[] GetSubTypes() => _subTypes.ToArray();
 
-        public MethodSpec[] Methods { get; private set; }
+        MethodSpec[] _methods;
+        public MethodSpec[] Methods => _methods ??= CreateMethodSpecs();
 
         public PropertySpec[] Properties { get; private set; }
         
@@ -356,6 +384,8 @@ namespace AssemblyAnalyser
 
         public EventSpec[] DelegateForSpecs => _delegateFor.ToArray();
 
+        public bool HasDefinition => _typeDefinition != null;
+
         public void RegisterAsDelegateFor(EventSpec eventSpec)
         {
             if (!_delegateFor.Contains(eventSpec))
@@ -363,6 +393,11 @@ namespace AssemblyAnalyser
                 _delegateFor.Add(eventSpec);
                 Assembly.RegisterDependentType(eventSpec.DeclaringType);
             }
+        }
+
+        public void AddDefinition(TypeDefinition type)
+        {
+            _typeDefinition = type;
         }
     }
 }

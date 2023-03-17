@@ -1,14 +1,14 @@
-﻿using System;
+﻿using Mono.Cecil;
+using System;
 using System.Collections.Generic;
-using System.Reflection;
 
 namespace AssemblyAnalyser
 {
     public interface IPropertySpecManager
     {
-        IReadOnlyDictionary<PropertyInfo, PropertySpec> Properties { get; }
+        IReadOnlyDictionary<PropertyDefinition, PropertySpec> Properties { get; }
 
-        PropertySpec[] TryLoadPropertySpecs(Func<PropertyInfo[]> value, TypeSpec declaringType);
+        PropertySpec[] TryLoadPropertySpecs(Func<PropertyDefinition[]> value, TypeSpec declaringType);
         void ProcessLoadedProperties(bool includeSystem = true);
         
 

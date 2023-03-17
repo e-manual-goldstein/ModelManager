@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Module = Mono.Cecil.ModuleDefinition;
-
+using Mono.Cecil;
 namespace AssemblyAnalyser
 {
     public class ModuleSpec : AbstractSpec
     {
-        Module _module;
-        public ModuleSpec(Module module, string filePath,
+        ModuleDefinition _module;
+        public ModuleSpec(ModuleDefinition module, string filePath,
              ISpecManager specManager, List<IRule> rules) : this(module.Name, specManager, rules)
         {
             _module = module;
@@ -32,6 +31,8 @@ namespace AssemblyAnalyser
 
         public ModuleSpec[] ReferencedModules => _referencedAssemblies ??= LoadReferencedModules();
 
+        TypeSpec[] _typeSpecs;
+        public TypeSpec[] TypeSpecs => _typeSpecs ??= _specManager.TryLoadTypesForModule(_module);
 
         public ModuleSpec[] LoadReferencedModules(bool includeSystem = false)
         {
@@ -45,11 +46,17 @@ namespace AssemblyAnalyser
             {
                 referencedModule.Process();
             }
+            _typeSpecs = _specManager.TryLoadTypesForModule(_module);
         }
 
         public override string ToString()
         {
             return ModuleFullName;
+        }
+
+        internal TypeDefinition GetTypeDefinition(TypeReference typeReference)
+        {
+            return _module.GetType(typeReference.FullName);
         }
     }
 }
