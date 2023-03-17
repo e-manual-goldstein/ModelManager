@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Mono.Cecil;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -10,9 +11,9 @@ namespace AssemblyAnalyser
 {
     public class FieldSpec : AbstractSpec, IMemberSpec
     {
-        private FieldInfo _fieldInfo;
+        private FieldDefinition _fieldInfo;
 
-        public FieldSpec(FieldInfo fieldInfo, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        public FieldSpec(FieldDefinition fieldInfo, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
         {
             _fieldInfo = fieldInfo;
             DeclaringType = declaringType;
@@ -36,9 +37,9 @@ namespace AssemblyAnalyser
             Attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }
 
-        private CustomAttributeData[] GetAttributes()
+        private CustomAttribute[] GetAttributes()
         {
-            return _fieldInfo.GetCustomAttributesData().ToArray();
+            return _fieldInfo.CustomAttributes.ToArray();
         }
 
         public override string ToString()

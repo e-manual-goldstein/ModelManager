@@ -286,7 +286,6 @@ namespace AssemblyAnalyser
 
         #endregion
 
-
         #region Types
 
         public IReadOnlyDictionary<string, TypeSpec> Types => _typeSpecs;
@@ -795,12 +794,6 @@ namespace AssemblyAnalyser
             return _parameterSpecs.GetOrAdd(parameterDefinition, CreateParameterSpec(parameterDefinition, method));
         }
 
-        private ParameterSpec CreateParameterSpec(ParameterInfo parameterInfo, MethodSpec method)
-        {
-            TryLoadTypeSpecs(() => parameterInfo.GetCustomAttributesData().Select(t => t.AttributeType).ToArray(), out TypeSpec[] typeSpecs);
-            return new ParameterSpec(parameterInfo, method, this, SpecRules);
-        }
-
         private ParameterSpec CreateParameterSpec(ParameterDefinition parameterDefinition, MethodSpec method)
         {
             TryLoadTypeSpecs(() => parameterDefinition.CustomAttributes.Select(t => t.AttributeType).ToArray(), out TypeSpec[] typeSpecs);
@@ -857,9 +850,9 @@ namespace AssemblyAnalyser
 
         #region Field Specs
 
-        public IReadOnlyDictionary<FieldInfo, FieldSpec> Fields => _fieldSpecs;
+        public IReadOnlyDictionary<FieldDefinition, FieldSpec> Fields => _fieldSpecs;
 
-        ConcurrentDictionary<FieldInfo, FieldSpec> _fieldSpecs = new ConcurrentDictionary<FieldInfo, FieldSpec>();
+        ConcurrentDictionary<FieldDefinition, FieldSpec> _fieldSpecs = new ConcurrentDictionary<FieldDefinition, FieldSpec>();
 
         public void ProcessLoadedFields(bool includeSystem = true)
         {
@@ -869,7 +862,7 @@ namespace AssemblyAnalyser
             }
         }
 
-        private FieldSpec LoadFieldSpec(FieldInfo fieldInfo, TypeSpec declaringType)
+        private FieldSpec LoadFieldSpec(FieldDefinition fieldInfo, TypeSpec declaringType)
         {
             FieldSpec fieldSpec = _fieldSpecs.GetOrAdd(fieldInfo, (spec) => CreateFieldSpec(fieldInfo, declaringType));
             //if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
@@ -887,19 +880,19 @@ namespace AssemblyAnalyser
             return fieldSpec;
         }
 
-        private FieldSpec CreateFieldSpec(FieldInfo fieldInfo, TypeSpec declaringType)
+        private FieldSpec CreateFieldSpec(FieldDefinition fieldInfo, TypeSpec declaringType)
         {
             return new FieldSpec(fieldInfo, declaringType, this, SpecRules);
         }
 
-        public FieldSpec[] LoadFieldSpecs(FieldInfo[] fieldInfos, TypeSpec declaringType)
+        public FieldSpec[] LoadFieldSpecs(FieldDefinition[] fieldInfos, TypeSpec declaringType)
         {
             return fieldInfos.Select(f => LoadFieldSpec(f, declaringType)).ToArray();
         }
 
-        public FieldSpec[] TryLoadFieldSpecs(Func<FieldInfo[]> getFields, TypeSpec declaringType)
+        public FieldSpec[] TryLoadFieldSpecs(Func<FieldDefinition[]> getFields, TypeSpec declaringType)
         {
-            FieldInfo[] fields = null;
+            FieldDefinition[] fields = null;
             try
             {
                 fields = getFields();
@@ -922,7 +915,7 @@ namespace AssemblyAnalyser
             }
             finally
             {
-                fields ??= Array.Empty<FieldInfo>();
+                fields ??= Array.Empty<FieldDefinition>();
             }
             return LoadFieldSpecs(fields, declaringType);
         }

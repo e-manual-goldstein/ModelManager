@@ -10,7 +10,6 @@ namespace AssemblyAnalyser
         IReadOnlyDictionary<string, TypeSpec> Types { get; }
         bool TryLoadTypeSpec(Func<Type> getType, out TypeSpec typeSpec, AssemblySpec assemblySpec = null);
         bool TryLoadTypeSpec(Func<TypeReference> getType, out TypeSpec typeSpec);
-        bool TryLoadTypeSpecs(Func<Type[]> value, out TypeSpec[] typeSpecs, AssemblySpec assemblySpec = null);
         bool TryLoadTypeSpecs(Func<TypeReference[]> value, out TypeSpec[] typeSpecs);
         //TypeSpec[] TryLoadTypesForAssembly(string assemblyFullName);
         TypeSpec[] TryLoadTypesForAssembly(AssemblySpec assemblySpec);

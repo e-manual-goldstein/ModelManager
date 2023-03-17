@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using System;
 using System.Runtime.CompilerServices;
-using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Mono.Cecil;
 
@@ -80,7 +79,7 @@ namespace AssemblyAnalyser
             {
                 _specManager.TryBuildTypeSpecForAssembly(FullTypeName, Namespace, Name, Assembly, type =>
                 {
-                    BuildSpec(type);
+                    BuildSpecInternal();
                 });
             }
             else
@@ -89,18 +88,18 @@ namespace AssemblyAnalyser
             }
         }
 
-        protected void BuildSpec(TypeInfo type)
+        protected void BuildSpecInternal()
         {
-            BaseSpec = CreateBaseSpec(type);
-            Interfaces = CreateInterfaceSpecs(type);
-            NestedTypes = CreateNestedTypeSpecs(type);
-            Fields = CreateFieldSpecs(type);
+            BaseSpec = CreateBaseSpec();
+            Interfaces = CreateInterfaceSpecs();
+            NestedTypes = CreateNestedTypeSpecs();
+            Fields = CreateFieldSpecs();
             _methods = CreateMethodSpecs();
             Properties = CreatePropertySpecs();
             Events = CreateEventSpecs();
             Attributes = _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this);
-            ProcessCompilerGenerated(type);
-            ProcessGenerics(type);
+            ProcessCompilerGenerated();
+            ProcessGenerics();
         }
 
         private CustomAttribute[] GetAttributes()
@@ -108,12 +107,12 @@ namespace AssemblyAnalyser
             return _typeDefinition.CustomAttributes.ToArray();
         }
 
-        private void ProcessCompilerGenerated(TypeInfo type)
+        private void ProcessCompilerGenerated()
         {
-            IsCompilerGenerated = type.HasAttribute(typeof(CompilerGeneratedAttribute));
+            IsCompilerGenerated = _typeDefinition.CustomAttributes.OfType<CompilerGeneratedAttribute>().Any();
             if (IsCompilerGenerated)
             {
-                if (type.DeclaringType != null)
+                if (_typeDefinition.DeclaringType != null)
                 {
                     //TODO
                     //DeclaringType = type.DeclaringType;
@@ -125,9 +124,9 @@ namespace AssemblyAnalyser
             }
         }
 
-        private TypeSpec CreateBaseSpec(TypeInfo type)
+        private TypeSpec CreateBaseSpec()
         {
-            if (_specManager.TryLoadTypeSpec(() => type.BaseType, out TypeSpec typeSpec))
+            if (_specManager.TryLoadTypeSpec(() => _typeDefinition.BaseType, out TypeSpec typeSpec))
             {
                 if (!typeSpec.IsNullSpec)
                 {
@@ -137,9 +136,9 @@ namespace AssemblyAnalyser
             return typeSpec;
         }
 
-        private TypeSpec[] CreateInterfaceSpecs(TypeInfo type)
+        private TypeSpec[] CreateInterfaceSpecs()
         {
-            if (_specManager.TryLoadTypeSpecs(() => type.GetInterfaces(), out TypeSpec[] specs))
+            if (_specManager.TryLoadTypeSpecs(() => _typeDefinition.Interfaces.Select(i => i.InterfaceType).ToArray(), out TypeSpec[] specs))
             {
                 foreach (var interfaceSpec in specs.Where(s => !s.IsNullSpec))
                 {
@@ -149,9 +148,9 @@ namespace AssemblyAnalyser
             return specs;
         }
 
-        private TypeSpec[] CreateNestedTypeSpecs(TypeInfo type)
+        private TypeSpec[] CreateNestedTypeSpecs()
         {
-            if (_specManager.TryLoadTypeSpecs(() => type.GetNestedTypes().Where(n => n.DeclaringType == type).ToArray()
+            if (_specManager.TryLoadTypeSpecs(() => _typeDefinition.NestedTypes.Where(n => n.DeclaringType == _typeDefinition).ToArray()
                 , out TypeSpec[] specs))
             {
                 foreach (var nestedType in specs.Where(s => !s.IsNullSpec))
@@ -189,9 +188,9 @@ namespace AssemblyAnalyser
             return specs;
         }
 
-        private FieldSpec[] CreateFieldSpecs(TypeInfo type)
+        private FieldSpec[] CreateFieldSpecs()
         {
-            var specs = _specManager.TryLoadFieldSpecs(() => type.GetFields().Where(m => m.DeclaringType == type).ToArray(), this);
+            var specs = _specManager.TryLoadFieldSpecs(() => _typeDefinition.Fields.Where(m => m.DeclaringType == _typeDefinition).ToArray(), this);
             return specs;
         }
 
@@ -259,33 +258,33 @@ namespace AssemblyAnalyser
 
         #region Generic Type Flags
 
-        private void ProcessGenerics(TypeInfo type)
+        private void ProcessGenerics()
         {
-            IsGenericType = type.IsGenericType;
-            IsGenericTypeDefinition = type.IsGenericTypeDefinition; // This seems to be never unequal to IsGenericType
-            if (IsGenericType)
-            {
-                var genericTypes = new List<TypeSpec>();
-                foreach (var parameterType in type.GenericTypeParameters)
-                {
-                    if (_specManager.TryLoadTypeSpec(() => parameterType, out TypeSpec typeSpec))
-                    {
-                        genericTypes.Add(typeSpec);
-                        typeSpec.BuildSpec(parameterType.GetTypeInfo());
-                    }
-                }
-                GenericTypeParameters = genericTypes.ToArray();
-            }            
-            if (type.IsGenericParameter)
-            {
+            //IsGenericType = _typeDefinition.IsGenericInstance;
+            //IsGenericTypeDefinition = _typeDefinition.IsGenericInstance; // This seems to be never unequal to IsGenericType
+            //if (IsGenericType)
+            //{
+            //    var genericTypes = new List<TypeSpec>();
+            //    foreach (var parameterType in type.GenericTypeParameters)
+            //    {
+            //        if (_specManager.TryLoadTypeSpec(() => parameterType, out TypeSpec typeSpec))
+            //        {
+            //            genericTypes.Add(typeSpec);
+            //            typeSpec.BuildSpec(parameterType.GetTypeInfo());
+            //        }
+            //    }
+            //    GenericTypeParameters = genericTypes.ToArray();
+            //}            
+            //if (type.IsGenericParameter)
+            //{
 
-            }
-            if (type.IsGenericTypeParameter)
-            {
+            //}
+            //if (type.IsGenericTypeParameter)
+            //{
 
-            }
-            IsGenericParameter = type.IsGenericParameter;
-            IsGenericTypeParameter = type.IsGenericTypeParameter;
+            //}
+            //IsGenericParameter = type.IsGenericParameter;
+            //IsGenericTypeParameter = type.IsGenericTypeParameter;
         }
 
         public bool IsGenericType { get; private set; }
