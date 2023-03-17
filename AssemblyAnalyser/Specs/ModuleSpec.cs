@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Mono.Cecil;
 namespace AssemblyAnalyser
@@ -57,6 +56,18 @@ namespace AssemblyAnalyser
         internal TypeDefinition GetTypeDefinition(TypeReference typeReference)
         {
             return _module.GetType(typeReference.FullName);
+        }
+
+        List<TypeSpec> _dependentTypes = new List<TypeSpec>();
+
+        public TypeSpec[] DependentTypes => _dependentTypes.ToArray();
+
+        public void RegisterDependentType(TypeSpec typeSpec)
+        {
+            if (!_dependentTypes.Contains(typeSpec))
+            {
+                _dependentTypes.Add(typeSpec);
+            }
         }
     }
 }

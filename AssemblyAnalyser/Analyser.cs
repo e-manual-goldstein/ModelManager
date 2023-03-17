@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -47,10 +46,10 @@ namespace AssemblyAnalyser
 
         #region Assembly Specs
 
-        public AssemblySpec Process(Assembly assembly)
-        {
-            return _specManager.LoadAssemblySpec(assembly);            
-        }
+        //public AssemblySpec Process(Assembly assembly)
+        //{
+        //    return _specManager.LoadAssemblySpec(assembly);            
+        //}
 
         //public bool CanAnalyse(Assembly assembly)
         //{
@@ -59,14 +58,14 @@ namespace AssemblyAnalyser
         //        //|| assembly.GetReferencedAssemblies().All(r => _workingFiles.Keys.Contains(r.Name));
         //}
 
-        public void BuildAssemblies(IEnumerable<string> assemblyNames)
-        {
-            foreach (var assemblyName in assemblyNames)
-            {
-                var assembly = _specManager.Assemblies[assemblyName];
-                assembly.Process();
-            }
-        }
+        //public void BuildAssemblies(IEnumerable<string> assemblyNames)
+        //{
+        //    foreach (var assemblyName in assemblyNames)
+        //    {
+        //        var assembly = _specManager.Assemblies[assemblyName];
+        //        assembly.Process();
+        //    }
+        //}
 
         #endregion
 
@@ -86,7 +85,7 @@ namespace AssemblyAnalyser
         {
             return new List<string>() 
             {  
-                $"Assemblies: {_specManager.Assemblies.Count()}",
+                //$"Assemblies: {_specManager.Assemblies.Count()}",
                 $"Types: {_specManager.Types.Count()}",
                 $"Properties {_specManager.Properties.Count()}",
                 $"Methods {_specManager.Methods.Count()}",

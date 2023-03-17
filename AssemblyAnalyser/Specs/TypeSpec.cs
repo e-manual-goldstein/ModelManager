@@ -58,14 +58,6 @@ namespace AssemblyAnalyser
             IsSystemType = module.IsSystem;
         }
 
-        public TypeSpec(string typeName, string uniqueTypeName, bool isInterface, AssemblySpec assembly, ISpecManager specManager, List<IRule> rules)
-            : this(typeName, uniqueTypeName, specManager, rules)
-        {
-            IsInterface = isInterface;
-            Assembly = assembly;
-            IsSystemType = AssemblyLoader.IsSystemAssembly(assembly.FilePath);
-        }
-
         TypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager, List<IRule> rules) 
             : base(rules, specManager)
         {
@@ -77,10 +69,7 @@ namespace AssemblyAnalyser
         {
             if (FullTypeName != null)
             {
-                _specManager.TryBuildTypeSpecForAssembly(FullTypeName, Namespace, Name, Assembly, type =>
-                {
-                    BuildSpecInternal();
-                });
+                BuildSpecInternal();                
             }
             else
             {
@@ -200,17 +189,16 @@ namespace AssemblyAnalyser
             return specs;
         }
 
-        public AssemblySpec Assembly { get; }
         public ModuleSpec Module { get; }
 
         private List<TypeSpec> _implementations = new List<TypeSpec>();
 
         public TypeSpec[] Implementations => _implementations.ToArray();
 
-        public AssemblySpec[] GetDependentAssemblies()
+        public ModuleSpec[] GetDependentModules()
         {
-            return Implementations.Select(i => i.Assembly)
-                .Concat(ResultTypeSpecs.Select(r => r.DeclaringType.Assembly)).Distinct().ToArray();
+            return Implementations.Select(i => i.Module)
+                .Concat(ResultTypeSpecs.Select(r => r.DeclaringType.Module)).Distinct().ToArray();
         }
 
         public void AddImplementation(TypeSpec typeSpec)
@@ -222,7 +210,7 @@ namespace AssemblyAnalyser
             if (!_implementations.Contains(typeSpec))
             {
                 _implementations.Add(typeSpec);
-                Assembly.RegisterDependentType(typeSpec);
+                Module.RegisterDependentType(typeSpec);
             }
         }
 
@@ -239,7 +227,7 @@ namespace AssemblyAnalyser
             if (!_subTypes.Contains(typeSpec))
             {
                 _subTypes.Add(typeSpec);
-                Assembly.RegisterDependentType(typeSpec);
+                Module.RegisterDependentType(typeSpec);
             }
         }
 
@@ -317,7 +305,7 @@ namespace AssemblyAnalyser
             if (!_resultTypeSpecs.Contains(methodSpec))
             {
                 _resultTypeSpecs.Add(methodSpec);
-                Assembly.RegisterDependentType(methodSpec.DeclaringType);
+                Module.RegisterDependentType(methodSpec.DeclaringType);
             }
         }
 
@@ -329,7 +317,7 @@ namespace AssemblyAnalyser
             if (!_dependentParameterSpecs.Contains(parameterSpec))
             {
                 _dependentParameterSpecs.Add(parameterSpec);
-                Assembly.RegisterDependentType(parameterSpec.Method.DeclaringType);
+                Module.RegisterDependentType(parameterSpec.Method.DeclaringType);
             }
         }
 
@@ -341,7 +329,7 @@ namespace AssemblyAnalyser
             if (!_dependentMethodBodies.Contains(methodSpec))
             {
                 _dependentMethodBodies.Add(methodSpec);
-                Assembly.RegisterDependentType(methodSpec.DeclaringType);
+                Module.RegisterDependentType(methodSpec.DeclaringType);
             }
         }
 
@@ -390,7 +378,7 @@ namespace AssemblyAnalyser
             if (!_delegateFor.Contains(eventSpec))
             {
                 _delegateFor.Add(eventSpec);
-                Assembly.RegisterDependentType(eventSpec.DeclaringType);
+                Module.RegisterDependentType(eventSpec.DeclaringType);
             }
         }
 

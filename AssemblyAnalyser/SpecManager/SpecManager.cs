@@ -1,17 +1,12 @@
 ﻿using AssemblyAnalyser.Extensions;
-using ModuleDefinition = Mono.Cecil.ModuleDefinition;
-using Microsoft.Extensions.DependencyInjection;
+using Mono.Cecil;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
-using Mono.Cecil;
 
 namespace AssemblyAnalyser
 {
@@ -38,7 +33,7 @@ namespace AssemblyAnalyser
 
         public void Reset()
         {
-            _assemblySpecs.Clear();
+            _moduleSpecs.Clear();
             _typeSpecs.Clear();
             _methodSpecs.Clear();
             _parameterSpecs.Clear();
@@ -68,7 +63,7 @@ namespace AssemblyAnalyser
 
         public void ProcessAll(bool includeSystem = true, bool parallelProcessing = true)
         {
-            ProcessAllAssemblies(includeSystem, parallelProcessing);
+            //ProcessAllAssemblies(includeSystem, parallelProcessing);
             ProcessAllLoadedTypes(includeSystem, parallelProcessing);
             ProcessLoadedMethods(includeSystem, parallelProcessing);
             ProcessLoadedProperties(includeSystem);
@@ -78,112 +73,55 @@ namespace AssemblyAnalyser
             ProcessLoadedAttributes(includeSystem);
         }
 
-        #region Assemblies
+        //#region Assemblies
 
-        public IReadOnlyDictionary<string, AssemblySpec> Assemblies => _assemblySpecs;
+        //public IReadOnlyDictionary<string, AssemblySpec> Assemblies => _assemblySpecs;
 
-        ConcurrentDictionary<string, AssemblySpec> _assemblySpecs = new ConcurrentDictionary<string, AssemblySpec>();
+        //ConcurrentDictionary<string, AssemblySpec> _assemblySpecs = new ConcurrentDictionary<string, AssemblySpec>();
 
-        public void ProcessAllAssemblies(bool includeSystem = true, bool parallelProcessing = true)
-        {
-            var list = new List<AssemblySpec>();
+        //public void ProcessAllAssemblies(bool includeSystem = true, bool parallelProcessing = true)
+        //{
+        //    var list = new List<AssemblySpec>();
             
-            var assemblySpecs = Assemblies.Values;
+        //    var assemblySpecs = Assemblies.Values;
 
-            var nonSystemAssemblies = assemblySpecs.Where(a => includeSystem || !a.IsSystemAssembly).ToArray();
-            foreach (var assembly in nonSystemAssemblies)
-            {
-                RecursivelyLoadAssemblies(assembly, list);
-            }
-            list = list.Where(a => includeSystem || !a.IsSystemAssembly).ToList();
-            if (parallelProcessing)
-            {
-                Parallel.ForEach(list, l => l.Process());
-            }
-            else
-            {
-                foreach (var item in list)
-                {
-                    item.Process();
-                }
-            }
-        }
+        //    var nonSystemAssemblies = assemblySpecs.Where(a => includeSystem || !a.IsSystemAssembly).ToArray();
+        //    foreach (var assembly in nonSystemAssemblies)
+        //    {
+        //        RecursivelyLoadAssemblies(assembly, list);
+        //    }
+        //    list = list.Where(a => includeSystem || !a.IsSystemAssembly).ToList();
+        //    if (parallelProcessing)
+        //    {
+        //        Parallel.ForEach(list, l => l.Process());
+        //    }
+        //    else
+        //    {
+        //        foreach (var item in list)
+        //        {
+        //            item.Process();
+        //        }
+        //    }
+        //}
         
-        private void RecursivelyLoadAssemblies(AssemblySpec assemblySpec, List<AssemblySpec> loaded)
-        {
-            var referencedAssemblies = assemblySpec.LoadReferencedAssemblies(false);
-            if (!loaded.Contains(assemblySpec))
-            {
-                loaded.Add(assemblySpec);
-            }
-            if (referencedAssemblies.Any())
-            {
-                var newAssemblies = referencedAssemblies.Except(loaded);
-                foreach (var newAssembly in newAssemblies)
-                {
-                    RecursivelyLoadAssemblies(newAssembly, loaded);
-                }
-            }
-        }
+        //private void RecursivelyLoadAssemblies(AssemblySpec assemblySpec, List<AssemblySpec> loaded)
+        //{
+        //    var referencedAssemblies = assemblySpec.LoadReferencedAssemblies(false);
+        //    if (!loaded.Contains(assemblySpec))
+        //    {
+        //        loaded.Add(assemblySpec);
+        //    }
+        //    if (referencedAssemblies.Any())
+        //    {
+        //        var newAssemblies = referencedAssemblies.Except(loaded);
+        //        foreach (var newAssembly in newAssemblies)
+        //        {
+        //            RecursivelyLoadAssemblies(newAssembly, loaded);
+        //        }
+        //    }
+        //}
 
-        public AssemblySpec LoadAssemblySpec(Assembly assembly)
-        {
-            AssemblySpec assemblySpec;
-            if (assembly == null)
-            {
-                return AssemblySpec.NullSpec;
-            }
-            assemblySpec = _assemblySpecs.GetOrAdd(assembly.FullName, (key) => CreateFullAssemblySpec(assembly));            
-            return assemblySpec;
-        }
-
-        public AssemblySpec[] LoadReferencedAssemblies(string assemblyFullName, string assemblyFilePath, string targetFrameworkVersion = null, string imageRuntimeVersion = null)
-        {
-            var specs = new List<AssemblySpec>();
-            var loader = AssemblyLoader.GetLoader(targetFrameworkVersion, imageRuntimeVersion);
-            var assemblyNames = loader.PreLoadReferencedAssembliesByRootPath(assemblyFilePath);
-            foreach (var assemblyName in assemblyNames)
-            {
-                try
-                {
-                    var assemblySpec = _assemblySpecs.GetOrAdd(assemblyName, (name) =>
-                    {
-                        var assembly = loader.LoadAssemblyByName(assemblyName);
-                        return CreateFullAssemblySpec(assembly);
-                    });
-                    specs.Add(assemblySpec);
-                }
-                catch (FileNotFoundException ex)
-                {
-                    _exceptionManager.Handle(ex);
-                    _logger.LogWarning($"Unable to load assembly {assemblyName}. Required by {assemblyFullName}");
-                }
-                catch
-                {
-                    _logger.LogWarning($"Unable to load assembly {assemblyName}. Required by {assemblyFullName}");
-                }
-            }
-            return specs.OrderBy(s => s.FilePath).ToArray();
-        }
-        
-        public AssemblySpec[] LoadAssemblySpecs(Assembly[] types)
-        {
-            return types.Select(t => LoadAssemblySpec(t)).ToArray();
-        }
-
-        private AssemblySpec CreateFullAssemblySpec(Assembly assembly)
-        {
-            assembly.TryGetTargetFrameworkVersion(out string frameworkVersion);
-            var spec = new AssemblySpec(assembly.FullName, assembly.GetName().Name, assembly.Location, this, SpecRules)
-            {
-                ImageRuntimeVersion = assembly.ImageRuntimeVersion,
-                TargetFrameworkVersion = frameworkVersion,
-            };
-            spec.Logger = _logger;
-            return spec;
-        }
-
-        #endregion
+        //#endregion
 
         #region Modules
 
@@ -294,49 +232,7 @@ namespace AssemblyAnalyser
 
         public void ProcessAllLoadedTypes(bool includeSystem = true, bool parallelProcessing = true)
         {
-            ProcessSpecs(Types.Values.Where(t => includeSystem || !t.Assembly.IsSystemAssembly).ToArray(), parallelProcessing);            
-        }
-
-        public void TryBuildTypeSpecForAssembly(string fullTypeName, string @namespace, string name, AssemblySpec assemblySpec, Action<TypeInfo> buildAction)
-        {
-            TypeInfo type = null;
-            var loader = AssemblyLoader.GetLoader(assemblySpec.TargetFrameworkVersion, assemblySpec.ImageRuntimeVersion);
-            var assembly = loader.LoadAssemblyByName(assemblySpec.AssemblyFullName);
-            try
-            {
-                var definedTypes = assembly.DefinedTypes;
-                type = definedTypes.SingleOrDefault(t => t.FullName == fullTypeName);
-                if (type == null)
-                {
-                    var matches = definedTypes.Where(t => t.Name == name && t.Namespace == @namespace);
-                    if (matches.Count() == 1)
-                    {
-                        type = matches.Single();
-                    }
-                    else
-                    {
-
-                    }
-                }
-            }
-            catch (ReflectionTypeLoadException ex)
-            {
-                type = ex.Types.SingleOrDefault(t => t.FullName == fullTypeName) as TypeInfo;
-            }
-            if (type == null)
-            {
-                _logger.LogError($"Could not find Type {fullTypeName}");
-            }
-            buildAction(type);
-        }
-
-        public TypeSpec[] TryLoadTypesForAssembly(AssemblySpec assemblySpec)
-        {
-            var specs = new List<TypeSpec>();
-            var loader = AssemblyLoader.GetLoader(assemblySpec.TargetFrameworkVersion, assemblySpec.ImageRuntimeVersion);
-            var assembly = loader.LoadAssemblyByName(assemblySpec.AssemblyFullName);
-            TryLoadTypeSpecs(() => assembly.DefinedTypes.ToArray(), out TypeSpec[] typeSpecs, assemblySpec);
-            return typeSpecs;
+            ProcessSpecs(Types.Values.Where(t => includeSystem || !t.Module.IsSystem).ToArray(), parallelProcessing);            
         }
 
         public TypeSpec[] TryLoadTypesForModule(ModuleDefinition module)
@@ -346,15 +242,6 @@ namespace AssemblyAnalyser
             TryLoadTypeSpecs(() => types.ToArray(), out TypeSpec[] typeSpecs);
             
             return typeSpecs;
-        }
-
-        private TypeSpec LoadTypeSpec(Type type, AssemblySpec assemblySpec)
-        {
-            if (type == null)
-            {
-                return TypeSpec.NullSpec;
-            }
-            return LoadFullTypeSpec(type, assemblySpec);
         }
 
         private TypeSpec LoadTypeSpec(TypeReference type)
@@ -375,11 +262,6 @@ namespace AssemblyAnalyser
             return LoadFullTypeSpec(type);
         }
 
-        private TypeSpec LoadFullTypeSpec(Type type, AssemblySpec assemblySpec = null)
-        {
-            return _typeSpecs.GetOrAdd(type.ToUniqueTypeName(), (key) => CreateFullTypeSpec(type, assemblySpec));
-        }
-
         private TypeSpec LoadFullTypeSpec(TypeDefinition type)
         {
             var typeSpec = _typeSpecs.GetOrAdd(type.FullName, (key) => CreateFullTypeSpec(type));
@@ -393,18 +275,6 @@ namespace AssemblyAnalyser
         private TypeSpec LoadFullTypeSpec(TypeReference type)
         {
             return _typeSpecs.GetOrAdd(type.FullName, (key) => CreateFullTypeSpec(type));
-        }
-
-        private TypeSpec CreateFullTypeSpec(Type type, AssemblySpec assemblySpec)
-        {
-            assemblySpec ??= LoadAssemblySpec(type.Assembly);
-            var spec = new TypeSpec(type.FullName, type.ToUniqueTypeName(), type.IsInterface, assemblySpec, this, SpecRules)
-            {
-                Name = type.Name,
-                Namespace = type.Namespace,
-            };
-            spec.Logger = _logger;            
-            return spec;
         }
 
         private TypeSpec CreateFullTypeSpec(TypeReference type)
@@ -432,35 +302,6 @@ namespace AssemblyAnalyser
         //    spec.Logger = _logger;            
         //    return spec;
         //}
-
-        public bool TryLoadTypeSpec(Func<Type> getType, out TypeSpec typeSpec, AssemblySpec assemblySpec = null)
-        {
-            bool success = false;
-            try
-            {
-                typeSpec = LoadTypeSpec(getType(), assemblySpec);
-                success = true;
-            }
-            catch (TypeLoadException ex)
-            {
-                if (!string.IsNullOrEmpty(ex.TypeName))
-                {
-                    throw new NotImplementedException();
-                }
-                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
-            }
-            catch (FileNotFoundException ex)
-            {
-                _exceptionManager.Handle(ex);
-                _logger.LogError(ex, "File Not Found");
-                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
-            }
-            return success;
-        }
 
         public bool TryLoadTypeSpec(Func<TypeReference> getType, out TypeSpec typeSpec)
         {
@@ -491,43 +332,6 @@ namespace AssemblyAnalyser
             return success;
         }
 
-        public bool TryLoadTypeSpecs(Func<Type[]> getTypes, out TypeSpec[] typeSpecs, AssemblySpec assemblySpec = null)
-        {
-            typeSpecs = Array.Empty<TypeSpec>();
-            bool success = false;
-            try
-            { 
-                typeSpecs = LoadTypeSpecs(getTypes(), assemblySpec);
-                success = true;
-            }
-            catch (TypeLoadException ex)
-            {
-                _logger.LogError(ex.Message);            
-            }
-            catch (FileNotFoundException ex)
-            {
-                _exceptionManager.Handle(ex);
-                _logger.LogError(ex.Message);
-            }
-            catch (ReflectionTypeLoadException ex)
-            {
-                foreach (var loaderException in ex.LoaderExceptions)
-                {
-                    Console.WriteLine(loaderException.Message);
-                }
-                if (ex.Types.Any())
-                {
-                    success = true;
-                    typeSpecs = LoadTypeSpecs(ex.Types, assemblySpec);
-                }
-            }
-            catch (InvalidOperationException ex)
-            {
-                //TODO Ignore For Now
-            }
-            return success;
-        }
-
         public bool TryLoadTypeSpecs(Func<TypeReference[]> getTypes, out TypeSpec[] typeSpecs)
         {
             typeSpecs = Array.Empty<TypeSpec>();
@@ -546,28 +350,18 @@ namespace AssemblyAnalyser
                 _exceptionManager.Handle(ex);
                 _logger.LogError(ex.Message);
             }
-            catch (ReflectionTypeLoadException ex)
-            {
-                foreach (var loaderException in ex.LoaderExceptions)
-                {
-                    Console.WriteLine(loaderException.Message);
-                }                
-            }
+            //catch (ReflectionTypeLoadException ex)
+            //{
+            //    foreach (var loaderException in ex.LoaderExceptions)
+            //    {
+            //        Console.WriteLine(loaderException.Message);
+            //    }                
+            //}
             catch (InvalidOperationException ex)
             {
                 //TODO Ignore For Now
             }
             return success;
-        }
-
-
-        public TypeSpec[] LoadTypeSpecs(Type[] types, AssemblySpec assemblySpec)
-        {
-            if (types.Any(t => t == null))
-            {
-
-            }
-            return types.Select(t => LoadTypeSpec(t, assemblySpec)).ToArray();
         }
 
         public TypeSpec[] LoadTypeSpecs(TypeReference[] types)
@@ -687,13 +481,13 @@ namespace AssemblyAnalyser
                 _exceptionManager.Handle(ex);
                 _logger.LogError(ex.Message);
             }
-            catch (ReflectionTypeLoadException ex)
-            {
-                foreach (var loaderException in ex.LoaderExceptions)
-                {
-                    Console.WriteLine(loaderException.Message);
-                }
-            }
+            //catch (ReflectionTypeLoadException ex)
+            //{
+            //    foreach (var loaderException in ex.LoaderExceptions)
+            //    {
+            //        Console.WriteLine(loaderException.Message);
+            //    }
+            //}
             finally
             {
                 methods ??= Array.Empty<MethodDefinition>();
@@ -749,13 +543,13 @@ namespace AssemblyAnalyser
             {
                 _logger.LogError(ex.Message);
             }
-            catch (ReflectionTypeLoadException ex)
-            {
-                foreach (var loaderException in ex.LoaderExceptions)
-                {
-                    Console.WriteLine(loaderException.Message);
-                }
-            }
+            //catch (ReflectionTypeLoadException ex)
+            //{
+            //    foreach (var loaderException in ex.LoaderExceptions)
+            //    {
+            //        Console.WriteLine(loaderException.Message);
+            //    }
+            //}
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
@@ -901,13 +695,13 @@ namespace AssemblyAnalyser
             {
                 _logger.LogError(ex.Message);
             }
-            catch (ReflectionTypeLoadException ex)
-            {
-                foreach (var loaderException in ex.LoaderExceptions)
-                {
-                    Console.WriteLine(loaderException.Message);
-                }
-            }
+            //catch (ReflectionTypeLoadException ex)
+            //{
+            //    foreach (var loaderException in ex.LoaderExceptions)
+            //    {
+            //        Console.WriteLine(loaderException.Message);
+            //    }
+            //}
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
@@ -939,13 +733,13 @@ namespace AssemblyAnalyser
             {
                 _logger.LogError(ex.Message);
             }
-            catch (ReflectionTypeLoadException ex)
-            {
-                foreach (var loaderException in ex.LoaderExceptions)
-                {
-                    Console.WriteLine(loaderException.Message);
-                }
-            }
+            //catch (ReflectionTypeLoadException ex)
+            //{
+            //    foreach (var loaderException in ex.LoaderExceptions)
+            //    {
+            //        Console.WriteLine(loaderException.Message);
+            //    }
+            //}
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
@@ -1003,13 +797,13 @@ namespace AssemblyAnalyser
             {
                 _logger.LogError(ex.Message);
             }
-            catch (ReflectionTypeLoadException ex)
-            {
-                foreach (var loaderException in ex.LoaderExceptions)
-                {
-                    Console.WriteLine(loaderException.Message);
-                }
-            }
+            //catch (ReflectionTypeLoadException ex)
+            //{
+            //    foreach (var loaderException in ex.LoaderExceptions)
+            //    {
+            //        Console.WriteLine(loaderException.Message);
+            //    }
+            //}
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
@@ -1053,11 +847,6 @@ namespace AssemblyAnalyser
         {
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
-        }
-
-        public TypeSpec[] TryLoadAttributeSpecs(Func<CustomAttributeData[]> value, AbstractSpec decoratedSpec)
-        {
-            throw new NotImplementedException();
         }
 
         #endregion

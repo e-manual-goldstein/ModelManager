@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
 
 namespace AssemblyAnalyser
 {
-    public interface ISpecManager : IAssemblySpecManager, IModuleSpecManager, ITypeSpecManager, IMethodSpecManager, IParameterSpecManager, 
+    public interface ISpecManager : IModuleSpecManager, ITypeSpecManager, IMethodSpecManager, IParameterSpecManager, 
         IPropertySpecManager, IFieldSpecManager, IAttributeSpecManager, IEventSpecManager
     {
         void SetWorkingDirectory(string workingDirectory);

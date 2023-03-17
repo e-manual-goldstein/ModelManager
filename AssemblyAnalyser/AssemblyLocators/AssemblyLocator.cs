@@ -5,7 +5,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -90,22 +89,6 @@ namespace AssemblyAnalyser
 
         private static Dictionary<string, AssemblyLocator> _runtimeImageCache = new Dictionary<string, AssemblyLocator>();
         private static Dictionary<string, AssemblyLocator> _targetFrameworkCache = new Dictionary<string, AssemblyLocator>();
-
-        private static void AddAssemblyLocatorAsKnownHandler(object sender, Assembly assembly)
-        {
-            if (sender is AssemblyLocator assemblyLoader)
-            {
-                if (!_runtimeImageCache.ContainsKey(assembly.ImageRuntimeVersion))
-                {
-                    _runtimeImageCache[assembly.ImageRuntimeVersion] = assemblyLoader;
-                }
-                if (assembly.TryGetTargetFrameworkVersion(out string targetFrameworkVersion)
-                    && !_targetFrameworkCache.ContainsKey(targetFrameworkVersion)) 
-                { 
-                    _targetFrameworkCache.Add(targetFrameworkVersion, assemblyLoader);
-                }
-            }
-        }
 
         public abstract string LocateAssemblyByName(string assemblyName);
         

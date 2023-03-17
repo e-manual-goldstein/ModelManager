@@ -14,7 +14,7 @@ namespace AssemblyAnalyser.Tests
         ISpecManager _specManager;
         ILoggerProvider _loggerProvider;
         IExceptionManager _exceptionManager;
-        AssemblySpec _assemblySpec;
+        ModuleSpec _moduleSpec;
         TypeSpec _basicClassSpec;
         TypeSpec _basicInterfaceSpec;
         TypeSpec _basicAttribute;
@@ -27,10 +27,10 @@ namespace AssemblyAnalyser.Tests
             _loggerProvider = NSubstitute.Substitute.For<ILoggerProvider>();
             _specManager = new SpecManager(_loggerProvider, _exceptionManager);
             var filePath = "..\\..\\..\\..\\AssemblyAnalyser.TestData\\bin\\Debug\\net6.0\\AssemblyAnalyser.TestData.dll";
-            var assembly = Assembly.LoadFile(Path.GetFullPath(filePath));
-            _assemblySpec = _specManager.LoadAssemblySpec(assembly);
-            _assemblySpec.Process();
-            foreach (var typeSpec in _assemblySpec.TypeSpecs)
+            var module = Mono.Cecil.ModuleDefinition.ReadModule(Path.GetFullPath(filePath));
+            _moduleSpec = _specManager.LoadModuleSpec(module);
+            _moduleSpec.Process();
+            foreach (var typeSpec in _moduleSpec.TypeSpecs)
             {
                 typeSpec.Process();
             }
@@ -40,13 +40,13 @@ namespace AssemblyAnalyser.Tests
             _specManager.ProcessLoadedParameters();
             _specManager.ProcessLoadedEvents();
             //_specManager.ProcessLoadedAttributes();
-            _basicClassSpec = _assemblySpec.TypeSpecs
+            _basicClassSpec = _moduleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.BasicClass");
-            _basicInterfaceSpec = _assemblySpec.TypeSpecs
+            _basicInterfaceSpec = _moduleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.IBasicInterface");
-            _basicAttribute = _assemblySpec.TypeSpecs
+            _basicAttribute = _moduleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.BasicAttribute");
-            _basicDelegate = _assemblySpec.TypeSpecs
+            _basicDelegate = _moduleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.BasicDelegate");
         }
 
