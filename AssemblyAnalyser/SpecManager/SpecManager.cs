@@ -1,4 +1,5 @@
 ﻿using AssemblyAnalyser.Extensions;
+using ModuleDefinition = Mono.Cecil.ModuleDefinition;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -182,6 +183,108 @@ namespace AssemblyAnalyser
         }
 
         #endregion
+
+        #region Modules
+
+        public IReadOnlyDictionary<string, ModuleSpec> Modules => _moduleSpecs;
+
+        ConcurrentDictionary<string, ModuleSpec> _moduleSpecs = new ConcurrentDictionary<string, ModuleSpec>();
+
+        public void ProcessAllModules(bool includeSystem = true, bool parallelProcessing = true)
+        {
+            //var list = new List<AssemblySpec>();
+
+            //var assemblySpecs = Assemblies.Values;
+
+            //var nonSystemAssemblies = assemblySpecs.Where(a => includeSystem || !a.IsSystemAssembly).ToArray();
+            //foreach (var assembly in nonSystemAssemblies)
+            //{
+            //    RecursivelyLoadAssemblies(assembly, list);
+            //}
+            //list = list.Where(a => includeSystem || !a.IsSystemAssembly).ToList();
+            //if (parallelProcessing)
+            //{
+            //    Parallel.ForEach(list, l => l.Process());
+            //}
+            //else
+            //{
+            //    foreach (var item in list)
+            //    {
+            //        item.Process();
+            //    }
+            //}
+        }
+
+        public ModuleSpec LoadModuleSpec(ModuleDefinition module)
+        {
+            ModuleSpec assemblySpec;
+            if (module == null)
+            {
+                throw new NotImplementedException();
+                //return ModuleSpec.NullSpec;
+            }
+            assemblySpec = _moduleSpecs.GetOrAdd(module.Name, (key) => CreateFullModuleSpec(module));
+            return assemblySpec;
+        }
+
+        public ModuleSpec[] LoadReferencedModules(ModuleDefinition module)
+        {
+
+            var specs = new List<ModuleSpec>();
+            var locator = AssemblyLocator.GetLocator(module);
+            foreach (var assemblyReference in module.AssemblyReferences)
+            {
+                try
+                {
+                    var assemblyLocation = locator.LocateAssemblyByName(assemblyReference.FullName);
+                    if (string.IsNullOrEmpty(assemblyLocation))
+                    {
+                        _logger.LogWarning($"Asssembly not found {assemblyReference.FullName}");
+                        continue;
+                    }                    
+                    var assemblySpec = _moduleSpecs.GetOrAdd(assemblyReference.FullName, (name) => CreateFullModuleSpec(assemblyLocation));
+                    specs.Add(assemblySpec);
+                }
+                catch (FileNotFoundException ex)
+                {
+                    _exceptionManager.Handle(ex);
+                    _logger.LogWarning($"Unable to load assembly {assemblyReference.FullName}. Required by {module}");
+                }
+                catch
+                {
+                    _logger.LogWarning($"Unable to load assembly {assemblyReference.FullName}. Required by {module}");
+                }
+            }
+            return specs.OrderBy(s => s.FilePath).ToArray();            
+        }
+
+        public ModuleSpec[] LoadModuleSpecs(ModuleDefinition[] types)
+        {
+            return types.Select(t => LoadModuleSpec(t)).ToArray();
+        }
+
+        private ModuleSpec CreateFullModuleSpec(string filePath)
+        {
+            var module = ModuleDefinition.ReadModule(filePath);
+            //module.TryGetTargetFrameworkVersion(out string frameworkVersion);
+            return CreateFullModuleSpec(module);
+        }
+
+        private ModuleSpec CreateFullModuleSpec(ModuleDefinition module)
+        {
+            //module.TryGetTargetFrameworkVersion(out string frameworkVersion);
+            var spec = new ModuleSpec(module, module.FileName, this, SpecRules)
+            {
+
+                //ImageRuntimeVersion = assembly.ImageRuntimeVersion,
+                //TargetFrameworkVersion = frameworkVersion,
+            };
+            spec.Logger = _logger;
+            return spec;
+        }
+
+        #endregion
+
 
         #region Types
 

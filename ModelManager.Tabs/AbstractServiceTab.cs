@@ -16,7 +16,7 @@ namespace ModelManager.Tabs
     {
         public abstract string Title { get; }
         public ILoggerProvider LoggerProvider { get; internal set; }
-        public IServiceProvider ServiceProvider { get; internal set; }
+        public IServiceProvider ServiceProvider { protected get; set; }
         
         private TextBox _console;
         private TabControl _tabControl;
