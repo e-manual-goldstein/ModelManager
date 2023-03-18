@@ -21,6 +21,7 @@ namespace AssemblyAnalyser
             ModuleFullName = assemblyFullName;
         }
 
+        
         public string ModuleShortName { get; }
         public string FilePath { get; }
         public bool IsSystem { get; }

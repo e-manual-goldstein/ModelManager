@@ -38,6 +38,7 @@ namespace AssemblyAnalyser
             Parameters = _specManager.TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray(), this);
             if (_methodDefinition.Body is MethodBody body)
             {
+                ProcessMethodBodyOperands(body);
                 ProcessLocalVariables(body);
                 ProcessExceptionClauseCatchTypes(body);
             }
@@ -49,21 +50,45 @@ namespace AssemblyAnalyser
             return _methodDefinition.CustomAttributes.ToArray();
         }
 
+        private void ProcessMethodBodyOperands(MethodBody methodBody)
+        {
+            foreach (var instruction in methodBody.Instructions) 
+            {
+                if (instruction.Operand != null)
+                {
+                    if (instruction.Operand.GetType().IsPrimitive || instruction.Operand is string)
+                    {
+                        continue;
+                    }
+                    var type = instruction.Operand switch
+                    {
+                        TypeReference typeReference => typeReference.Module,
+                        MethodReference methodReference => methodReference.Module,
+                        FieldReference fieldReference => fieldReference.Module,
+                        ParameterReference parameterReference => parameterReference.ParameterType.Module,
+                        VariableReference variableReference => variableReference.VariableType.Module,
+                        Instruction operandInstruction => operandInstruction.Operand,
+                        Instruction[] operandInstructions => operandInstructions.Select(t => t.Operand),
+                        _ => null
+                    };
+                }
+            }
+        }
+
         private void ProcessExceptionClauseCatchTypes(MethodBody body)
         {
-            //if (_specManager.TryLoadTypeSpecs(() => body.ExceptionHandlers
-            //    .Where(d => d.Flags == ExceptionHandlingClauseOptions.Clause).Select(d => d.CatchType).ToArray(), 
-            //    out TypeSpec[] exceptionCatchTypes))
-            //{
-            //    foreach (var catchType in exceptionCatchTypes)
-            //    {
-            //        if (!_exceptionCatchTypes.Contains(catchType))
-            //        {
-            //            _exceptionCatchTypes.Add(catchType);
-            //            catchType.RegisterDependentMethodSpec(this);
-            //        }
-            //    }
-            //}
+            if (_specManager.TryLoadTypeSpecs(() => body.ExceptionHandlers.Select(d => d.CatchType).Where(d => d != null).ToArray(),
+                out TypeSpec[] exceptionCatchTypes))
+            {
+                foreach (var catchType in exceptionCatchTypes)
+                {
+                    if (!_exceptionCatchTypes.Contains(catchType))
+                    {
+                        _exceptionCatchTypes.Add(catchType);
+                        catchType.RegisterDependentMethodSpec(this);
+                    }
+                }
+            }
         }
 
         private void ProcessLocalVariables(MethodBody body)

@@ -153,19 +153,15 @@ namespace AssemblyAnalyser
 
         public ModuleSpec LoadModuleSpec(ModuleDefinition module)
         {
-            ModuleSpec assemblySpec;
             if (module == null)
             {
                 throw new NotImplementedException();
-                //return ModuleSpec.NullSpec;
             }
-            assemblySpec = _moduleSpecs.GetOrAdd(module.Assembly.FullName, (key) => CreateFullModuleSpec(module));
-            return assemblySpec;
+            return _moduleSpecs.GetOrAdd(module.Assembly.FullName, (key) => CreateFullModuleSpec(module));            
         }
 
         public ModuleSpec[] LoadReferencedModules(ModuleDefinition module)
         {
-
             var specs = new List<ModuleSpec>();
             var locator = AssemblyLocator.GetLocator(module);
             foreach (var assemblyReference in module.AssemblyReferences)
@@ -192,6 +188,33 @@ namespace AssemblyAnalyser
                 }
             }
             return specs.OrderBy(s => s.FilePath).ToArray();            
+        }
+
+        public ModuleSpec LoadReferencedModule(ModuleDefinition module, string referencedModuleName)
+        {
+            var locator = AssemblyLocator.GetLocator(module);
+            var assemblyReference = module.AssemblyReferences.Single(a => a.FullName.Contains(referencedModuleName));
+            try
+            {
+                var assemblyLocation = locator.LocateAssemblyByName(assemblyReference.FullName);
+                if (string.IsNullOrEmpty(assemblyLocation))
+                {
+                    _logger.LogWarning($"Asssembly not found {assemblyReference.FullName}");                
+                }
+                return _moduleSpecs.GetOrAdd(assemblyReference.FullName, (name) => CreateFullModuleSpec(assemblyLocation));
+                
+            }
+            catch (FileNotFoundException ex)
+            {
+                _exceptionManager.Handle(ex);
+                _logger.LogWarning($"Unable to load assembly {assemblyReference.FullName}. Required by {module}");
+            }
+            catch
+            {
+                _logger.LogWarning($"Unable to load assembly {assemblyReference.FullName}. Required by {module}");
+            }
+
+            return null;
         }
 
         public ModuleSpec[] LoadModuleSpecs(ModuleDefinition[] types)
@@ -374,15 +397,6 @@ namespace AssemblyAnalyser
         {
             ProcessSpecs(Methods.Values.Where(t => includeSystem || !t.IsSystemMethod), parallelProcessing);
         }
-
-        //public MethodSpec LoadMethodSpec(MethodInfo method, TypeSpec declaringType)
-        //{
-        //    if (method == null)
-        //    {
-        //        return null;
-        //    }
-        //    return _methodSpecs.GetOrAdd(method, (key) => CreateMethodSpec(method, declaringType));            
-        //}
 
         public MethodSpec LoadMethodSpec(MethodDefinition method, TypeSpec declaringType)
         {
