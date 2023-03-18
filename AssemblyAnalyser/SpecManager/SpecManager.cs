@@ -73,56 +73,6 @@ namespace AssemblyAnalyser
             ProcessLoadedAttributes(includeSystem);
         }
 
-        //#region Assemblies
-
-        //public IReadOnlyDictionary<string, AssemblySpec> Assemblies => _assemblySpecs;
-
-        //ConcurrentDictionary<string, AssemblySpec> _assemblySpecs = new ConcurrentDictionary<string, AssemblySpec>();
-
-        //public void ProcessAllAssemblies(bool includeSystem = true, bool parallelProcessing = true)
-        //{
-        //    var list = new List<AssemblySpec>();
-            
-        //    var assemblySpecs = Assemblies.Values;
-
-        //    var nonSystemAssemblies = assemblySpecs.Where(a => includeSystem || !a.IsSystemAssembly).ToArray();
-        //    foreach (var assembly in nonSystemAssemblies)
-        //    {
-        //        RecursivelyLoadAssemblies(assembly, list);
-        //    }
-        //    list = list.Where(a => includeSystem || !a.IsSystemAssembly).ToList();
-        //    if (parallelProcessing)
-        //    {
-        //        Parallel.ForEach(list, l => l.Process());
-        //    }
-        //    else
-        //    {
-        //        foreach (var item in list)
-        //        {
-        //            item.Process();
-        //        }
-        //    }
-        //}
-        
-        //private void RecursivelyLoadAssemblies(AssemblySpec assemblySpec, List<AssemblySpec> loaded)
-        //{
-        //    var referencedAssemblies = assemblySpec.LoadReferencedAssemblies(false);
-        //    if (!loaded.Contains(assemblySpec))
-        //    {
-        //        loaded.Add(assemblySpec);
-        //    }
-        //    if (referencedAssemblies.Any())
-        //    {
-        //        var newAssemblies = referencedAssemblies.Except(loaded);
-        //        foreach (var newAssembly in newAssemblies)
-        //        {
-        //            RecursivelyLoadAssemblies(newAssembly, loaded);
-        //        }
-        //    }
-        //}
-
-        //#endregion
-
         #region Modules
 
         public IReadOnlyDictionary<string, ModuleSpec> Modules => _moduleSpecs;
@@ -225,18 +175,14 @@ namespace AssemblyAnalyser
         private ModuleSpec CreateFullModuleSpec(string filePath)
         {
             var module = ModuleDefinition.ReadModule(filePath);
-            //module.TryGetTargetFrameworkVersion(out string frameworkVersion);
             return CreateFullModuleSpec(module);
         }
 
         private ModuleSpec CreateFullModuleSpec(ModuleDefinition module)
         {
-            //module.TryGetTargetFrameworkVersion(out string frameworkVersion);
             var spec = new ModuleSpec(module, module.FileName, this, SpecRules)
             {
 
-                //ImageRuntimeVersion = assembly.ImageRuntimeVersion,
-                //TargetFrameworkVersion = frameworkVersion,
             };
             spec.Logger = _logger;
             return spec;
@@ -300,20 +246,6 @@ namespace AssemblyAnalyser
             return spec;
         }
 
-        //private TypeSpec LoadPartialTypeSpec(string typeName)
-        //{
-        //    return _typeSpecs.GetOrAdd(typeName, (key) => CreatePartialTypeSpec(typeName));            
-        //}
-
-        //private TypeSpec CreatePartialTypeSpec(string typeName)
-        //{
-        //    var spec = new TypeSpec(typeName, this, SpecRules);
-        //    spec.Exclude("Type is only partial spec");
-        //    spec.SkipProcessing("Type is only partial spec");
-        //    spec.Logger = _logger;            
-        //    return spec;
-        //}
-
         public bool TryLoadTypeSpec(Func<TypeReference> getType, out TypeSpec typeSpec)
         {
             bool success = false;
@@ -361,13 +293,6 @@ namespace AssemblyAnalyser
                 _exceptionManager.Handle(ex);
                 _logger.LogError(ex.Message);
             }
-            //catch (ReflectionTypeLoadException ex)
-            //{
-            //    foreach (var loaderException in ex.LoaderExceptions)
-            //    {
-            //        Console.WriteLine(loaderException.Message);
-            //    }                
-            //}
             catch (InvalidOperationException ex)
             {
                 //TODO Ignore For Now
@@ -407,16 +332,6 @@ namespace AssemblyAnalyser
             return _methodSpecs.GetOrAdd(method, (key) => CreateMethodSpec(method, declaringType));
         }
 
-        //private MethodSpec CreateMethodSpec(MethodInfo method, TypeSpec declaringType)
-        //{
-        //    declaringType ??= LoadFullTypeSpec(method.DeclaringType);
-        //    var spec = new MethodSpec(method, declaringType, this, SpecRules)
-        //    {
-        //        Logger = _logger
-        //    };
-        //    return spec;
-        //}
-
         private MethodSpec CreateMethodSpec(MethodDefinition method, TypeSpec declaringType)
         {
             declaringType ??= LoadFullTypeSpec(method.DeclaringType);
@@ -427,45 +342,10 @@ namespace AssemblyAnalyser
             return spec;
         }
 
-        //public MethodSpec[] LoadMethodSpecs(MethodInfo[] methodInfos, TypeSpec declaringType)
-        //{
-        //    return methodInfos.Select(m => LoadMethodSpec(m, declaringType)).ToArray();
-        //}
-
         public MethodSpec[] LoadMethodSpecs(MethodDefinition[] methodDefinitions, TypeSpec declaringType)
         {
             return methodDefinitions.Select(m => LoadMethodSpec(m, declaringType)).ToArray();
         }
-
-        //public MethodSpec[] TryLoadMethodSpecs(Func<MethodInfo[]> getMethods, TypeSpec declaringType)
-        //{
-        //    MethodInfo[] methods = null;
-        //    try
-        //    {
-        //        methods = getMethods();
-        //    }
-        //    catch (TypeLoadException ex)
-        //    {
-        //        _logger.LogError(ex.Message);
-        //    }
-        //    catch (FileNotFoundException ex)
-        //    {
-        //        _exceptionManager.Handle(ex);
-        //        _logger.LogError(ex.Message);
-        //    }
-        //    catch (ReflectionTypeLoadException ex)
-        //    {
-        //        foreach (var loaderException in ex.LoaderExceptions)
-        //        {
-        //            Console.WriteLine(loaderException.Message);
-        //        }
-        //    }
-        //    finally
-        //    {
-        //        methods ??= Array.Empty<MethodInfo>();
-        //    }
-        //    return LoadMethodSpecs(methods, declaringType);
-        //}
 
         public MethodSpec[] TryLoadMethodSpecs(Func<MethodDefinition[]> getMethods, TypeSpec declaringType)
         {
@@ -483,13 +363,6 @@ namespace AssemblyAnalyser
                 _exceptionManager.Handle(ex);
                 _logger.LogError(ex.Message);
             }
-            //catch (ReflectionTypeLoadException ex)
-            //{
-            //    foreach (var loaderException in ex.LoaderExceptions)
-            //    {
-            //        Console.WriteLine(loaderException.Message);
-            //    }
-            //}
             finally
             {
                 methods ??= Array.Empty<MethodDefinition>();
@@ -545,13 +418,6 @@ namespace AssemblyAnalyser
             {
                 _logger.LogError(ex.Message);
             }
-            //catch (ReflectionTypeLoadException ex)
-            //{
-            //    foreach (var loaderException in ex.LoaderExceptions)
-            //    {
-            //        Console.WriteLine(loaderException.Message);
-            //    }
-            //}
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
@@ -580,11 +446,6 @@ namespace AssemblyAnalyser
             }
         }
 
-        //private ParameterSpec LoadParameterSpec(ParameterInfo parameterInfo, MethodSpec method)
-        //{
-        //    return _parameterSpecs.GetOrAdd(parameterInfo, CreateParameterSpec(parameterInfo, method));
-        //}
-
         private ParameterSpec LoadParameterSpec(ParameterDefinition parameterDefinition, MethodSpec method)
         {
             return _parameterSpecs.GetOrAdd(parameterDefinition, CreateParameterSpec(parameterDefinition, method));
@@ -596,33 +457,10 @@ namespace AssemblyAnalyser
             return new ParameterSpec(parameterDefinition, method, this, SpecRules);
         }
 
-        //public ParameterSpec[] LoadParameterSpecs(ParameterInfo[] parameterInfos, MethodSpec method)
-        //{
-        //    return parameterInfos?.Select(p => LoadParameterSpec(p, method)).ToArray();
-        //}
-
         public ParameterSpec[] LoadParameterSpecs(ParameterDefinition[] parameterDefinitions, MethodSpec method)
         {
             return parameterDefinitions?.Select(p => LoadParameterSpec(p, method)).ToArray();
         }
-
-        //public ParameterSpec[] TryLoadParameterSpecs(Func<ParameterInfo[]> parameterInfosFunc, MethodSpec method)
-        //{
-        //    ParameterInfo[] parameterInfos = null;
-        //    try
-        //    {
-        //        parameterInfos = parameterInfosFunc();
-        //    }
-        //    catch (TypeLoadException typeLoadException)
-        //    {
-
-        //    }
-        //    catch (Exception)
-        //    {
-
-        //    }
-        //    return LoadParameterSpecs(parameterInfos, method);
-        //}
 
         public ParameterSpec[] TryLoadParameterSpecs(Func<ParameterDefinition[]> parameterDefinitions, MethodSpec method)
         {
@@ -661,18 +499,6 @@ namespace AssemblyAnalyser
         private FieldSpec LoadFieldSpec(FieldDefinition fieldInfo, TypeSpec declaringType)
         {
             FieldSpec fieldSpec = _fieldSpecs.GetOrAdd(fieldInfo, (spec) => CreateFieldSpec(fieldInfo, declaringType));
-            //if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
-            //{
-            //    //Console.WriteLine($"Locking for {fieldInfo.Name}");
-            //    lock (_lock)
-            //    {
-            //        if (!_fieldSpecs.TryGetValue(fieldInfo, out fieldSpec))
-            //        {
-            //            _fieldSpecs[fieldInfo] = fieldSpec = CreateFieldSpec(fieldInfo, declaringType);
-            //        }
-            //    }
-            //    //Console.WriteLine($"Unlocking for {fieldInfo.Name}");
-            //}
             return fieldSpec;
         }
 
@@ -697,13 +523,6 @@ namespace AssemblyAnalyser
             {
                 _logger.LogError(ex.Message);
             }
-            //catch (ReflectionTypeLoadException ex)
-            //{
-            //    foreach (var loaderException in ex.LoaderExceptions)
-            //    {
-            //        Console.WriteLine(loaderException.Message);
-            //    }
-            //}
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
@@ -735,13 +554,6 @@ namespace AssemblyAnalyser
             {
                 _logger.LogError(ex.Message);
             }
-            //catch (ReflectionTypeLoadException ex)
-            //{
-            //    foreach (var loaderException in ex.LoaderExceptions)
-            //    {
-            //        Console.WriteLine(loaderException.Message);
-            //    }
-            //}
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
@@ -799,13 +611,6 @@ namespace AssemblyAnalyser
             {
                 _logger.LogError(ex.Message);
             }
-            //catch (ReflectionTypeLoadException ex)
-            //{
-            //    foreach (var loaderException in ex.LoaderExceptions)
-            //    {
-            //        Console.WriteLine(loaderException.Message);
-            //    }
-            //}
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
