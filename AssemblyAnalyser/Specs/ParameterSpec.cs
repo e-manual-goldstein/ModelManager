@@ -19,6 +19,11 @@ namespace AssemblyAnalyser
             Method = method;
         }
 
+        protected override CustomAttribute[] GetAttributes()
+        {
+            return _parameterDefinition.CustomAttributes.ToArray();
+        }
+
         protected override void BuildSpec()
         {
             if (_specManager.TryLoadTypeSpec(() => _parameterDefinition.ParameterType, out TypeSpec returnTypeSpec))

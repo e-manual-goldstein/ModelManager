@@ -41,10 +41,10 @@ namespace AssemblyAnalyser
                 ProcessLocalVariables(body);
                 ProcessExceptionClauseCatchTypes(body);
             }
-            Attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
+            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }
 
-        private CustomAttribute[] GetAttributes()
+        protected override CustomAttribute[] GetAttributes()
         {
             return _methodDefinition.CustomAttributes.ToArray();
         }

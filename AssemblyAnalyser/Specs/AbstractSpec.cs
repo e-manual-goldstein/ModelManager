@@ -1,9 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
-using System;
+using Mono.Cecil;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
@@ -25,7 +23,10 @@ namespace AssemblyAnalyser
             ExclusionRules = rules.OfType<ExclusionRule>().ToList();            
         }
 
-        public TypeSpec[] Attributes { get; protected set; }
+        protected TypeSpec[] _attributes;
+        public TypeSpec[] Attributes => _attributes ??= _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this);
+
+        protected abstract CustomAttribute[] GetAttributes();
 
         public void Process()
         {

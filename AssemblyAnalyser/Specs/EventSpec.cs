@@ -49,10 +49,10 @@ namespace AssemblyAnalyser
                 EventType = typeSpec;
                 EventType.RegisterAsDelegateFor(this);
             }
-            Attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
+            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }
 
-        private CustomAttribute[] GetAttributes()
+        protected override CustomAttribute[] GetAttributes()
         {
             return _eventInfo.CustomAttributes.ToArray();
         }

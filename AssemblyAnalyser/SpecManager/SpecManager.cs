@@ -131,27 +131,24 @@ namespace AssemblyAnalyser
 
         public void ProcessAllModules(bool includeSystem = true, bool parallelProcessing = true)
         {
-            //var list = new List<AssemblySpec>();
+            var list = new List<ModuleSpec>();
 
-            //var assemblySpecs = Assemblies.Values;
+            var assemblySpecs = Modules.Values;
 
-            //var nonSystemAssemblies = assemblySpecs.Where(a => includeSystem || !a.IsSystemAssembly).ToArray();
-            //foreach (var assembly in nonSystemAssemblies)
-            //{
-            //    RecursivelyLoadAssemblies(assembly, list);
-            //}
-            //list = list.Where(a => includeSystem || !a.IsSystemAssembly).ToList();
-            //if (parallelProcessing)
-            //{
-            //    Parallel.ForEach(list, l => l.Process());
-            //}
-            //else
-            //{
-            //    foreach (var item in list)
-            //    {
-            //        item.Process();
-            //    }
-            //}
+            var nonSystemAssemblies = assemblySpecs.Where(a => includeSystem || !a.IsSystem).ToArray();
+            
+            list = nonSystemAssemblies.Where(a => includeSystem || !a.IsSystem).ToList();
+            if (parallelProcessing)
+            {
+                Parallel.ForEach(list, l => l.Process());
+            }
+            else
+            {
+                foreach (var item in list)
+                {
+                    item.Process();
+                }
+            }
         }
 
         public ModuleSpec LoadModuleSpec(ModuleDefinition module)
@@ -162,7 +159,7 @@ namespace AssemblyAnalyser
                 throw new NotImplementedException();
                 //return ModuleSpec.NullSpec;
             }
-            assemblySpec = _moduleSpecs.GetOrAdd(module.Name, (key) => CreateFullModuleSpec(module));
+            assemblySpec = _moduleSpecs.GetOrAdd(module.Assembly.FullName, (key) => CreateFullModuleSpec(module));
             return assemblySpec;
         }
 
@@ -253,15 +250,6 @@ namespace AssemblyAnalyser
             return LoadFullTypeSpec(type);
         }
 
-        private TypeSpec LoadTypeSpec(TypeDefinition type)
-        {
-            if (type == null)
-            {
-                return TypeSpec.NullSpec;
-            }
-            return LoadFullTypeSpec(type);
-        }
-
         private TypeSpec LoadFullTypeSpec(TypeDefinition type)
         {
             var typeSpec = _typeSpecs.GetOrAdd(type.FullName, (key) => CreateFullTypeSpec(type));
@@ -277,9 +265,9 @@ namespace AssemblyAnalyser
             return _typeSpecs.GetOrAdd(type.FullName, (key) => CreateFullTypeSpec(type));
         }
 
-        private TypeSpec CreateFullTypeSpec(TypeReference type)
+        private TypeSpec CreateFullTypeSpec(TypeReference type, ModuleSpec moduleSpec = null)
         {
-            var moduleSpec = LoadModuleSpec(type.Module);
+            moduleSpec ??= LoadModuleSpec(type.Module);
             var spec = new TypeSpec(type, moduleSpec, this, SpecRules)
             {
                 Name = type.Name,

@@ -28,10 +28,10 @@ namespace AssemblyAnalyser
                 FieldType = typeSpec;
                 FieldType.RegisterAsResultType(this);
             }
-            Attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
+            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }
 
-        private CustomAttribute[] GetAttributes()
+        protected override CustomAttribute[] GetAttributes()
         {
             return _fieldInfo.CustomAttributes.ToArray();
         }

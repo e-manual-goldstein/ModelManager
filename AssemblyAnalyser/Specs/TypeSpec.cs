@@ -46,14 +46,14 @@ namespace AssemblyAnalyser
         public string FullTypeName { get; }
         public string Namespace { get; set; }
         public string Name { get; set; }
-        public bool IsInterface { get; private set; }
+        public bool? IsInterface { get; private set; }
         public bool IsSystemType { get; }
 
         public TypeSpec(TypeReference typeReference, ModuleSpec module, ISpecManager specManager, List<IRule> rules)
             : this(typeReference.Name, typeReference.FullName, specManager, rules)
         {
-            _typeDefinition = (typeReference is TypeDefinition typeDefinition) ? typeDefinition : module.GetTypeDefinition(typeReference);
-            IsInterface = _typeDefinition.IsInterface;            
+            _typeDefinition = (typeReference is TypeDefinition typeDefinition) ? typeDefinition : null;
+            IsInterface = _typeDefinition?.IsInterface;            
             Module = module;
             IsSystemType = module.IsSystem;
         }
@@ -79,19 +79,19 @@ namespace AssemblyAnalyser
 
         protected void BuildSpecInternal()
         {
-            BaseSpec = CreateBaseSpec();
-            Interfaces = CreateInterfaceSpecs();
-            NestedTypes = CreateNestedTypeSpecs();
-            Fields = CreateFieldSpecs();
+            _baseSpec = CreateBaseSpec();
+            _interfaces = CreateInterfaceSpecs();
+            _nestedTypes = CreateNestedTypeSpecs();
+            _fields = CreateFieldSpecs();
             _methods = CreateMethodSpecs();
-            Properties = CreatePropertySpecs();
-            Events = CreateEventSpecs();
-            Attributes = _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this);
+            _properties = CreatePropertySpecs();
+            _events = CreateEventSpecs();
+            _attributes = _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this);
             ProcessCompilerGenerated();
             ProcessGenerics();
         }
 
-        private CustomAttribute[] GetAttributes()
+        protected override CustomAttribute[] GetAttributes()
         {
             return _typeDefinition.CustomAttributes.ToArray();
         }
@@ -203,7 +203,7 @@ namespace AssemblyAnalyser
 
         public void AddImplementation(TypeSpec typeSpec)
         {
-            if (!IsInterface)
+            if (IsInterface.Equals(false))
             {
                 throw new InvalidOperationException("Cannot implement a non-interface Type");
             }
@@ -214,11 +214,15 @@ namespace AssemblyAnalyser
             }
         }
 
-        public TypeSpec[] Interfaces { get; private set; }
+        TypeSpec[] _interfaces;
+        public TypeSpec[] Interfaces => _interfaces ??= CreateInterfaceSpecs();
 
-        public TypeSpec BaseSpec { get; private set; }
-        
-        public TypeSpec[] NestedTypes { get; private set; }
+        TypeSpec _baseSpec;
+        public TypeSpec BaseSpec => _baseSpec ??= CreateBaseSpec();
+
+        TypeSpec[] _nestedTypes;
+        public TypeSpec[] NestedTypes => _nestedTypes ??= CreateNestedTypeSpecs();
+
 
         private List<TypeSpec> _subTypes = new List<TypeSpec>();
 
@@ -236,13 +240,17 @@ namespace AssemblyAnalyser
         MethodSpec[] _methods;
         public MethodSpec[] Methods => _methods ??= CreateMethodSpecs();
 
-        public PropertySpec[] Properties { get; private set; }
-        
-        public FieldSpec[] Fields { get; private set; }
+        PropertySpec[] _properties;
+        public PropertySpec[] Properties => _properties ??= CreatePropertySpecs();
 
-        public TypeSpec[] GenericTypeParameters { get; private set; }
+        FieldSpec[] _fields;
+        public FieldSpec[] Fields => _fields ??= CreateFieldSpecs();
 
-        public EventSpec[] Events { get; private set; }
+        TypeSpec[] _genericTypeParamters;
+        public TypeSpec[] GenericTypeParameters => _genericTypeParamters;
+
+        EventSpec[] _events;
+        public EventSpec[] Events => _events ??= CreateEventSpecs();
 
         #region Generic Type Flags
 

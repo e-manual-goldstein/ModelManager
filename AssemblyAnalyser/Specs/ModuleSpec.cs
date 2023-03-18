@@ -7,7 +7,7 @@ namespace AssemblyAnalyser
     {
         ModuleDefinition _module;
         public ModuleSpec(ModuleDefinition module, string filePath,
-             ISpecManager specManager, List<IRule> rules) : this(module.Name, specManager, rules)
+             ISpecManager specManager, List<IRule> rules) : this(module.Assembly.FullName, specManager, rules)
         {
             _module = module;
             FilePath = filePath;
@@ -32,6 +32,11 @@ namespace AssemblyAnalyser
 
         TypeSpec[] _typeSpecs;
         public TypeSpec[] TypeSpecs => _typeSpecs ??= _specManager.TryLoadTypesForModule(_module);
+        
+        protected override CustomAttribute[] GetAttributes()
+        {
+            return _module.CustomAttributes.ToArray();
+        }
 
         public ModuleSpec[] LoadReferencedModules(bool includeSystem = false)
         {
@@ -44,6 +49,7 @@ namespace AssemblyAnalyser
             foreach (var referencedModule in ReferencedModules)
             {
                 referencedModule.Process();
+                referencedModule.RegisterAsReferencedAssemblyFor(this);
             }
             _typeSpecs = _specManager.TryLoadTypesForModule(_module);
         }
@@ -67,6 +73,18 @@ namespace AssemblyAnalyser
             if (!_dependentTypes.Contains(typeSpec))
             {
                 _dependentTypes.Add(typeSpec);
+            }
+        }
+
+        List<ModuleSpec> _referencedBy = new List<ModuleSpec>();
+
+        public ModuleSpec[] ReferencedBy => _referencedBy.ToArray();
+
+        private void RegisterAsReferencedAssemblyFor(ModuleSpec assemblySpec)
+        {
+            if (!_referencedBy.Contains(assemblySpec))
+            {
+                _referencedBy.Add(assemblySpec);
             }
         }
     }

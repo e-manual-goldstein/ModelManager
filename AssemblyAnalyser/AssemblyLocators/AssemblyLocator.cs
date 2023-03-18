@@ -2,6 +2,7 @@
 using Mono.Cecil;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -67,28 +68,18 @@ namespace AssemblyAnalyser
 
         private static AssemblyLocator CreateOrGetLocatorForRuntimeVersion(string imageRuntimeVersion)
         {
-            if (!_runtimeImageCache.TryGetValue(imageRuntimeVersion, out AssemblyLocator loader))
-            {
-                loader = new DotNetFrameworkLocator(imageRuntimeVersion);
-                _runtimeImageCache.Add(imageRuntimeVersion, loader);                
-            }
-            return _runtimeImageCache[imageRuntimeVersion];
+            return _runtimeImageCache.GetOrAdd(imageRuntimeVersion, new DotNetFrameworkLocator(imageRuntimeVersion));            
         }
 
         private static AssemblyLocator CreateOrGetLocatorForFrameworkVersion(string targetFrameworkVersion)
         {
-            if (!_targetFrameworkCache.TryGetValue(targetFrameworkVersion, out AssemblyLocator loader))
-            {
-                loader = new DotNetFrameworkLocator();
-                _targetFrameworkCache.Add(targetFrameworkVersion, loader);                
-            }
-            return _targetFrameworkCache[targetFrameworkVersion];
+            return _targetFrameworkCache.GetOrAdd(targetFrameworkVersion, new DotNetFrameworkLocator());
         }
 
-        protected Dictionary<string, string> _locatedAssembliesByName = new Dictionary<string, string>();
+        protected ConcurrentDictionary<string, string> _locatedAssembliesByName = new ConcurrentDictionary<string, string>();
 
-        private static Dictionary<string, AssemblyLocator> _runtimeImageCache = new Dictionary<string, AssemblyLocator>();
-        private static Dictionary<string, AssemblyLocator> _targetFrameworkCache = new Dictionary<string, AssemblyLocator>();
+        private static ConcurrentDictionary<string, AssemblyLocator> _runtimeImageCache = new ConcurrentDictionary<string, AssemblyLocator>();
+        private static ConcurrentDictionary<string, AssemblyLocator> _targetFrameworkCache = new ConcurrentDictionary<string, AssemblyLocator>();
 
         public abstract string LocateAssemblyByName(string assemblyName);
         
