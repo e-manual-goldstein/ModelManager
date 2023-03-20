@@ -67,7 +67,7 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            if (FullTypeName != null)
+            if (FullTypeName != null && _typeDefinition != null)
             {
                 BuildSpecInternal();                
             }
@@ -302,7 +302,7 @@ namespace AssemblyAnalyser
 
         public override string ToString()
         {
-            return FullTypeName ?? UniqueTypeName;
+            return $"{Module.ModuleShortName}_{FullTypeName}" ?? UniqueTypeName;
         }
 
         List<IMemberSpec> _resultTypeSpecs = new List<IMemberSpec>();
@@ -380,7 +380,7 @@ namespace AssemblyAnalyser
         public EventSpec[] DelegateForSpecs => _delegateFor.ToArray();
 
         public bool HasDefinition => _typeDefinition != null;
-
+        
         public void RegisterAsDelegateFor(EventSpec eventSpec)
         {
             if (!_delegateFor.Contains(eventSpec))

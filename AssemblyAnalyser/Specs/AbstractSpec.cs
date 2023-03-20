@@ -36,6 +36,8 @@ namespace AssemblyAnalyser
             }
         }
 
+        public bool IsProcessed => _processed;
+
         protected abstract void BuildSpec();
 
         protected void Build()

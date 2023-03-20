@@ -68,12 +68,12 @@ namespace AssemblyAnalyser
 
         private static AssemblyLocator CreateOrGetLocatorForRuntimeVersion(string imageRuntimeVersion)
         {
-            return _runtimeImageCache.GetOrAdd(imageRuntimeVersion, new DotNetFrameworkLocator(imageRuntimeVersion));            
+            return _runtimeImageCache.GetOrAdd(imageRuntimeVersion, (imageRuntimeVersion) => new DotNetFrameworkLocator(imageRuntimeVersion));            
         }
 
         private static AssemblyLocator CreateOrGetLocatorForFrameworkVersion(string targetFrameworkVersion)
         {
-            return _targetFrameworkCache.GetOrAdd(targetFrameworkVersion, new DotNetFrameworkLocator());
+            return _targetFrameworkCache.GetOrAdd(targetFrameworkVersion, (imageRuntimeVersion) => new DotNetFrameworkLocator(imageRuntimeVersion));
         }
 
         protected ConcurrentDictionary<string, string> _locatedAssembliesByName = new ConcurrentDictionary<string, string>();

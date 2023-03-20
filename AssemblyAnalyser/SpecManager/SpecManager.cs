@@ -60,7 +60,6 @@ namespace AssemblyAnalyser
             }
         }
 
-
         public void ProcessAll(bool includeSystem = true, bool parallelProcessing = true)
         {
             //ProcessAllAssemblies(includeSystem, parallelProcessing);
@@ -107,34 +106,19 @@ namespace AssemblyAnalyser
             {
                 throw new NotImplementedException();
             }
-            return _moduleSpecs.GetOrAdd(module.Assembly.FullName, (key) => CreateFullModuleSpec(module));            
+            return _moduleSpecs.GetOrAdd(module.Assembly.Name.Name, (key) => CreateFullModuleSpec(module));            
         }
 
-        public ModuleSpec[] LoadReferencedModules(ModuleDefinition module)
+        public ModuleSpec[] LoadReferencedModules(ModuleDefinition baseModule)
         {
             var specs = new List<ModuleSpec>();
-            var locator = AssemblyLocator.GetLocator(module);
-            foreach (var assemblyReference in module.AssemblyReferences)
+            var locator = AssemblyLocator.GetLocator(baseModule);
+            foreach (var assemblyReference in baseModule.AssemblyReferences)
             {
-                try
+                var moduleSpec = LoadReferencedModule(baseModule, assemblyReference.FullName);
+                if (moduleSpec != null)
                 {
-                    var assemblyLocation = locator.LocateAssemblyByName(assemblyReference.FullName);
-                    if (string.IsNullOrEmpty(assemblyLocation))
-                    {
-                        _logger.LogWarning($"Asssembly not found {assemblyReference.FullName}");
-                        continue;
-                    }                    
-                    var assemblySpec = _moduleSpecs.GetOrAdd(assemblyReference.FullName, (name) => CreateFullModuleSpec(assemblyLocation));
-                    specs.Add(assemblySpec);
-                }
-                catch (FileNotFoundException ex)
-                {
-                    _exceptionManager.Handle(ex);
-                    _logger.LogWarning($"Unable to load assembly {assemblyReference.FullName}. Required by {module}");
-                }
-                catch
-                {
-                    _logger.LogWarning($"Unable to load assembly {assemblyReference.FullName}. Required by {module}");
+                    specs.Add(moduleSpec);
                 }
             }
             return specs.OrderBy(s => s.FilePath).ToArray();            
@@ -149,9 +133,13 @@ namespace AssemblyAnalyser
                 var assemblyLocation = locator.LocateAssemblyByName(assemblyReference.FullName);
                 if (string.IsNullOrEmpty(assemblyLocation))
                 {
-                    _logger.LogWarning($"Asssembly not found {assemblyReference.FullName}");                
+                    _logger.LogWarning($"Asssembly not found {assemblyReference.FullName}");      
+                    return null;
                 }
-                return _moduleSpecs.GetOrAdd(assemblyReference.FullName, (name) => CreateFullModuleSpec(assemblyLocation));
+                var referencedModule = ModuleDefinition.ReadModule(assemblyLocation);
+                var moduleSpec = _moduleSpecs.GetOrAdd(assemblyReference.Name, (name) => CreateFullModuleSpec(referencedModule));
+                moduleSpec.AddModuleVersion(assemblyReference);
+                return moduleSpec;
                 
             }
             catch (FileNotFoundException ex)
@@ -172,12 +160,6 @@ namespace AssemblyAnalyser
             return types.Select(t => LoadModuleSpec(t)).ToArray();
         }
 
-        private ModuleSpec CreateFullModuleSpec(string filePath)
-        {
-            var module = ModuleDefinition.ReadModule(filePath);
-            return CreateFullModuleSpec(module);
-        }
-
         private ModuleSpec CreateFullModuleSpec(ModuleDefinition module)
         {
             var spec = new ModuleSpec(module, module.FileName, this, SpecRules)
@@ -191,6 +173,8 @@ namespace AssemblyAnalyser
         #endregion
 
         #region Types
+
+        public TypeSpec[] ProcessedTypes => Types.Values.Where(t => t.IsProcessed).OrderBy(s => s.FullTypeName).ToArray();
 
         public IReadOnlyDictionary<string, TypeSpec> Types => _typeSpecs;
 
@@ -221,7 +205,7 @@ namespace AssemblyAnalyser
 
         private TypeSpec LoadFullTypeSpec(TypeDefinition type)
         {
-            var typeSpec = _typeSpecs.GetOrAdd(type.FullName, (key) => CreateFullTypeSpec(type));
+            var typeSpec = _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type), (key) => CreateFullTypeSpec(type));
             if (!typeSpec.HasDefinition)
             {
                 typeSpec.AddDefinition(type);
@@ -229,9 +213,14 @@ namespace AssemblyAnalyser
             return typeSpec;
         }
 
+        private string CreateUniqueTypeSpecName(TypeReference type)
+        {
+            return $"{type.Module.Name}_{type.FullName}";
+        }
+
         private TypeSpec LoadFullTypeSpec(TypeReference type)
         {
-            return _typeSpecs.GetOrAdd(type.FullName, (key) => CreateFullTypeSpec(type));
+            return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type), (key) => CreateFullTypeSpec(type));
         }
 
         private TypeSpec CreateFullTypeSpec(TypeReference type, ModuleSpec moduleSpec = null)
@@ -308,7 +297,6 @@ namespace AssemblyAnalyser
             }
             return types.Select(t => LoadTypeSpec(t)).ToArray();
         }
-
 
         #endregion
 

@@ -67,10 +67,14 @@ namespace AssemblyAnalyser
                         FieldReference fieldReference => fieldReference.Module,
                         ParameterReference parameterReference => parameterReference.ParameterType.Module,
                         VariableReference variableReference => variableReference.VariableType.Module,
-                        Instruction operandInstruction => operandInstruction.Operand,
-                        Instruction[] operandInstructions => operandInstructions.Select(t => t.Operand),
+                        //Instruction operandInstruction => operandInstruction.Operand,
+                        //Instruction[] operandInstructions => operandInstructions.Select(t => t.Operand),
                         _ => null
                     };
+                    if (type != null)
+                    {
+                        _specManager.RegisterDependency(this, type);
+                    }
                 }
             }
         }

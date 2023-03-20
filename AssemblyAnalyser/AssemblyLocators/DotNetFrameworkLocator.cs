@@ -1,5 +1,6 @@
 ﻿using AssemblyAnalyser;
 using AssemblyAnalyser.Extensions;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,6 +11,8 @@ namespace AssemblyAnalyser
     public class DotNetFrameworkLocator : AssemblyLocator
     {
         string _imageRuntimeVersion;
+
+        AssemblyPathCache _assemblyPathCache;
 
         Dictionary<string, string[]> _baseFrameworkPaths = new Dictionary<string, string[]>()
         {
@@ -22,7 +25,8 @@ namespace AssemblyAnalyser
 
         public DotNetFrameworkLocator(string imageRuntimeVersion) : base()
         {
-            _imageRuntimeVersion = imageRuntimeVersion;            
+            _imageRuntimeVersion = imageRuntimeVersion;
+            _assemblyPathCache = AssemblyPathCache.LoadPathCache($"AssemblyLookup_{imageRuntimeVersion}.txt");
             LoadFilePaths(GetBaseFilePathsForLocator());
         }
 
@@ -30,8 +34,6 @@ namespace AssemblyAnalyser
         {
             throw new NotImplementedException();
         }
-
-
 
         protected override List<string> GetBaseFilePathsForLocator()
         {
@@ -63,12 +65,15 @@ namespace AssemblyAnalyser
                 {                   
                     Faults.Add($"Assembly Not Found: {assemblyName}");                    
                 }
-                else
-                {
-                    _locatedAssembliesByName[assemblyName] = assemblyPath;
-                }
+                AddFilePathToCache(assemblyName, assemblyPath);
             }
             return assemblyPath;
+        }
+
+        private void AddFilePathToCache(string assemblyName, string assemblyPath)
+        {
+            _locatedAssembliesByName[assemblyName] = assemblyPath;
+            _assemblyPathCache.Add(assemblyName, assemblyPath);
         }
 
         private bool TryLocateAssemblyByName(string assemblyName, out string assembly)
@@ -81,7 +86,10 @@ namespace AssemblyAnalyser
                 var matches = _filePathsForLocator.Where(r => Path.GetFileName(r) == assemblyFileName);
                 if (!matches.Any())
                 {
-                    success = SystemAssemblyLookup.TryGetPath(assemblyName, out assembly);
+                    if (!_assemblyPathCache.FilePaths.TryGetValue(assemblyName, out assembly))
+                    {
+                        success = SystemAssemblyLookup.TryGetPath(assemblyName, out assembly);
+                    }
                 }
                 else if (matches.Count() == 1)
                 {
@@ -92,7 +100,7 @@ namespace AssemblyAnalyser
                     Faults.Add($"Assembly found in more than one location: {assemblyName}");
                     assembly = matches.First();                    
                 }
-                success = assembly != null;
+                success = !string.IsNullOrEmpty(assembly);
             }
             catch (Exception ex)
             {
@@ -120,6 +128,48 @@ namespace AssemblyAnalyser
             }
             assemblies = list;
             return success;
+        }
+
+        class AssemblyPathCache
+        {
+            public AssemblyPathCache()
+            {
+
+            }
+
+            public AssemblyPathCache(string fileName)
+            {
+                FileName = fileName;
+            }
+
+            public string FileName { get; set; }
+            public Dictionary<string, string> FilePaths { get; set; } = new();
+            
+            public static AssemblyPathCache LoadPathCache(string fileName)
+            {
+                var cacheFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
+                if (File.Exists(cacheFilePath))
+                {
+                    return JsonConvert.DeserializeObject<AssemblyPathCache>(File.ReadAllText(cacheFilePath));
+                }
+                return new AssemblyPathCache(fileName);
+            }
+
+            public void SaveCache()
+            {
+                var cacheFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FileName);
+                var savedCache = JsonConvert.SerializeObject(this, Formatting.Indented);
+                File.WriteAllText(cacheFilePath, savedCache);                
+            }
+
+            internal void Add(string assemblyName, string assemblyPath)
+            {
+                if (!FilePaths.ContainsKey(assemblyName))
+                {
+                    FilePaths.Add(assemblyName, assemblyPath);
+                    SaveCache();
+                }
+            }
         }
     }
 }

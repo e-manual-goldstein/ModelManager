@@ -5,11 +5,16 @@ namespace AssemblyAnalyser
 {
     public class ModuleSpec : AbstractSpec
     {
-        ModuleDefinition _module;
+        //the _baseVersion is the version of the module for which an assembly has been located
+        //this is the version which corresponds to the file found at FilePath
+        ModuleDefinition _baseVersion;
         public ModuleSpec(ModuleDefinition module, string filePath,
              ISpecManager specManager, List<IRule> rules) : this(module.Assembly.FullName, specManager, rules)
         {
-            _module = module;
+            Versions = new();
+            _baseVersion = module;
+            Versions.Add(module.Assembly.FullName, module.Assembly.Name);
+            ModuleShortName = module.Assembly.Name.Name;
             FilePath = filePath;
             IsSystem = AssemblyLoader.IsSystemAssembly(filePath);
         }
@@ -20,28 +25,37 @@ namespace AssemblyAnalyser
             _specManager = specManager;
             ModuleFullName = assemblyFullName;
         }
-
-        
+                
         public string ModuleShortName { get; }
         public string FilePath { get; }
         public bool IsSystem { get; }
         public string ModuleFullName { get; }
+
+        Dictionary<string, AssemblyNameReference> Versions { get; }
+        
+        public void AddModuleVersion(AssemblyNameReference reference)
+        {
+            if (!Versions.ContainsKey(reference.Version.ToString()))
+            {
+                Versions[reference.Version.ToString()] = reference;
+            }
+        }
 
         ModuleSpec[] _referencedAssemblies;
 
         public ModuleSpec[] ReferencedModules => _referencedAssemblies ??= LoadReferencedModules();
 
         TypeSpec[] _typeSpecs;
-        public TypeSpec[] TypeSpecs => _typeSpecs ??= _specManager.TryLoadTypesForModule(_module);
+        public TypeSpec[] TypeSpecs => _typeSpecs ??= _specManager.TryLoadTypesForModule(_baseVersion);
         
         protected override CustomAttribute[] GetAttributes()
         {
-            return _module.CustomAttributes.ToArray();
+            return _baseVersion.CustomAttributes.ToArray();
         }
 
         public ModuleSpec[] LoadReferencedModules(bool includeSystem = false)
         {
-            return (_referencedAssemblies ??= _specManager.LoadReferencedModules(_module))
+            return (_referencedAssemblies ??= _specManager.LoadReferencedModules(_baseVersion))
                 .Where(r => !r.IsSystem || includeSystem).ToArray();
         }
 
@@ -52,7 +66,7 @@ namespace AssemblyAnalyser
                 referencedModule.Process();
                 referencedModule.RegisterAsReferencedAssemblyFor(this);
             }
-            _typeSpecs = _specManager.TryLoadTypesForModule(_module);
+            _typeSpecs = _specManager.TryLoadTypesForModule(_baseVersion);
         }
 
         public override string ToString()
@@ -62,7 +76,7 @@ namespace AssemblyAnalyser
 
         internal TypeDefinition GetTypeDefinition(TypeReference typeReference)
         {
-            return _module.GetType(typeReference.FullName);
+            return _baseVersion.GetType(typeReference.FullName);
         }
 
         List<TypeSpec> _dependentTypes = new List<TypeSpec>();
