@@ -1,11 +1,10 @@
 ﻿using InvalidOperationException = System.InvalidOperationException;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using System;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Mono.Cecil;
+using AssemblyAnalyser.Specs;
 
 namespace AssemblyAnalyser
 {
@@ -41,21 +40,25 @@ namespace AssemblyAnalyser
         #endregion
 
         TypeDefinition _typeDefinition;
-
-        public string UniqueTypeName { get; }
-        public string FullTypeName { get; }
-        public string Namespace { get; set; }
-        public string Name { get; set; }
-        public bool? IsInterface { get; private set; }
-        public bool IsSystemType { get; }
-
-        public TypeSpec(TypeReference typeReference, ModuleSpec module, ISpecManager specManager, List<IRule> rules)
+        TypeReference _typeReference;
+        public TypeSpec(TypeReference typeReference, ISpecManager specManager, List<IRule> rules)
             : this(typeReference.Name, typeReference.FullName, specManager, rules)
         {
+            _typeReference = typeReference;
             _typeDefinition = (typeReference is TypeDefinition typeDefinition) ? typeDefinition : null;
-            IsInterface = _typeDefinition?.IsInterface;            
-            Module = module;
-            IsSystemType = module.IsSystem;
+            IsInterface = _typeDefinition?.IsInterface;
+            //if (!module.HasScopeName(typeReference.Scope.Name))
+            //{
+            //    if (typeReference.IsGenericInstance)
+            //    {
+            //        //handle
+            //    }
+            //    else
+            //    {
+
+            //    }
+            //}
+            IsSystemType = Module?.IsSystem;
         }
 
         TypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager, List<IRule> rules) 
@@ -65,11 +68,20 @@ namespace AssemblyAnalyser
             FullTypeName = fullTypeName;
         }
 
+        public string UniqueTypeName { get; }
+        public string FullTypeName { get; }
+        public string Namespace { get; set; }
+        public string Name { get; set; }
+        public bool? IsInterface { get; private set; }
+        public bool? IsSystemType { get; }
+
+        #region BuildSpec
+
         protected override void BuildSpec()
         {
             if (FullTypeName != null && _typeDefinition != null)
             {
-                BuildSpecInternal();                
+                BuildSpecInternal();
             }
             else
             {
@@ -113,6 +125,12 @@ namespace AssemblyAnalyser
             }
         }
 
+        ModuleSpec _module;
+        public ModuleSpec Module => _module ??= _specManager.LoadReferencedModule(_typeReference.Module, _typeReference.Scope.Name);
+
+        TypeSpec _baseSpec;
+        public TypeSpec BaseSpec => _baseSpec ??= CreateBaseSpec();
+
         private TypeSpec CreateBaseSpec()
         {
             if (_specManager.TryLoadTypeSpec(() => _typeDefinition.BaseType, out TypeSpec typeSpec))
@@ -120,10 +138,13 @@ namespace AssemblyAnalyser
                 if (!typeSpec.IsNullSpec)
                 {
                     typeSpec.AddSubType(this);
-                }                
+                }
             }
             return typeSpec;
         }
+
+        TypeSpec[] _interfaces;
+        public TypeSpec[] Interfaces => _interfaces ??= CreateInterfaceSpecs();
 
         private TypeSpec[] CreateInterfaceSpecs()
         {
@@ -136,6 +157,9 @@ namespace AssemblyAnalyser
             }
             return specs;
         }
+
+        TypeSpec[] _nestedTypes;
+        public TypeSpec[] NestedTypes => _nestedTypes ??= CreateNestedTypeSpecs();
 
         private TypeSpec[] CreateNestedTypeSpecs()
         {
@@ -151,11 +175,8 @@ namespace AssemblyAnalyser
             return specs;
         }
 
-        //private MethodSpec[] CreateMethodSpecs(TypeInfo type)
-        //{
-        //    var specs = _specManager.TryLoadMethodSpecs(() => type.GetMethods().Where(m => m.DeclaringType == type).ToArray(), this);
-        //    return specs;
-        //}
+        MethodSpec[] _methods;
+        public MethodSpec[] Methods => _methods ??= CreateMethodSpecs();
 
         private MethodSpec[] CreateMethodSpecs()
         {
@@ -167,6 +188,9 @@ namespace AssemblyAnalyser
             return specs;
         }
 
+        PropertySpec[] _properties;
+        public PropertySpec[] Properties => _properties ??= CreatePropertySpecs();
+
         private PropertySpec[] CreatePropertySpecs()
         {
             if (_typeDefinition == null)
@@ -177,11 +201,17 @@ namespace AssemblyAnalyser
             return specs;
         }
 
+        FieldSpec[] _fields;
+        public FieldSpec[] Fields => _fields ??= CreateFieldSpecs();
+
         private FieldSpec[] CreateFieldSpecs()
         {
             var specs = _specManager.TryLoadFieldSpecs(() => _typeDefinition.Fields.Where(m => m.DeclaringType == _typeDefinition).ToArray(), this);
             return specs;
         }
+
+        EventSpec[] _events;
+        public EventSpec[] Events => _events ??= CreateEventSpecs();
 
         private EventSpec[] CreateEventSpecs()
         {
@@ -189,68 +219,8 @@ namespace AssemblyAnalyser
             return specs;
         }
 
-        public ModuleSpec Module { get; }
-
-        private List<TypeSpec> _implementations = new List<TypeSpec>();
-
-        public TypeSpec[] Implementations => _implementations.ToArray();
-
-        public ModuleSpec[] GetDependentModules()
-        {
-            return Implementations.Select(i => i.Module)
-                .Concat(ResultTypeSpecs.Select(r => r.DeclaringType.Module)).Distinct().ToArray();
-        }
-
-        public void AddImplementation(TypeSpec typeSpec)
-        {
-            if (IsInterface.Equals(false))
-            {
-                throw new InvalidOperationException("Cannot implement a non-interface Type");
-            }
-            if (!_implementations.Contains(typeSpec))
-            {
-                _implementations.Add(typeSpec);
-                Module.RegisterDependentType(typeSpec);
-            }
-        }
-
-        TypeSpec[] _interfaces;
-        public TypeSpec[] Interfaces => _interfaces ??= CreateInterfaceSpecs();
-
-        TypeSpec _baseSpec;
-        public TypeSpec BaseSpec => _baseSpec ??= CreateBaseSpec();
-
-        TypeSpec[] _nestedTypes;
-        public TypeSpec[] NestedTypes => _nestedTypes ??= CreateNestedTypeSpecs();
-
-
-        private List<TypeSpec> _subTypes = new List<TypeSpec>();
-
-        public void AddSubType(TypeSpec typeSpec)
-        {
-            if (!_subTypes.Contains(typeSpec))
-            {
-                _subTypes.Add(typeSpec);
-                Module.RegisterDependentType(typeSpec);
-            }
-        }
-
-        public TypeSpec[] GetSubTypes() => _subTypes.ToArray();
-
-        MethodSpec[] _methods;
-        public MethodSpec[] Methods => _methods ??= CreateMethodSpecs();
-
-        PropertySpec[] _properties;
-        public PropertySpec[] Properties => _properties ??= CreatePropertySpecs();
-
-        FieldSpec[] _fields;
-        public FieldSpec[] Fields => _fields ??= CreateFieldSpecs();
-
         TypeSpec[] _genericTypeParamters;
         public TypeSpec[] GenericTypeParameters => _genericTypeParamters;
-
-        EventSpec[] _events;
-        public EventSpec[] Events => _events ??= CreateEventSpecs();
 
         #region Generic Type Flags
 
@@ -297,13 +267,61 @@ namespace AssemblyAnalyser
 
         public bool IsNullSpec { get; private set; }
         public bool IsErrorSpec { get; private set; }
-
         public bool IsCompilerGenerated { get; private set; }
+
+        #endregion
+        
+        public ModuleSpec[] GetDependentModules()
+        {
+            return Implementations.Select(i => i.Module)
+                .Concat(ResultTypeSpecs.Select(r => r.DeclaringType.Module)).Distinct().ToArray();
+        }
+
+        public TypeSpec NestedIn { get; private set; }
+
+        private void SetNestedIn(TypeSpec typeSpec)
+        {
+            if (NestedIn != null)
+            {
+                Logger.LogError($"NestedIn already set for Type {this}");
+            }
+            NestedIn = typeSpec;
+        }
 
         public override string ToString()
         {
             return $"{Module.ModuleShortName}_{FullTypeName}" ?? UniqueTypeName;
         }
+        
+        private List<TypeSpec> _implementations = new List<TypeSpec>();
+
+        public TypeSpec[] Implementations => _implementations.ToArray();
+
+        public void AddImplementation(TypeSpec typeSpec)
+        {
+            if (IsInterface.Equals(false))
+            {
+                throw new InvalidOperationException("Cannot implement a non-interface Type");
+            }
+            if (!_implementations.Contains(typeSpec))
+            {
+                _implementations.Add(typeSpec);
+                Module.RegisterDependentType(typeSpec);
+            }
+        }
+
+        private List<TypeSpec> _subTypes = new List<TypeSpec>();
+
+        public void AddSubType(TypeSpec typeSpec)
+        {
+            if (!_subTypes.Contains(typeSpec))
+            {
+                _subTypes.Add(typeSpec);
+                Module.RegisterDependentType(typeSpec);
+            }
+        }
+
+        public TypeSpec[] GetSubTypes() => _subTypes.ToArray();
 
         List<IMemberSpec> _resultTypeSpecs = new List<IMemberSpec>();
         public IMemberSpec[] ResultTypeSpecs => _resultTypeSpecs.ToArray();
@@ -339,17 +357,6 @@ namespace AssemblyAnalyser
                 _dependentMethodBodies.Add(methodSpec);
                 Module.RegisterDependentType(methodSpec.DeclaringType);
             }
-        }
-
-        public TypeSpec NestedIn { get; private set; }
-
-        private void SetNestedIn(TypeSpec typeSpec)
-        {
-            if (NestedIn != null)
-            {
-                Logger.LogError($"NestedIn already set for Type {this}");
-            }
-            NestedIn = typeSpec;
         }
 
         List<AbstractSpec> _decoratorForSpecs = new List<AbstractSpec>();
@@ -393,6 +400,24 @@ namespace AssemblyAnalyser
         public void AddDefinition(TypeDefinition type)
         {
             _typeDefinition = type;
+        }
+
+        public bool IsSpecFor(TypeReference typeReference)
+        {
+            if (Module.IsSpecFor(typeReference))
+            {
+                return typeReference.FullName == _typeDefinition.FullName;
+            }
+            else
+            {
+
+            }
+            return false;
+        }
+
+        public MethodSpec GetMethodSpec(MethodReference method)
+        {
+            return Methods.Single(m => m.IsSpecFor(method));
         }
     }
 }

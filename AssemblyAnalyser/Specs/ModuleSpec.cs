@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Mono.Cecil;
 namespace AssemblyAnalyser
@@ -101,6 +102,27 @@ namespace AssemblyAnalyser
             {
                 _referencedBy.Add(assemblySpec);
             }
+        }
+
+        public TypeSpec GetTypeSpec(TypeReference typeReference)
+        {
+            var matchingByName = TypeSpecs.Where(t => t.IsSpecFor(typeReference)).ToList();
+            return matchingByName.Single();
+        }
+
+        public bool HasScopeName(string name)
+        {
+            return _baseVersion.Assembly.Name.Name == name;
+        }
+
+        public bool IsSpecFor(TypeReference typeReference)
+        {
+            var definition = typeReference.Resolve();
+            return _baseVersion.HasTypeReference(definition.Scope.Name, definition.FullName);
+            //return _baseVersion.Types.Any(t 
+            //    => t.FullName == typeReference.FullName
+            //    && t.Scope == typeReference.Scope);
+            //return _baseVersion.HasTypeReference(typeReference.Scope.Name, typeReference.FullName);
         }
     }
 }

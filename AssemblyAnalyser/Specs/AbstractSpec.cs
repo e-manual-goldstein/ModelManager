@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using AssemblyAnalyser.Specs;
+using Microsoft.Extensions.Logging;
 using Mono.Cecil;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,8 +8,6 @@ namespace AssemblyAnalyser
 {
     public abstract class AbstractSpec : ISpec
     {
-        private bool _analysing;
-        private bool _analysed;
         private bool _processing;
         private bool _processed;
         private bool? _included;
@@ -27,6 +26,24 @@ namespace AssemblyAnalyser
         public TypeSpec[] Attributes => _attributes ??= _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this);
 
         protected abstract CustomAttribute[] GetAttributes();
+
+        List<ISpecDependency> _requiredBy = new List<ISpecDependency>();
+        public ISpecDependency[] RequiredBy => _requiredBy.ToArray();
+
+        public virtual void RegisterAsRequiredBy(ISpecDependency specDependency)
+        {
+            _requiredBy.Add(specDependency);
+            //Module.RegisterAsRequiredBy(specDependency);
+        }
+
+        List<ISpecDependency> _dependsOn = new List<ISpecDependency>();
+        public ISpecDependency[] DependsOn => _dependsOn.ToArray();
+
+        public virtual void RegisterDependency(ISpecDependency specDependency)
+        {
+            _dependsOn.Add(specDependency);
+            //Module.RegisterAsRequiredBy(specDependency);
+        }
 
         public void Process()
         {
@@ -52,6 +69,7 @@ namespace AssemblyAnalyser
             return !_processing && !_processed;
         }
 
+        #region Inclusion / Exclusion
         public bool IsExcluded()
         {
             return ExclusionRules.Any(r => r.Exclude(this));
@@ -66,10 +84,16 @@ namespace AssemblyAnalyser
 
         public void Exclude(string excludedReason)
         {
-            ExcludedReason = excludedReason;    
+            ExcludedReason = excludedReason;
             ExclusionRules.Add(new ExclusionRule(s => true));
         }
-        
+
+        public List<ExclusionRule> ExclusionRules { get; private set; }
+        public List<InclusionRule> InclusionRules { get; private set; }
+        #endregion
+
+        #region Skip Processing
+
         public bool Skipped { get; private set; }
         public string SkipReason { get; set; }
         public void SkipProcessing(string skipReason)
@@ -79,7 +103,6 @@ namespace AssemblyAnalyser
             _processed = true;
         }
 
-        public List<ExclusionRule> ExclusionRules { get; private set; }
-        public List<InclusionRule> InclusionRules { get; private set; }
+        #endregion
     }
 }

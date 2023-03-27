@@ -27,7 +27,7 @@ namespace AssemblyAnalyser
         public TypeSpec PropertyType { get; private set; }
                 
         public TypeSpec DeclaringType { get; }
-        public bool IsSystemProperty { get; }
+        public bool? IsSystemProperty { get; }
 
         public IEnumerable<MethodDefinition> InnerMethods()
         {

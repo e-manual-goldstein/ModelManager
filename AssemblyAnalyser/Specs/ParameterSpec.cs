@@ -1,4 +1,6 @@
-﻿using Mono.Cecil;
+﻿using AssemblyAnalyser.Specs;
+using Mono.Cecil;
+using System;
 using System.Collections.Generic;
 
 namespace AssemblyAnalyser
@@ -9,7 +11,7 @@ namespace AssemblyAnalyser
 
         public TypeSpec ParameterType { get; private set; }
         public MethodSpec Method { get; }
-        public bool IsSystemParameter { get; }
+        public bool? IsSystemParameter { get; }
 
         public ParameterSpec(ParameterDefinition parameterDefinition, MethodSpec method, ISpecManager specManager, List<IRule> rules)
             : base(rules, specManager)
@@ -32,5 +34,6 @@ namespace AssemblyAnalyser
                 returnTypeSpec.RegisterAsDependentParameterSpec(this);
             }            
         }
+
     }
 }

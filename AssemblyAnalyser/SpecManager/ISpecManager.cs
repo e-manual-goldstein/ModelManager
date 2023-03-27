@@ -1,5 +1,4 @@
-﻿using Mono.Cecil;
-using System;
+﻿using AssemblyAnalyser.Specs;
 using System.Collections.Generic;
 
 namespace AssemblyAnalyser
@@ -11,6 +10,7 @@ namespace AssemblyAnalyser
         void ProcessSpecs<TSpec>(IEnumerable<TSpec> specs, bool parallelProcessing = true) where TSpec : AbstractSpec;
         void Reset();
         void ProcessAll(bool includeSystem = true, bool parallelProcessing = true);
+        ISpecDependency RegisterOperandDependency(object operand, MethodSpec methodSpec);
         //void RegisterDependency(ISpec dependingSpec, ModuleDefinition targetSpec);
     }
 }

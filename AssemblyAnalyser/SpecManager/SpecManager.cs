@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Mono.Cecil.Cil;
+using AssemblyAnalyser.Specs;
 
 namespace AssemblyAnalyser
 {
@@ -126,6 +128,10 @@ namespace AssemblyAnalyser
 
         public ModuleSpec LoadReferencedModule(ModuleDefinition module, string referencedModuleName)
         {
+            if (module.Name == referencedModuleName)
+            {
+                return LoadModuleSpec(module);
+            }
             var locator = AssemblyLocator.GetLocator(module);
             var assemblyReference = module.AssemblyReferences.Single(a => a.FullName.Contains(referencedModuleName));
             try
@@ -215,7 +221,7 @@ namespace AssemblyAnalyser
 
         private string CreateUniqueTypeSpecName(TypeReference type)
         {
-            return $"{type.Module.Name}_{type.FullName}";
+            return $"{type.Scope.Name}_{type.FullName}";
         }
 
         private TypeSpec LoadFullTypeSpec(TypeReference type)
@@ -223,10 +229,10 @@ namespace AssemblyAnalyser
             return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type), (key) => CreateFullTypeSpec(type));
         }
 
-        private TypeSpec CreateFullTypeSpec(TypeReference type, ModuleSpec moduleSpec = null)
+        private TypeSpec CreateFullTypeSpec(TypeReference type)
         {
-            moduleSpec ??= LoadModuleSpec(type.Module);
-            var spec = new TypeSpec(type, moduleSpec, this, SpecRules)
+            
+            var spec = new TypeSpec(type, this, SpecRules)
             {
                 Name = type.Name,
                 Namespace = type.Namespace,
@@ -308,7 +314,27 @@ namespace AssemblyAnalyser
         
         public void ProcessLoadedMethods(bool includeSystem = true, bool parallelProcessing = true)
         {
-            ProcessSpecs(Methods.Values.Where(t => includeSystem || !t.IsSystemMethod), parallelProcessing);
+            ProcessSpecs(Methods.Values.Where(t => includeSystem || t.IsSystemMethod.Equals(false)), parallelProcessing);
+        }
+
+        public MethodSpec LoadMethodSpec(MethodReference method)
+        {
+            if (!(method is MethodDefinition methodDefinition))
+            {
+                try
+                {
+                    methodDefinition = method.Resolve();
+                }
+                catch
+                {
+                    var module = LoadReferencedModule(method.Module, method.DeclaringType.Scope.Name);
+                    var type = module.GetTypeSpec(method.DeclaringType);
+                    return type.GetMethodSpec(method);
+                }
+                //return type.GetMethodSpec(method);
+            }
+            return _methodSpecs.GetOrAdd(methodDefinition, 
+                (key) => CreateMethodSpec(methodDefinition, LoadTypeSpec(methodDefinition.DeclaringType)));
         }
 
         public MethodSpec LoadMethodSpec(MethodDefinition method, TypeSpec declaringType)
@@ -369,7 +395,7 @@ namespace AssemblyAnalyser
 
         public void ProcessLoadedProperties(bool includeSystem = true)
         {
-            foreach (var (propertyName, prop) in Properties.Where(t => includeSystem || !t.Value.IsSystemProperty))
+            foreach (var (propertyName, prop) in Properties.Where(t => includeSystem || t.Value.IsSystemProperty.Equals(false)))
             {
                 prop.Process();
             }
@@ -428,7 +454,7 @@ namespace AssemblyAnalyser
 
         public void ProcessLoadedParameters(bool includeSystem = true)
         {
-            foreach (var (parameterName, param) in Parameters.Where(t => includeSystem || !t.Value.IsSystemParameter))
+            foreach (var (parameterName, param) in Parameters.Where(t => includeSystem || t.Value.IsSystemParameter.Equals(false)))
             {
                 param.Process();
             }
@@ -478,7 +504,7 @@ namespace AssemblyAnalyser
 
         public void ProcessLoadedFields(bool includeSystem = true)
         {
-            foreach (var (fieldName, field) in Fields.Where(t => includeSystem || !t.Value.IsSystemField))
+            foreach (var (fieldName, field) in Fields.Where(t => includeSystem || t.Value.IsSystemField.Equals(false)))
             {
                 field.Process();
             }
@@ -582,7 +608,7 @@ namespace AssemblyAnalyser
 
         public void ProcessLoadedEvents(bool includeSystem = true)
         {
-            foreach (var (fieldName, field) in Events.Where(t => includeSystem || !t.Value.IsSystemEvent))
+            foreach (var (fieldName, field) in Events.Where(t => includeSystem || t.Value.IsSystemEvent.Equals(false)))
             {
                 field.Process();
             }
@@ -642,6 +668,30 @@ namespace AssemblyAnalyser
         {
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
+        }
+
+        public ISpecDependency RegisterOperandDependency(object operand, MethodSpec methodSpec)
+        {
+            if (operand is MethodReference methodRef)
+            {
+                //kludge
+                if (methodRef.DeclaringType.IsGenericInstance)
+                {
+                    return null;
+                }
+            }
+            return operand switch
+            {
+                TypeReference typeReference => new MethodToTypeDependency(methodSpec, LoadTypeSpec(typeReference)),
+                MethodReference methodReference => new MethodToMethodDependency(methodSpec, LoadMethodSpec(methodReference)),
+                //FieldReference fieldReference => fieldReference.Module,
+                //ParameterReference parameterReference => parameterReference.ParameterType.Module,
+                //VariableReference variableReference => variableReference.VariableType.Module,
+                //Instruction operandInstruction => operandInstruction.Operand,
+                //Instruction[] operandInstructions => operandInstructions.Select(t => t.Operand),
+                _ => null
+            };
+            
         }
 
         #endregion

@@ -1,5 +1,7 @@
 ﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Collections.Generic;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -25,7 +27,7 @@ namespace AssemblyAnalyser
         public TypeSpec[] LocalVariableTypes => _localVariableTypes.ToArray();
         List<TypeSpec> _exceptionCatchTypes = new List<TypeSpec>();
         public TypeSpec[] ExceptionCatchTypes => _exceptionCatchTypes.ToArray();
-        public bool IsSystemMethod { get; }
+        public bool? IsSystemMethod { get; }
         public bool IsConstructor { get; }
         
         protected override void BuildSpec()
@@ -56,25 +58,12 @@ namespace AssemblyAnalyser
             {
                 if (instruction.Operand != null)
                 {
-                    if (instruction.Operand.GetType().IsPrimitive || instruction.Operand is string)
+                    var operandType = instruction.Operand.GetType();
+                    if (operandType.IsPrimitive || operandType == typeof(string))
                     {
                         continue;
                     }
-                    var type = instruction.Operand switch
-                    {
-                        TypeReference typeReference => typeReference.Module,
-                        MethodReference methodReference => methodReference.Module,
-                        FieldReference fieldReference => fieldReference.Module,
-                        ParameterReference parameterReference => parameterReference.ParameterType.Module,
-                        VariableReference variableReference => variableReference.VariableType.Module,
-                        //Instruction operandInstruction => operandInstruction.Operand,
-                        //Instruction[] operandInstructions => operandInstructions.Select(t => t.Operand),
-                        _ => null
-                    };
-                    if (type != null)
-                    {
-                        _specManager.RegisterDependency(this, type);
-                    }
+                    _specManager.RegisterOperandDependency(instruction.Operand, this);
                 }
             }
         }
@@ -116,6 +105,28 @@ namespace AssemblyAnalyser
         public override string ToString()
         {
             return _methodDefinition.Name;
-        }        
+        }
+
+        public bool IsSpecFor(MethodReference method)
+        {
+            return _methodDefinition.FullName == method.FullName && MatchParameters(method.Parameters.ToArray());
+        }
+
+        private bool MatchParameters(ParameterDefinition[] parameters)
+        {
+            var myParameters = _methodDefinition.Parameters.ToArray();
+            if (parameters.Length != myParameters.Length)
+            {
+                return false;
+            }
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                if (myParameters[i].Name == parameters[i].Name || myParameters[i].ParameterType == parameters[i].ParameterType)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 }

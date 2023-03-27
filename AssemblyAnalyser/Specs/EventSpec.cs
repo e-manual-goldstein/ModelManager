@@ -35,7 +35,7 @@ namespace AssemblyAnalyser
 
         public string EventName => _eventInfo.Name;
         public TypeSpec EventType { get; private set; }
-        public bool IsSystemEvent { get; set; }
+        public bool? IsSystemEvent { get; set; }
         public TypeSpec DeclaringType { get; }
 
         TypeSpec IMemberSpec.ResultType => EventType;
