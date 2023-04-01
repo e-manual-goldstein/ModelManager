@@ -2,6 +2,7 @@
 using AssemblyAnalyser.Extensions;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -143,7 +144,7 @@ namespace AssemblyAnalyser
             }
 
             public string FileName { get; set; }
-            public Dictionary<string, string> FilePaths { get; set; } = new();
+            public ConcurrentDictionary<string, string> FilePaths { get; set; } = new();
             
             public static AssemblyPathCache LoadPathCache(string fileName)
             {
@@ -162,13 +163,16 @@ namespace AssemblyAnalyser
                 File.WriteAllText(cacheFilePath, savedCache);                
             }
 
+            static object _lock = new object();
+
             internal void Add(string assemblyName, string assemblyPath)
             {
-                if (!FilePaths.ContainsKey(assemblyName))
+                if (FilePaths.TryAdd(assemblyName, assemblyPath));
+                lock (_lock)
                 {
-                    FilePaths.Add(assemblyName, assemblyPath);
                     SaveCache();
                 }
+                
             }
         }
     }
