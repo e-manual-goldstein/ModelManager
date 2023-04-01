@@ -14,6 +14,8 @@ namespace ModelManager.Tabs.Outputs
     {
         private readonly TreeOutputItem[] _treeOutputItems;
 
+        static MethodInfo[] _baseObjectMethods = typeof(object).GetMethods();
+
         public TreeOutput(object content) : base(content)
         {
             _treeOutputItems = TreeOutputItem.CreateTreeOutputItems(content).ToArray();
@@ -134,8 +136,8 @@ namespace ModelManager.Tabs.Outputs
                 {
                     var objectType = value.GetType();
                     var actions = objectType.GetMethods().Where(m =>
-                            !m.IsConstructor && !m.GetParameters().Any() && m.IsPublic && 
-                            !m.IsSpecialName && m.DeclaringType == objectType && m.Name != "ToString" );
+                            !m.IsConstructor && !m.GetParameters().Any() && m.IsPublic && !_baseObjectMethods.Contains(m) &&
+                            !m.IsSpecialName && m.Name != "ToString" );
                     foreach (var action in actions)
                     {
                         var actionItem = new MenuItem() { Header = action.Name };
