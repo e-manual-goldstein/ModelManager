@@ -11,6 +11,7 @@ namespace AssemblyAnalyser
         ModuleSpec[] LoadModuleSpecs(ModuleDefinition[] modules);
         ModuleSpec LoadModuleSpec(ModuleDefinition module);
         ModuleSpec[] LoadReferencedModules(ModuleDefinition module);
-        ModuleSpec LoadReferencedModule(ModuleDefinition module, string referencedModuleName);
+        ModuleSpec LoadReferencedModuleByFullName(ModuleDefinition module, string referencedModuleName);
+        ModuleSpec LoadReferencedModuleByScopeName(ModuleDefinition module, IMetadataScope scope);
     }
 }

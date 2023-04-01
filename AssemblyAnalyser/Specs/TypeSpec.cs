@@ -126,7 +126,7 @@ namespace AssemblyAnalyser
         }
 
         ModuleSpec _module;
-        public ModuleSpec Module => _module ??= _specManager.LoadReferencedModule(_typeReference.Module, _typeReference.Scope.Name);
+        public ModuleSpec Module => _module ??= _specManager.LoadReferencedModuleByScopeName(_typeReference.Module, _typeReference.Scope);
 
         TypeSpec _baseSpec;
         public TypeSpec BaseSpec => _baseSpec ??= CreateBaseSpec();
@@ -306,7 +306,7 @@ namespace AssemblyAnalyser
             if (!_implementations.Contains(typeSpec))
             {
                 _implementations.Add(typeSpec);
-                Module.RegisterDependentType(typeSpec);
+                RegisterDependentTypeForModule(typeSpec);
             }
         }
 
@@ -317,7 +317,7 @@ namespace AssemblyAnalyser
             if (!_subTypes.Contains(typeSpec))
             {
                 _subTypes.Add(typeSpec);
-                Module.RegisterDependentType(typeSpec);
+                RegisterDependentTypeForModule(typeSpec);
             }
         }
 
@@ -331,7 +331,7 @@ namespace AssemblyAnalyser
             if (!_resultTypeSpecs.Contains(methodSpec))
             {
                 _resultTypeSpecs.Add(methodSpec);
-                Module.RegisterDependentType(methodSpec.DeclaringType);
+                RegisterDependentTypeForModule(methodSpec.DeclaringType);
             }
         }
 
@@ -343,7 +343,7 @@ namespace AssemblyAnalyser
             if (!_dependentParameterSpecs.Contains(parameterSpec))
             {
                 _dependentParameterSpecs.Add(parameterSpec);
-                Module.RegisterDependentType(parameterSpec.Method.DeclaringType);
+                RegisterDependentTypeForModule(parameterSpec.Method.DeclaringType);
             }
         }
 
@@ -355,7 +355,7 @@ namespace AssemblyAnalyser
             if (!_dependentMethodBodies.Contains(methodSpec))
             {
                 _dependentMethodBodies.Add(methodSpec);
-                Module.RegisterDependentType(methodSpec.DeclaringType);
+                RegisterDependentTypeForModule(methodSpec.DeclaringType);
             }
         }
 
@@ -393,7 +393,7 @@ namespace AssemblyAnalyser
             if (!_delegateFor.Contains(eventSpec))
             {
                 _delegateFor.Add(eventSpec);
-                Module.RegisterDependentType(eventSpec.DeclaringType);
+                RegisterDependentTypeForModule(eventSpec.DeclaringType);
             }
         }
 
@@ -418,6 +418,16 @@ namespace AssemblyAnalyser
         public MethodSpec GetMethodSpec(MethodReference method)
         {
             return Methods.Single(m => m.IsSpecFor(method));
+        }
+
+        private void RegisterDependentTypeForModule(TypeSpec typeSpec)
+        {
+            if (Module == null)
+            {
+                Logger.LogWarning($"Module not found for Type: {_typeReference}");
+                return;
+            }
+            Module.RegisterDependentType(typeSpec);
         }
     }
 }

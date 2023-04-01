@@ -40,7 +40,7 @@ namespace AssemblyAnalyser
             Parameters = _specManager.TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray(), this);
             if (_methodDefinition.Body is MethodBody body)
             {
-                ProcessMethodBodyOperands(body);
+                //ProcessMethodBodyOperands(body);
                 ProcessLocalVariables(body);
                 ProcessExceptionClauseCatchTypes(body);
             }

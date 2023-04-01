@@ -117,7 +117,7 @@ namespace AssemblyAnalyser
             var locator = AssemblyLocator.GetLocator(baseModule);
             foreach (var assemblyReference in baseModule.AssemblyReferences)
             {
-                var moduleSpec = LoadReferencedModule(baseModule, assemblyReference.FullName);
+                var moduleSpec = LoadReferencedModuleByFullName(baseModule, assemblyReference.FullName);
                 if (moduleSpec != null)
                 {
                     specs.Add(moduleSpec);
@@ -126,7 +126,7 @@ namespace AssemblyAnalyser
             return specs.OrderBy(s => s.FilePath).ToArray();            
         }
 
-        public ModuleSpec LoadReferencedModule(ModuleDefinition module, string referencedModuleName)
+        public ModuleSpec LoadReferencedModuleByFullName(ModuleDefinition module, string referencedModuleName)
         {
             if (module.Name == referencedModuleName)
             {
@@ -134,28 +134,51 @@ namespace AssemblyAnalyser
             }
             var locator = AssemblyLocator.GetLocator(module);
             var assemblyReference = module.AssemblyReferences.Single(a => a.FullName.Contains(referencedModuleName));
+            return LoadReferencedModule(locator, assemblyReference);
+        }
+
+        public ModuleSpec LoadReferencedModuleByScopeName(ModuleDefinition module, IMetadataScope scope)
+        {
+            if (module.Name == scope.Name)
+            {
+                return LoadModuleSpec(module);
+            }
+            var locator = AssemblyLocator.GetLocator(module);
+            var version = scope switch
+            {
+                AssemblyNameReference assemblyNameReference => assemblyNameReference.Version,
+                ModuleDefinition moduleDefinition => moduleDefinition.Assembly.Name.Version,
+                _ => throw new NotImplementedException()
+            };
+            var assemblyReference = module.AssemblyReferences
+                .Single(a => a.FullName.ParseShortName() == scope.Name && a.Version == version);
+            return LoadReferencedModule(locator, assemblyReference);            
+        }
+
+        private ModuleSpec LoadReferencedModule(AssemblyLocator locator, AssemblyNameReference assemblyReference)
+        {
             try
             {
                 var assemblyLocation = locator.LocateAssemblyByName(assemblyReference.FullName);
                 if (string.IsNullOrEmpty(assemblyLocation))
                 {
-                    _logger.LogWarning($"Asssembly not found {assemblyReference.FullName}");      
+                    _logger.LogWarning($"Asssembly not found {assemblyReference.FullName}");
                     return null;
                 }
                 var referencedModule = ModuleDefinition.ReadModule(assemblyLocation);
                 var moduleSpec = _moduleSpecs.GetOrAdd(assemblyReference.Name, (name) => CreateFullModuleSpec(referencedModule));
                 moduleSpec.AddModuleVersion(assemblyReference);
                 return moduleSpec;
-                
+
             }
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
-                _logger.LogWarning($"Unable to load assembly {assemblyReference.FullName}. Required by {module}");
+                _logger.LogWarning($"Unable to load assembly {assemblyReference.FullName}. Required by {assemblyReference}");
             }
             catch
             {
-                _logger.LogWarning($"Unable to load assembly {assemblyReference.FullName}. Required by {module}");
+                _logger.LogWarning($"Unable to load assembly {assemblyReference.FullName}. Required by {assemblyReference}");
             }
 
             return null;
@@ -327,7 +350,7 @@ namespace AssemblyAnalyser
                 }
                 catch
                 {
-                    var module = LoadReferencedModule(method.Module, method.DeclaringType.Scope.Name);
+                    var module = LoadReferencedModuleByScopeName(method.Module, method.DeclaringType.Scope);
                     var type = module.GetTypeSpec(method.DeclaringType);
                     return type.GetMethodSpec(method);
                 }
