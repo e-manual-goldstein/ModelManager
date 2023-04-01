@@ -3,14 +3,9 @@ using System;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Reflection;
 using System.Windows;
-using System.Xml.Linq;
-using System.Reflection.Metadata;
-using System.IO;
 using System.Collections;
 
 namespace ModelManager.Tabs.Outputs
@@ -111,21 +106,44 @@ namespace ModelManager.Tabs.Outputs
                 Value = value;
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    TreeViewItem = CreateTreeViewItem(expandable);
+                    TreeViewItem = CreateTreeViewItem(expandable, value);
                 });
             }
 
-            private TreeViewItem CreateTreeViewItem(bool isExpandable)
+            private TreeViewItem CreateTreeViewItem(bool isExpandable, object value)
             {
                 var treeViewItem = new TreeViewItem();
                 treeViewItem.Header = $"{Label}";
                 treeViewItem.IsExpanded = false;
                 treeViewItem.Expanded += TreeViewItem_Expanded;
+                treeViewItem.ContextMenu = GetContextMenuActions(value);
+                var refreshItem = new MenuItem() { Header = "Refresh" };
+                refreshItem.Click += (s, e) => Refresh(treeViewItem);
+                treeViewItem.ContextMenu.Items.Add(refreshItem);
                 if (isExpandable)
                 {
                     treeViewItem.Items.Add("Loading...");
                 }
                 return treeViewItem;
+            }
+
+            private ContextMenu GetContextMenuActions(object value)
+            {
+                var contextMenu = new ContextMenu();
+                if (value != null)
+                {
+                    var objectType = value.GetType();
+                    var actions = objectType.GetMethods().Where(m =>
+                            !m.IsConstructor && !m.GetParameters().Any() && m.IsPublic && 
+                            !m.IsSpecialName && m.DeclaringType == objectType && m.Name != "ToString" );
+                    foreach (var action in actions)
+                    {
+                        var actionItem = new MenuItem() { Header = action.Name };
+                        actionItem.Click += (s, e) => action.Invoke(value, new object[] { });
+                        contextMenu.Items.Add(actionItem);
+                    }                    
+                }
+                return contextMenu;                
             }
 
             private static string CreateItemName(MemberInfo member, object content)
@@ -175,6 +193,30 @@ namespace ModelManager.Tabs.Outputs
                     return false;
                 }
                 return true;
+            }
+
+            private void Refresh(TreeViewItem item)
+            {
+                item.Items.Clear();
+                try
+                {
+                    var propertyValue = Value;
+                    if (propertyValue != null)
+                    {
+                        _treeOutputItems = CreateTreeOutputItems(propertyValue).ToArray();
+                        int index = 0;
+                        foreach (var outputItem in _treeOutputItems.OrderBy(r => r.Label))
+                        {
+                            outputItem.TreeViewItem.Header = $"{index++}. {outputItem.Label}";
+                            item.Items.Add(outputItem.TreeViewItem);
+                        }
+                    }
+                    _loaded = true;
+                }
+                catch
+                {
+
+                }
             }
 
             private void TreeViewItem_Expanded(object sender, RoutedEventArgs e)
