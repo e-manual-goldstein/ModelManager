@@ -14,7 +14,6 @@ namespace AssemblyAnalyser
         private bool? _included;
         protected bool Included => _included ??= !IsExcluded() && IsIncluded();
         protected ISpecManager _specManager;
-        public ILogger Logger { get; internal set; }
 
         public AbstractSpec(List<IRule> rules, ISpecManager specManager)
         {

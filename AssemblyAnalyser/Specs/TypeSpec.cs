@@ -51,7 +51,7 @@ namespace AssemblyAnalyser
             Namespace = typeReference.Namespace;
             if (_typeDefinition == null)
             {
-                specManager.AddFault($"Could not find matching TypeDefinition for {FullTypeName}");
+                specManager.AddFault(FaultSeverity.Warning, $"Could not find matching TypeDefinition for {FullTypeName}");
             }
             IsInterface = _typeDefinition?.IsInterface;
             IsSystemType = Module?.IsSystem;
@@ -80,7 +80,7 @@ namespace AssemblyAnalyser
             }
             else
             {
-                Logger.LogError("Cannot build Spec with null FullTypeName");
+                _specManager.AddFault(FaultSeverity.Error, "Cannot build Spec with null FullTypeName");
             }
         }
 
@@ -178,7 +178,7 @@ namespace AssemblyAnalyser
         {
             if (_typeDefinition == null)
             {
-                _specManager.AddFault($"Unable to determine MethodSpecs for {this}");
+                _specManager.AddFault(FaultSeverity.Warning, $"Unable to determine MethodSpecs for {this}");
                 return Array.Empty<MethodSpec>();
             }
             var specs = _specManager.TryLoadMethodSpecs(() => _typeDefinition.Methods.Where(m => m.DeclaringType == _typeDefinition).ToArray(), this);
@@ -192,7 +192,7 @@ namespace AssemblyAnalyser
         {
             if (_typeDefinition == null)
             {
-                _specManager.AddFault($"Unable to determine PropertySpecs for {this}");
+                _specManager.AddFault(FaultSeverity.Warning, $"Unable to determine PropertySpecs for {this}");
                 return Array.Empty<PropertySpec>();
             }
             var specs = _specManager.TryLoadPropertySpecs(() => _typeDefinition.Properties.Where(m => m.DeclaringType == _typeDefinition).ToArray(), this);
@@ -286,7 +286,7 @@ namespace AssemblyAnalyser
                 var propertySpec = GetPropertySpec(interfaceProperty.Name);
                 if (propertySpec == null)
                 {
-                    _specManager.AddFault($"{this} does not implement {interfaceProperty}");
+                    _specManager.AddFault(FaultSeverity.Warning, $"{this} does not implement {interfaceProperty}");
                 }
                 else
                 {
@@ -298,7 +298,7 @@ namespace AssemblyAnalyser
                 var methodSpec = MatchMethodSpecByNameAndParameterType(interfaceMethod.Name, interfaceMethod.Parameters);
                 if (methodSpec == null)
                 {
-                    _specManager.AddFault($"{this} does not implement {interfaceMethod}");
+                    _specManager.AddFault(FaultSeverity.Warning, $"{this} does not implement {interfaceMethod}");
                 }
                 else
                 {
@@ -325,7 +325,7 @@ namespace AssemblyAnalyser
         {
             if (NestedIn != null)
             {
-                Logger.LogError($"NestedIn already set for Type {this}");
+                _specManager.AddFault(FaultSeverity.Error, $"NestedIn already set for Type {this}");
             }
             NestedIn = typeSpec;
         }
@@ -485,7 +485,7 @@ namespace AssemblyAnalyser
         {
             if (Module == null)
             {
-                Logger.LogWarning($"Module not found for Type: {_typeReference}");
+                _specManager.AddFault(FaultSeverity.Warning, $"Module not found for Type: {_typeReference}");
                 return;
             }
             Module.RegisterDependentType(typeSpec);

@@ -36,6 +36,23 @@ namespace AssemblyAnalyser
             _faults.Add(faultMessage);
         }
 
+        public void AddFault(FaultSeverity faultSeverity, string faultMessage)
+        {
+            switch (faultSeverity)
+            {
+                case FaultSeverity.Error:
+                    _logger.Log(LogLevel.Error, faultMessage);
+                    break;
+                case FaultSeverity.Warning:
+                    _logger.Log(LogLevel.Warning, faultMessage);
+                    break;
+                default:
+                    _logger.Log(LogLevel.Debug, faultMessage);
+                    break;
+            }
+            AddFault($"[{faultSeverity}]\t{faultMessage}");
+        }
+
         public void SetWorkingDirectory(string workingDirectory)
         {
             _workingFiles = Directory.EnumerateFiles(workingDirectory, "*.dll").ToDictionary(d => Path.GetFileNameWithoutExtension(d), e => e);
@@ -199,11 +216,7 @@ namespace AssemblyAnalyser
 
         private ModuleSpec CreateFullModuleSpec(ModuleDefinition module)
         {
-            var spec = new ModuleSpec(module, module.FileName, this, SpecRules)
-            {
-
-            };
-            spec.Logger = _logger;
+            var spec = new ModuleSpec(module, module.FileName, this, SpecRules);
             return spec;
         }
 
@@ -268,7 +281,6 @@ namespace AssemblyAnalyser
                 TryGetTypeDefinition(ref type);
             }
             var spec = new TypeSpec(type, this, SpecRules);
-            spec.Logger = _logger;
             return spec;
         }
 
@@ -422,10 +434,7 @@ namespace AssemblyAnalyser
         private MethodSpec CreateMethodSpec(MethodDefinition method, TypeSpec declaringType)
         {
             declaringType ??= LoadFullTypeSpec(method.DeclaringType);
-            var spec = new MethodSpec(method, declaringType, this, SpecRules)
-            {
-                Logger = _logger
-            };
+            var spec = new MethodSpec(method, declaringType, this, SpecRules);
             return spec;
         }
 
