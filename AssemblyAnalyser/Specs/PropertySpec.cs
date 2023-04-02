@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace AssemblyAnalyser
 {
-    public class PropertySpec : AbstractSpec, IMemberSpec
+    public class PropertySpec : AbstractSpec, IMemberSpec, IImplementsSpec<PropertySpec>
     {
         private PropertyDefinition _propertyDefinition;
         private MethodDefinition _getter;
@@ -14,8 +14,9 @@ namespace AssemblyAnalyser
             : base(rules, specManager)
         {
             _propertyDefinition = propertyInfo;
+            Name = propertyInfo.Name;
             _getter = propertyInfo.GetMethod;
-            _setter = propertyInfo.SetMethod;
+            _setter = propertyInfo.SetMethod;            
             DeclaringType = declaringType;
             IsSystemProperty = declaringType.IsSystemType;
         }
@@ -24,10 +25,13 @@ namespace AssemblyAnalyser
         public MethodSpec Setter { get; private set; }
 
         TypeSpec IMemberSpec.ResultType => PropertyType;
-        public TypeSpec PropertyType { get; private set; }
+        TypeSpec _propertyType;
+        public TypeSpec PropertyType => _propertyType ??= TryGetPropertyType();
                 
         public TypeSpec DeclaringType { get; }
         public bool? IsSystemProperty { get; }
+
+        public PropertySpec Implements { get; set; }
 
         public IEnumerable<MethodDefinition> InnerMethods()
         {
@@ -43,13 +47,17 @@ namespace AssemblyAnalyser
         {
             Getter = _specManager.LoadMethodSpec(_getter, DeclaringType);
             Setter = _specManager.LoadMethodSpec(_setter, DeclaringType);
+            _propertyType = TryGetPropertyType();
+            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
+        }
+
+        private TypeSpec TryGetPropertyType()
+        {
             if (_specManager.TryLoadTypeSpec(() => _propertyDefinition.PropertyType, out TypeSpec typeSpec))
             {
-                PropertyType = typeSpec;
                 typeSpec.RegisterAsResultType(this);
-                
             }
-            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
+            return typeSpec;
         }
 
         protected override CustomAttribute[] GetAttributes()

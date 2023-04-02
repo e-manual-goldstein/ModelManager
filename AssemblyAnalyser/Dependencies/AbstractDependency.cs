@@ -17,5 +17,9 @@
 
         public TDependsOn DependsOn { get; set; }
 
+        public override string ToString()
+        {
+            return $"{RequiredBy} --> {DependsOn}";
+        }
     }
 }

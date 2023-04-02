@@ -22,6 +22,8 @@ namespace AssemblyAnalyser
             ExclusionRules = rules.OfType<ExclusionRule>().ToList();            
         }
 
+        public string Name { get; protected set; }
+
         protected TypeSpec[] _attributes;
         public TypeSpec[] Attributes => _attributes ??= _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this);
 

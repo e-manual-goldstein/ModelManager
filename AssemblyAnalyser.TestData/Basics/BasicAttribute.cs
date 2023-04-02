@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AssemblyAnalyser.TestData
+namespace AssemblyAnalyser.TestData.Basics
 {
     public class BasicAttribute : Attribute
     {

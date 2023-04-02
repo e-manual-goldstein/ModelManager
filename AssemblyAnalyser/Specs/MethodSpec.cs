@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace AssemblyAnalyser
 {
-    public class MethodSpec : AbstractSpec, IMemberSpec
+    public class MethodSpec : AbstractSpec, IMemberSpec, IImplementsSpec<MethodSpec>
     {
         MethodDefinition _methodDefinition;
 
@@ -15,36 +15,55 @@ namespace AssemblyAnalyser
             : base(rules, specManager)
         {
             _methodDefinition = methodDefinition;
+            Name = methodDefinition.Name;
             IsSystemMethod = declaringType.IsSystemType;
             IsConstructor = methodDefinition.IsConstructor;
             DeclaringType = declaringType;
         }
 
-        public TypeSpec ResultType { get; private set; }
+        protected MethodSpec(ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        {
+
+        }
+
+        TypeSpec _resultType;
+        public TypeSpec ResultType => _resultType ??= TryGetReturnType();
+
         public TypeSpec DeclaringType { get; }
-        public ParameterSpec[] Parameters { get; private set; }
+
+        ParameterSpec[] _parameters;
+        public ParameterSpec[] Parameters => _parameters ??= _specManager.TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray(), this);
+
         List<TypeSpec> _localVariableTypes = new List<TypeSpec>();
         public TypeSpec[] LocalVariableTypes => _localVariableTypes.ToArray();
         List<TypeSpec> _exceptionCatchTypes = new List<TypeSpec>();
         public TypeSpec[] ExceptionCatchTypes => _exceptionCatchTypes.ToArray();
+
         public bool? IsSystemMethod { get; }
         public bool IsConstructor { get; }
         
+        public MethodSpec Implements { get; set; }
+
         protected override void BuildSpec()
         {
-            if (_specManager.TryLoadTypeSpec(() => _methodDefinition.ReturnType, out TypeSpec returnTypeSpec))
-            {
-                ResultType = returnTypeSpec;
-                returnTypeSpec.RegisterAsResultType(this);
-            }
-            Parameters = _specManager.TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray(), this);
+            _resultType = TryGetReturnType();
+            _parameters = _specManager.TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray(), this);
             if (_methodDefinition.Body is MethodBody body)
             {
-                //ProcessMethodBodyOperands(body);
+                ProcessMethodBodyOperands(body);
                 ProcessLocalVariables(body);
                 ProcessExceptionClauseCatchTypes(body);
             }
             _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
+        }
+
+        private TypeSpec TryGetReturnType()
+        {
+            if (_specManager.TryLoadTypeSpec(() => _methodDefinition.ReturnType, out TypeSpec returnTypeSpec))
+            {
+                returnTypeSpec.RegisterAsResultType(this);
+            }
+            return returnTypeSpec;
         }
 
         protected override CustomAttribute[] GetAttributes()
@@ -109,7 +128,15 @@ namespace AssemblyAnalyser
 
         public bool IsSpecFor(MethodReference method)
         {
-            return _methodDefinition.FullName == method.FullName && MatchParameters(method.Parameters.ToArray());
+            if (_methodDefinition.Name == method.Name)
+            {
+                if (method is GenericInstanceMethod != _methodDefinition.IsGenericInstance)
+                {
+                    return false;
+                }
+                return !method.Parameters.Any() || MatchParameters(method.Parameters.ToArray());
+            }
+            return false;
         }
 
         private bool MatchParameters(ParameterDefinition[] parameters)
@@ -121,7 +148,19 @@ namespace AssemblyAnalyser
             }
             for (int i = 0; i < parameters.Length; i++)
             {
-                if (myParameters[i].Name == parameters[i].Name || myParameters[i].ParameterType == parameters[i].ParameterType)
+                if (myParameters[i].Name != parameters[i].Name || myParameters[i].ParameterType != parameters[i].ParameterType)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public bool HasExactParameterTypes(ParameterSpec[] parameterSpecs)
+        {
+            for (int i = 0; i < parameterSpecs.Length; i++)
+            {
+                if (Parameters[i].ParameterType != parameterSpecs[i].ParameterType)
                 {
                     return false;
                 }

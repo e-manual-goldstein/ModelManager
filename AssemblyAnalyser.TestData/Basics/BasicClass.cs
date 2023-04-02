@@ -1,10 +1,21 @@
 ﻿using System;
 
-namespace AssemblyAnalyser.TestData
+namespace AssemblyAnalyser.TestData.Basics
 {
     [Basic]
     public class BasicClass : IBasicInterface
     {
+
+        public BasicClass()
+        {
+
+        }
+
+        public BasicClass(string stringParam)
+        {
+
+        }
+
         public string PublicProperty { get; set; }
 
         [Basic]

@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Mono.Cecil;
 using AssemblyAnalyser.Specs;
+using System;
 
 namespace AssemblyAnalyser
 {
@@ -42,7 +43,7 @@ namespace AssemblyAnalyser
         TypeDefinition _typeDefinition;
         TypeReference _typeReference;
         public TypeSpec(TypeReference typeReference, ISpecManager specManager, List<IRule> rules)
-            : this(typeReference.Name, typeReference.FullName, specManager, rules)
+            : this($"{typeReference.Namespace}.{ typeReference.Name}", typeReference.FullName, specManager, rules)
         {
             _typeReference = typeReference;
             _typeDefinition = (typeReference is TypeDefinition typeDefinition) ? typeDefinition : null;
@@ -99,6 +100,7 @@ namespace AssemblyAnalyser
             _properties = CreatePropertySpecs();
             _events = CreateEventSpecs();
             _attributes = _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this);
+            ProcessInterfaceImplementations();
             ProcessCompilerGenerated();
             ProcessGenerics();
         }
@@ -182,7 +184,8 @@ namespace AssemblyAnalyser
         {
             if (_typeDefinition == null)
             {
-                return null;
+                _specManager.AddFault($"Unable to determine MethodSpecs for {this}");
+                return Array.Empty<MethodSpec>();
             }
             var specs = _specManager.TryLoadMethodSpecs(() => _typeDefinition.Methods.Where(m => m.DeclaringType == _typeDefinition).ToArray(), this);
             return specs;
@@ -195,10 +198,16 @@ namespace AssemblyAnalyser
         {
             if (_typeDefinition == null)
             {
-                return null;
+                _specManager.AddFault($"Unable to determine PropertySpecs for {this}");
+                return Array.Empty<PropertySpec>();
             }
             var specs = _specManager.TryLoadPropertySpecs(() => _typeDefinition.Properties.Where(m => m.DeclaringType == _typeDefinition).ToArray(), this);
             return specs;
+        }
+
+        public PropertySpec GetPropertySpec(string name)
+        {
+            return _properties.Where(p => p.Name == name).SingleOrDefault();
         }
 
         FieldSpec[] _fields;
@@ -265,6 +274,42 @@ namespace AssemblyAnalyser
 
         #endregion
 
+        private void ProcessInterfaceImplementations()
+        {
+            foreach (var interfaceSpec in Interfaces)
+            {
+                RegisterMemberImplementations(interfaceSpec);
+            }            
+        }
+
+        private void RegisterMemberImplementations(TypeSpec interfaceSpec)
+        {
+            foreach (var interfaceProperty in interfaceSpec.Properties)
+            {
+                var propertySpec = GetPropertySpec(interfaceProperty.Name);
+                if (propertySpec == null)
+                {
+                    _specManager.AddFault($"{this} does not implement {interfaceProperty}");
+                }
+                else
+                {
+                    propertySpec.Implements = interfaceProperty;
+                }
+            }
+            foreach (var interfaceMethod in interfaceSpec.Methods)
+            {
+                var methodSpec = MatchMethodSpecByNameAndParameterType(interfaceMethod.Name, interfaceMethod.Parameters);
+                if (methodSpec == null)
+                {
+                    _specManager.AddFault($"{this} does not implement {interfaceMethod}");
+                }
+                else
+                {
+                    methodSpec.Implements = methodSpec;
+                }
+            }
+        }
+
         public bool IsNullSpec { get; private set; }
         public bool IsErrorSpec { get; private set; }
         public bool IsCompilerGenerated { get; private set; }
@@ -290,7 +335,7 @@ namespace AssemblyAnalyser
 
         public override string ToString()
         {
-            return $"{Module.ModuleShortName}_{FullTypeName}" ?? UniqueTypeName;
+            return $"{_typeReference.Namespace}_{_typeReference.FullName}" ?? UniqueTypeName;
         }
         
         private List<TypeSpec> _implementations = new List<TypeSpec>();
@@ -402,11 +447,11 @@ namespace AssemblyAnalyser
             _typeDefinition = type;
         }
 
-        public bool IsSpecFor(TypeReference typeReference)
+        public bool IsSpecFor(TypeReference typeReference, bool moduleChecked = false)
         {
-            if (Module.IsSpecFor(typeReference))
+            if (moduleChecked || Module.IsSpecFor(typeReference))
             {
-                return typeReference.FullName == _typeDefinition.FullName;
+                return typeReference.FullName == _typeDefinition?.FullName;
             }
             else
             {
@@ -417,7 +462,21 @@ namespace AssemblyAnalyser
 
         public MethodSpec GetMethodSpec(MethodReference method)
         {
-            return Methods.Single(m => m.IsSpecFor(method));
+            var matchingMethods = Methods.Where(m => m.IsSpecFor(method)).ToList();
+            if (matchingMethods.Count > 1)
+            {
+
+            }
+            return Methods.SingleOrDefault(m => m.IsSpecFor(method));
+        }
+
+        public MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs)
+        {
+            var matchingMethods = Methods.Where(m
+                    => m.Name == methodName
+                    && m.Parameters.Length == parameterSpecs.Length
+                    && m.HasExactParameterTypes(parameterSpecs));
+            return matchingMethods.SingleOrDefault();
         }
 
         private void RegisterDependentTypeForModule(TypeSpec typeSpec)

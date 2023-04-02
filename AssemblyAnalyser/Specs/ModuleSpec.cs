@@ -106,7 +106,7 @@ namespace AssemblyAnalyser
 
         public TypeSpec GetTypeSpec(TypeReference typeReference)
         {
-            var matchingByName = TypeSpecs.Where(t => t.IsSpecFor(typeReference)).ToList();
+            var matchingByName = TypeSpecs.Where(t => t.IsSpecFor(typeReference, true)).ToList();
             return matchingByName.Single();
         }
 
@@ -117,8 +117,8 @@ namespace AssemblyAnalyser
 
         public bool IsSpecFor(TypeReference typeReference)
         {
-            var definition = typeReference.Resolve();
-            return _baseVersion.HasTypeReference(definition.Scope.Name, definition.FullName);
+            throw new NotImplementedException();
+            //return _baseVersion.HasTypeReference(definition.Scope.Name, definition.FullName);
             //return _baseVersion.Types.Any(t 
             //    => t.FullName == typeReference.FullName
             //    && t.Scope == typeReference.Scope);

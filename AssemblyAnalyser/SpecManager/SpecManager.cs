@@ -27,6 +27,14 @@ namespace AssemblyAnalyser
         }
         
         public List<IRule> SpecRules { get; set; } = new List<IRule>();
+        
+        List<string> _faults = new List<string>();
+        public string[] Faults => _faults.ToArray();
+
+        public void AddFault(string faultMessage)
+        {
+            _faults.Add(faultMessage);
+        }
 
         public void SetWorkingDirectory(string workingDirectory)
         {
@@ -244,7 +252,8 @@ namespace AssemblyAnalyser
 
         private string CreateUniqueTypeSpecName(TypeReference type)
         {
-            return $"{type.Scope.Name}_{type.FullName}";
+            var moduleName = type.Scope.Name.Replace(".dll", "");
+            return $"{moduleName}_{type.FullName}";
         }
 
         private TypeSpec LoadFullTypeSpec(TypeReference type)
@@ -254,7 +263,6 @@ namespace AssemblyAnalyser
 
         private TypeSpec CreateFullTypeSpec(TypeReference type)
         {
-            
             var spec = new TypeSpec(type, this, SpecRules)
             {
                 Name = type.Name,
@@ -342,22 +350,28 @@ namespace AssemblyAnalyser
 
         public MethodSpec LoadMethodSpec(MethodReference method)
         {
-            if (!(method is MethodDefinition methodDefinition))
+            var methodDefinition = method as MethodDefinition;
+            try
+            {
+                methodDefinition = method.Resolve();                    
+            }
+            catch
+            {
+            }
+            if (methodDefinition == null)
             {
                 try
                 {
-                    methodDefinition = method.Resolve();
+                    var module = LoadReferencedModuleByScopeName(method.Module, method.DeclaringType.Scope);
+                    var type = module.GetTypeSpec(method.DeclaringType);
+                    return type.GetMethodSpec(method) ?? new MissingMethodSpec(method, this, SpecRules);
                 }
                 catch
                 {
-                    var module = LoadReferencedModuleByScopeName(method.Module, method.DeclaringType.Scope);
-                    var type = module.GetTypeSpec(method.DeclaringType);
-                    return type.GetMethodSpec(method);
-                }
-                //return type.GetMethodSpec(method);
+                    return new MissingMethodSpec(method, this, SpecRules);
+                }                
             }
-            return _methodSpecs.GetOrAdd(methodDefinition, 
-                (key) => CreateMethodSpec(methodDefinition, LoadTypeSpec(methodDefinition.DeclaringType)));
+            return _methodSpecs.GetOrAdd(methodDefinition, (key) => CreateMethodSpec(methodDefinition, LoadTypeSpec(methodDefinition.DeclaringType)));
         }
 
         public MethodSpec LoadMethodSpec(MethodDefinition method, TypeSpec declaringType)

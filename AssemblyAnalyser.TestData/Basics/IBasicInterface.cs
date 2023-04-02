@@ -1,4 +1,4 @@
-﻿namespace AssemblyAnalyser.TestData
+﻿namespace AssemblyAnalyser.TestData.Basics
 {
     public interface IBasicInterface
     {

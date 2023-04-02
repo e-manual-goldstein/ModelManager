@@ -41,13 +41,13 @@ namespace AssemblyAnalyser.Tests
             _specManager.ProcessLoadedEvents();
             //_specManager.ProcessLoadedAttributes();
             _basicClassSpec = _moduleSpec.TypeSpecs
-                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.BasicClass");
+                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicClass");
             _basicInterfaceSpec = _moduleSpec.TypeSpecs
-                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.IBasicInterface");
+                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.IBasicInterface");
             _basicAttribute = _moduleSpec.TypeSpecs
-                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.BasicAttribute");
+                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicAttribute");
             _basicDelegate = _moduleSpec.TypeSpecs
-                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.BasicDelegate");
+                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicDelegate");
         }
 
         #region Basic Class Tests
@@ -90,7 +90,7 @@ namespace AssemblyAnalyser.Tests
         [TestMethod]
         public void BasicClassSpecHasExactlyOneField_Test()
         {
-            Assert.AreEqual(1, _basicClassSpec.Fields.Length);
+            Assert.AreEqual(1, _basicClassSpec.Fields.Where(f => !f.IsBackingField && !f.IsEventField).Count());
         }
 
         [TestMethod]
@@ -106,17 +106,42 @@ namespace AssemblyAnalyser.Tests
         }
 
         [TestMethod]
-        public void BasicClassSpecHasSevenMethods_Test()
+        public void BasicClassSpecHasThreeBackingFields_Test()
         {
-            Assert.AreEqual(3, _basicClassSpec.Properties.Length);
+            Assert.AreEqual(3, _basicClassSpec.Fields.Where(f => f.IsBackingField).Count());
+        }
+
+        [TestMethod]
+        public void BasicClassSpecHasElevenMethods_Test()
+        {
+            Assert.AreEqual(11, _basicClassSpec.Methods.Length);
+        }
+
+        [TestMethod]
+        public void BasicClassSpecHasTwoConstructors_Test()
+        {
+            Assert.AreEqual(2, _basicClassSpec.Methods.Where(m => m.IsConstructor).Count());
+        }
+
+        [TestMethod]
+        public void BasicClassSpecHasOneParameterLessConstructor_Test()
+        {
+            Assert.AreEqual(1, _basicClassSpec.Methods.Where(m => m.IsConstructor && !m.Parameters.Any()).Count());
+        }
+
+        [TestMethod]
+        public void BasicClassSpecHasOneConstructorWithParameters_Test()
+        {
+            Assert.AreEqual(1, _basicClassSpec.Methods.Where(m => m.IsConstructor && m.Parameters.Any()).Count());
         }
 
         [TestMethod]
         public void BasicClassSpecHasTwoNonPropertyMethods_Test()
         {
             var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.InnerSpecs());
+            var constructors = _basicClassSpec.Methods.Where(m => m.IsConstructor);
             var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
-            var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods).Except(eventMethods);
+            var nonPropertyMethods = _basicClassSpec.Methods.Except(constructors).Except(propertyMethods).Except(eventMethods);
 
             Assert.AreEqual(2, nonPropertyMethods.Count());
         }
@@ -128,7 +153,7 @@ namespace AssemblyAnalyser.Tests
             var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
             var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods).Except(eventMethods);
 
-            Assert.AreEqual(1, nonPropertyMethods.Where(d => !d.Parameters.Any()).Count());
+            Assert.AreEqual(1, nonPropertyMethods.Where(d => !d.IsConstructor && !d.Parameters.Any()).Count());
         }
 
         [TestMethod]
@@ -138,7 +163,7 @@ namespace AssemblyAnalyser.Tests
             var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
             var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods).Except(eventMethods);
 
-            Assert.AreEqual(1, nonPropertyMethods.Where(d => d.Parameters.Any()).Count());
+            Assert.AreEqual(1, nonPropertyMethods.Where(d => !d.IsConstructor && d.Parameters.Any()).Count());
         }
 
         [TestMethod]
@@ -147,7 +172,7 @@ namespace AssemblyAnalyser.Tests
             var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.InnerSpecs());
             var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
             var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods).Except(eventMethods);
-            var parameteredMethod = nonPropertyMethods.Single(d => d.Parameters.Any());
+            var parameteredMethod = nonPropertyMethods.Single(d => !d.IsConstructor && d.Parameters.Any());
 
             Assert.AreEqual(2, parameteredMethod.Parameters.Length);
         }
@@ -156,6 +181,12 @@ namespace AssemblyAnalyser.Tests
         public void BasicClassSpecHasExactlyOneEvent_Test()
         {
             Assert.AreEqual(1, _basicClassSpec.Events.Length);
+        }
+
+        [TestMethod]
+        public void BasicClassSpecHasExactlyOneEventField_Test()
+        {
+            Assert.AreEqual(1, _basicClassSpec.Fields.Where(f => f.IsEventField).Count());
         }
         #endregion
 
