@@ -1,6 +1,7 @@
 ﻿using AssemblyAnalyser.Specs;
 using Microsoft.Extensions.Logging;
 using Mono.Cecil;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -53,6 +54,11 @@ namespace AssemblyAnalyser
             {
                 Build();
             }
+        }
+
+        public void ForceRebuildSpec()
+        {
+            Build();
         }
 
         public bool IsProcessed => _processed;

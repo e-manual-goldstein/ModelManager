@@ -47,18 +47,13 @@ namespace AssemblyAnalyser
         {
             _typeReference = typeReference;
             _typeDefinition = (typeReference is TypeDefinition typeDefinition) ? typeDefinition : null;
+            Name = typeReference.Name;
+            Namespace = typeReference.Namespace;
+            if (_typeDefinition == null)
+            {
+                specManager.AddFault($"Could not find matching TypeDefinition for {FullTypeName}");
+            }
             IsInterface = _typeDefinition?.IsInterface;
-            //if (!module.HasScopeName(typeReference.Scope.Name))
-            //{
-            //    if (typeReference.IsGenericInstance)
-            //    {
-            //        //handle
-            //    }
-            //    else
-            //    {
-
-            //    }
-            //}
             IsSystemType = Module?.IsSystem;
         }
 
@@ -72,7 +67,6 @@ namespace AssemblyAnalyser
         public string UniqueTypeName { get; }
         public string FullTypeName { get; }
         public string Namespace { get; set; }
-        public string Name { get; set; }
         public bool? IsInterface { get; private set; }
         public bool? IsSystemType { get; }
 
@@ -276,10 +270,13 @@ namespace AssemblyAnalyser
 
         private void ProcessInterfaceImplementations()
         {
-            foreach (var interfaceSpec in Interfaces)
+            if (IsInterface != true) // Skip unless explicitly labelled as NOT an interface
             {
-                RegisterMemberImplementations(interfaceSpec);
-            }            
+                foreach (var interfaceSpec in Interfaces)
+                {
+                    RegisterMemberImplementations(interfaceSpec);
+                }
+            }
         }
 
         private void RegisterMemberImplementations(TypeSpec interfaceSpec)
@@ -468,6 +465,11 @@ namespace AssemblyAnalyser
 
             }
             return Methods.SingleOrDefault(m => m.IsSpecFor(method));
+        }
+
+        public MethodSpec[] GetMethodSpecs(string methodName)
+        {
+            return Methods.Where(m => m.Name == methodName).ToArray();
         }
 
         public MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs)

@@ -147,7 +147,7 @@ namespace AssemblyAnalyser
 
         public ModuleSpec LoadReferencedModuleByScopeName(ModuleDefinition module, IMetadataScope scope)
         {
-            if (module.Name == scope.Name)
+            if (module.GetScopeNameWithoutExtension() == scope.GetScopeNameWithoutExtension())
             {
                 return LoadModuleSpec(module);
             }
@@ -159,7 +159,7 @@ namespace AssemblyAnalyser
                 _ => throw new NotImplementedException()
             };
             var assemblyReference = module.AssemblyReferences
-                .Single(a => a.FullName.ParseShortName() == scope.Name && a.Version == version);
+                .Single(a => a.FullName.ParseShortName() == scope.GetScopeNameWithoutExtension() && a.Version == version);
             return LoadReferencedModule(locator, assemblyReference);            
         }
 
@@ -252,7 +252,7 @@ namespace AssemblyAnalyser
 
         private string CreateUniqueTypeSpecName(TypeReference type)
         {
-            var moduleName = type.Scope.Name.Replace(".dll", "");
+            var moduleName = type.Scope.GetScopeNameWithoutExtension();
             return $"{moduleName}_{type.FullName}";
         }
 
@@ -263,13 +263,49 @@ namespace AssemblyAnalyser
 
         private TypeSpec CreateFullTypeSpec(TypeReference type)
         {
-            var spec = new TypeSpec(type, this, SpecRules)
+            if (!type.IsDefinition && !(type.IsGenericInstance || type.IsGenericParameter))
             {
-                Name = type.Name,
-                Namespace = type.Namespace,
-            };
+                TryGetTypeDefinition(ref type);
+            }
+            var spec = new TypeSpec(type, this, SpecRules);
             spec.Logger = _logger;
             return spec;
+        }
+
+        private void TryGetTypeDefinition(ref TypeReference type)
+        {
+            TypeDefinition typeDefinition = null;
+            try
+            {
+                typeDefinition = type.Resolve();
+            }
+            catch 
+            {
+            }
+            if (typeDefinition == null)
+            {
+                var scopeName = type.Scope.GetScopeNameWithoutExtension();
+                var modules = _moduleSpecs.Where(m => m.Key == scopeName).ToList();
+                if (!modules.Any())
+                {
+                    AddFault($"Module not found for {type.Namespace}.{type.Name}");
+                }
+                else if (modules.Count > 1)
+                {
+                    AddFault($"Multiple Modules found for {type.Namespace}.{type.Name}");
+                }
+                else
+                {
+                    var module = modules.Single();
+                    typeDefinition = module.Value.GetTypeDefinition(type);
+                }
+            }
+            if (typeDefinition != null)
+            {
+                type = typeDefinition;
+                return;
+            }
+            AddFault("Could not fully resolve TypeDefinition");
         }
 
         public bool TryLoadTypeSpec(Func<TypeReference> getType, out TypeSpec typeSpec)

@@ -9,8 +9,8 @@
             RequiredBy = requiredBy;
             DependsOn = dependsOn;
 
-            requiredBy.RegisterAsRequiredBy(this);
-            dependsOn.RegisterDependency(this);
+            requiredBy.RegisterDependency(this);
+            dependsOn.RegisterAsRequiredBy(this);
         }
 
         public TRequiredBy RequiredBy { get; set; }

@@ -9,13 +9,14 @@ using System.Reflection;
 namespace AssemblyAnalyser.Tests
 {
     [TestClass]
-    public class BasicPropertyTests
+    public class BasicMethodTests
     {
         ISpecManager _specManager;
         ILoggerProvider _loggerProvider;
         IExceptionManager _exceptionManager;
         ModuleSpec _moduleSpec;
         TypeSpec _basicClassSpec;
+        TypeSpec _basicInterfaceSpec;
 
         [TestInitialize] 
         public void Initialize() 
@@ -32,28 +33,29 @@ namespace AssemblyAnalyser.Tests
                 typeSpec.Process();
             }
             _specManager.ProcessLoadedProperties();
-            //_specManager.ProcessLoadedMethods();
-            //_specManager.ProcessLoadedFields();
-            //_specManager.ProcessLoadedParameters();
-            //_specManager.ProcessLoadedEvents();
+            _specManager.ProcessLoadedMethods();
+            _specManager.ProcessLoadedFields();
+            _specManager.ProcessLoadedParameters();
+            _specManager.ProcessLoadedEvents();
             //_specManager.ProcessLoadedAttributes();
             _basicClassSpec = _moduleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicClass");
+            _basicInterfaceSpec = _moduleSpec.TypeSpecs
+                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.IBasicInterface");
         }
 
         #region Basic Property Tests
         
         [TestMethod]
-        public void BasicPropertySpecIsNotNull_Test()
+        public void BasicMethodSpecIsNotNull_Test()
         {
-            Assert.IsNotNull(_basicClassSpec.GetPropertySpec("PublicProperty"));
+            Assert.IsNotNull(_basicClassSpec.GetMethodSpecs("PublicMethod").SingleOrDefault());
         }
 
         [TestMethod]
-        public void BasicPropertySpecLinkedToInterfaceImplementationMember_Test()
+        public void BasicMethodSpecLinkedToInterfaceImplementationMember_Test()
         {
-            var interfaceImplementation = _basicClassSpec.GetPropertySpec("ReadOnlyInterfaceImpl");
-
+            var interfaceImplementation = _basicClassSpec.GetMethodSpecs("PublicMethod").SingleOrDefault();
             Assert.IsNotNull(interfaceImplementation.Implements);
         }
 

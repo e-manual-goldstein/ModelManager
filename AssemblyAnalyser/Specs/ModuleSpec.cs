@@ -77,6 +77,7 @@ namespace AssemblyAnalyser
 
         internal TypeDefinition GetTypeDefinition(TypeReference typeReference)
         {
+            var types = _baseVersion.Types.ToArray();
             return _baseVersion.GetType(typeReference.FullName);
         }
 
