@@ -53,6 +53,14 @@ namespace AssemblyAnalyser
             AddFault($"[{faultSeverity}]\t{faultMessage}");
         }
 
+        List<string> _messages = new List<string>();
+        public string[] Messages => _messages.ToArray();
+
+        public void AddMessage(string msg)
+        {
+            _messages.Add(msg);
+        }
+
         public void SetWorkingDirectory(string workingDirectory)
         {
             _workingFiles = Directory.EnumerateFiles(workingDirectory, "*.dll").ToDictionary(d => Path.GetFileNameWithoutExtension(d), e => e);
@@ -187,7 +195,7 @@ namespace AssemblyAnalyser
                 var assemblyLocation = locator.LocateAssemblyByName(assemblyReference.FullName);
                 if (string.IsNullOrEmpty(assemblyLocation))
                 {
-                    _logger.LogWarning($"Asssembly not found {assemblyReference.FullName}");
+                    AddFault(FaultSeverity.Warning, $"Asssembly not found {assemblyReference.FullName}");
                     return null;
                 }
                 var referencedModule = ModuleDefinition.ReadModule(assemblyLocation);
@@ -199,11 +207,11 @@ namespace AssemblyAnalyser
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
-                _logger.LogWarning($"Unable to load assembly {assemblyReference.FullName}. Required by {assemblyReference}");
+                AddFault(FaultSeverity.Warning, $"Unable to load assembly {assemblyReference.FullName}. Required by {assemblyReference}");
             }
             catch
             {
-                _logger.LogWarning($"Unable to load assembly {assemblyReference.FullName}. Required by {assemblyReference}");
+                AddFault(FaultSeverity.Warning, $"Unable to load assembly {assemblyReference.FullName}. Required by {assemblyReference}");
             }
 
             return null;
@@ -271,15 +279,16 @@ namespace AssemblyAnalyser
 
         private TypeSpec LoadFullTypeSpec(TypeReference type)
         {
+            if (!type.IsDefinition && !(type.IsGenericInstance || type.IsGenericParameter))
+            {
+                TryGetTypeDefinition(ref type);
+            }
             return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type), (key) => CreateFullTypeSpec(type));
         }
 
         private TypeSpec CreateFullTypeSpec(TypeReference type)
         {
-            if (!type.IsDefinition && !(type.IsGenericInstance || type.IsGenericParameter))
-            {
-                TryGetTypeDefinition(ref type);
-            }
+            AddMessage($"Creating new TypeSpec for {CreateUniqueTypeSpecName(type)}");
             var spec = new TypeSpec(type, this, SpecRules);
             return spec;
         }
@@ -291,8 +300,9 @@ namespace AssemblyAnalyser
             {
                 typeDefinition = type.Resolve();
             }
-            catch 
+            catch (AssemblyResolutionException assemblyResolutionException)
             {
+                AddFault($"Failed to resolve Type {type}: {assemblyResolutionException.Message}");
             }
             if (typeDefinition == null)
             {
@@ -360,12 +370,12 @@ namespace AssemblyAnalyser
             }
             catch (TypeLoadException ex)
             {
-                _logger.LogError(ex.Message);
+                AddFault(FaultSeverity.Error, ex.Message);
             }
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
-                _logger.LogError(ex.Message);
+                AddFault(FaultSeverity.Error, ex.Message);
             }
             catch (InvalidOperationException ex)
             {
@@ -452,12 +462,12 @@ namespace AssemblyAnalyser
             }
             catch (TypeLoadException ex)
             {
-                _logger.LogError(ex.Message);
+                AddFault(FaultSeverity.Error, ex.Message);
             }
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
-                _logger.LogError(ex.Message);
+                AddFault(FaultSeverity.Error, ex.Message);
             }
             finally
             {
@@ -512,7 +522,7 @@ namespace AssemblyAnalyser
             }
             catch (TypeLoadException ex)
             {
-                _logger.LogError(ex.Message);
+                AddFault(FaultSeverity.Error, ex.Message);
             }
             catch (FileNotFoundException ex)
             {
@@ -617,7 +627,7 @@ namespace AssemblyAnalyser
             }
             catch (TypeLoadException ex)
             {
-                _logger.LogError(ex.Message);
+                AddFault(FaultSeverity.Error, ex.Message);
             }
             catch (FileNotFoundException ex)
             {
@@ -648,7 +658,7 @@ namespace AssemblyAnalyser
             }
             catch (TypeLoadException ex)
             {
-                _logger.LogError(ex.Message);
+                AddFault(FaultSeverity.Error, ex.Message);
             }
             catch (FileNotFoundException ex)
             {
@@ -705,7 +715,7 @@ namespace AssemblyAnalyser
             }
             catch (TypeLoadException ex)
             {
-                _logger.LogError(ex.Message);
+                AddFault(FaultSeverity.Error, ex.Message);
             }
             catch (FileNotFoundException ex)
             {

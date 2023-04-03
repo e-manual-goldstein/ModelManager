@@ -11,14 +11,17 @@ namespace AssemblyAnalyser
 
         public TypeSpec ParameterType { get; private set; }
         public MethodSpec Method { get; }
+        public bool IsOut { get; }
         public bool? IsSystemParameter { get; }
 
         public ParameterSpec(ParameterDefinition parameterDefinition, MethodSpec method, ISpecManager specManager, List<IRule> rules)
             : base(rules, specManager)
         {
             _parameterDefinition = parameterDefinition;
+            Name = _parameterDefinition.Name;
             IsSystemParameter = method.IsSystemMethod;
             Method = method;
+            IsOut = parameterDefinition.IsOut;
         }
 
         protected override CustomAttribute[] GetAttributes()
@@ -35,5 +38,9 @@ namespace AssemblyAnalyser
             }            
         }
 
+        public override string ToString()
+        {
+            return $"{ParameterType.Name} {Name}";
+        }
     }
 }

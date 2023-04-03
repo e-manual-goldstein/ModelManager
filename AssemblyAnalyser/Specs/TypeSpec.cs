@@ -477,7 +477,12 @@ namespace AssemblyAnalyser
             var matchingMethods = Methods.Where(m
                     => m.Name == methodName
                     && m.Parameters.Length == parameterSpecs.Length
-                    && m.HasExactParameterTypes(parameterSpecs));
+                    && m.HasExactParameters(parameterSpecs));
+            if (matchingMethods.Count() > 1)
+            {
+                _specManager.AddFault(FaultSeverity.Error, $"Multiple Methods found for signature. MethodName:{methodName}");
+                return null;
+            }
             return matchingMethods.SingleOrDefault();
         }
 

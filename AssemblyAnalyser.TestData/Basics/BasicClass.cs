@@ -29,6 +29,31 @@ namespace AssemblyAnalyser.TestData.Basics
 
         }
 
+        public void MethodWithOutParameter(string stringParam, Guid guidParam, out string outParam)
+        {
+            outParam = stringParam;
+        }
+
+        public void OverloadedMethod(string stringParam, Guid guidParam, out string outParam)
+        {
+            outParam = stringParam;
+        }
+
+        public void OverloadedMethod(string stringParam, Guid guidParam, string outParam)
+        {
+            
+        }
+
+        public void OverloadedMethod(string stringParam, string outParam)
+        {
+            
+        }
+
+        public void OverloadedMethod(string stringParam, Guid guidParam)
+        {
+            
+        }
+
         public string ReadOnlyInterfaceImpl { get; }
 
         public string ReadWriteInterfaceImpl { get; set; }

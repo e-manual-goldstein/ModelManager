@@ -44,7 +44,7 @@ namespace AssemblyAnalyser.Tests
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.IBasicInterface");
         }
 
-        #region Basic Property Tests
+        #region Basic Method Tests
         
         [TestMethod]
         public void BasicMethodSpecIsNotNull_Test()
@@ -58,6 +58,37 @@ namespace AssemblyAnalyser.Tests
             var interfaceImplementation = _basicClassSpec.GetMethodSpecs("PublicMethod").SingleOrDefault();
             Assert.IsNotNull(interfaceImplementation.Implements);
         }
+
+        [TestMethod]
+        public void BasicMethodWithOutParameterHasCorrectParameters()
+        {
+            var methodWithOutParameter = _basicClassSpec.GetMethodSpecs("MethodWithOutParameter").SingleOrDefault();
+            methodWithOutParameter.ForceRebuildSpec();
+            Assert.AreEqual(3, methodWithOutParameter.Parameters.Length);
+            Assert.AreEqual(1, methodWithOutParameter.Parameters.Where(m => m.IsOut).Count());
+        }
+
+        #endregion
+
+        #region Method Overloading Tests
+
+        [TestMethod]
+        public void BasicMethodHasFourOverloads_Test()
+        {
+            Assert.AreEqual(4, _basicClassSpec.GetMethodSpecs("OverloadedMethod").Length);
+        }
+
+        [TestMethod]
+        public void BasicMethodCanDistinguishAllOverloads_Test()
+        {
+            var overloadedMethods = _basicClassSpec.GetMethodSpecs("OverloadedMethod");
+            foreach (var overload in overloadedMethods)
+            {
+                var methodSpec = _basicClassSpec.MatchMethodSpecByNameAndParameterType(overload.Name, overload.Parameters);
+                Assert.IsNotNull(methodSpec);
+            }
+        }
+
 
         #endregion
 

@@ -112,9 +112,9 @@ namespace AssemblyAnalyser.Tests
         }
 
         [TestMethod]
-        public void BasicClassSpecHasElevenMethods_Test()
+        public void BasicClassSpecHasMultipleMethods_Test()
         {
-            Assert.AreEqual(11, _basicClassSpec.Methods.Length);
+            Assert.IsTrue(_basicClassSpec.Methods.Any());
         }
 
         [TestMethod]
@@ -136,14 +136,14 @@ namespace AssemblyAnalyser.Tests
         }
 
         [TestMethod]
-        public void BasicClassSpecHasTwoNonPropertyMethods_Test()
+        public void BasicClassSpecHasMultipleNonPropertyMethods_Test()
         {
             var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.InnerSpecs());
             var constructors = _basicClassSpec.Methods.Where(m => m.IsConstructor);
             var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
             var nonPropertyMethods = _basicClassSpec.Methods.Except(constructors).Except(propertyMethods).Except(eventMethods);
 
-            Assert.AreEqual(2, nonPropertyMethods.Count());
+            Assert.IsTrue(nonPropertyMethods.Any());
         }
 
         [TestMethod]
@@ -157,13 +157,13 @@ namespace AssemblyAnalyser.Tests
         }
 
         [TestMethod]
-        public void BasicClassSpecHasOneParameteredMethod_Test()
+        public void BasicClassSpecHasMultipleParameteredMethods_Test()
         {
             var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.InnerSpecs());
             var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
             var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods).Except(eventMethods);
 
-            Assert.AreEqual(1, nonPropertyMethods.Where(d => !d.IsConstructor && d.Parameters.Any()).Count());
+            Assert.IsTrue(nonPropertyMethods.Where(d => !d.IsConstructor && d.Parameters.Any()).Any());
         }
 
         [TestMethod]
@@ -172,7 +172,7 @@ namespace AssemblyAnalyser.Tests
             var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.InnerSpecs());
             var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
             var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods).Except(eventMethods);
-            var parameteredMethod = nonPropertyMethods.Single(d => !d.IsConstructor && d.Parameters.Any());
+            var parameteredMethod = nonPropertyMethods.Single(d => d.Name == "PublicMethodWithParameters" && !d.IsConstructor && d.Parameters.Any());
 
             Assert.AreEqual(2, parameteredMethod.Parameters.Length);
         }

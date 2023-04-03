@@ -156,11 +156,11 @@ namespace AssemblyAnalyser
             return true;
         }
 
-        public bool HasExactParameterTypes(ParameterSpec[] parameterSpecs)
+        public bool HasExactParameters(ParameterSpec[] parameterSpecs)
         {
             for (int i = 0; i < parameterSpecs.Length; i++)
             {
-                if (Parameters[i].ParameterType != parameterSpecs[i].ParameterType)
+                if (Parameters[i].ParameterType != parameterSpecs[i].ParameterType || Parameters[i].IsOut != parameterSpecs[i].IsOut)
                 {
                     return false;
                 }
