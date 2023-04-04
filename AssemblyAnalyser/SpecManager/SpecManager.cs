@@ -26,7 +26,9 @@ namespace AssemblyAnalyser
             _exceptionManager = exceptionManager;
         }
         
-        public List<IRule> SpecRules { get; set; } = new List<IRule>();
+        
+        List<IRule> _specRules = new List<IRule>();
+        public IRule[] SpecRules => _specRules.ToArray();
         
         List<string> _faults = new List<string>();
         public string[] Faults => _faults.ToArray();
@@ -224,7 +226,7 @@ namespace AssemblyAnalyser
 
         private ModuleSpec CreateFullModuleSpec(ModuleDefinition module)
         {
-            var spec = new ModuleSpec(module, module.FileName, this, SpecRules);
+            var spec = new ModuleSpec(module, module.FileName, this);
             return spec;
         }
 
@@ -290,7 +292,7 @@ namespace AssemblyAnalyser
 
         private TypeSpec CreateFullTypeSpec(TypeReference type)
         {
-            var spec = new TypeSpec(type, this, SpecRules);
+            var spec = new TypeSpec(type, this);
             return spec;
         }
 
@@ -423,11 +425,11 @@ namespace AssemblyAnalyser
                 {
                     var module = LoadReferencedModuleByScopeName(method.Module, method.DeclaringType.Scope);
                     var type = module.GetTypeSpec(method.DeclaringType);
-                    return type.GetMethodSpec(method) ?? new MissingMethodSpec(method, this, SpecRules);
+                    return type.GetMethodSpec(method) ?? new MissingMethodSpec(method, this);
                 }
                 catch
                 {
-                    return new MissingMethodSpec(method, this, SpecRules);
+                    return new MissingMethodSpec(method, this);
                 }                
             }
             return _methodSpecs.GetOrAdd(methodDefinition, (key) => CreateMethodSpec(methodDefinition, LoadTypeSpec(methodDefinition.DeclaringType)));
@@ -445,7 +447,7 @@ namespace AssemblyAnalyser
         private MethodSpec CreateMethodSpec(MethodDefinition method, TypeSpec declaringType)
         {
             declaringType ??= LoadFullTypeSpec(method.DeclaringType);
-            var spec = new MethodSpec(method, declaringType, this, SpecRules);
+            var spec = new MethodSpec(method, declaringType, this);
             return spec;
         }
 
@@ -506,7 +508,7 @@ namespace AssemblyAnalyser
 
         private PropertySpec CreatePropertySpec(PropertyDefinition propertyInfo, TypeSpec declaringType)
         {
-            return new PropertySpec(propertyInfo, declaringType, this, SpecRules);
+            return new PropertySpec(propertyInfo, declaringType, this);
         }
 
         public PropertySpec[] LoadPropertySpecs(PropertyDefinition[] propertyInfos, TypeSpec declaringType)
@@ -561,7 +563,7 @@ namespace AssemblyAnalyser
         private ParameterSpec CreateParameterSpec(ParameterDefinition parameterDefinition, MethodSpec method)
         {
             TryLoadTypeSpecs(() => parameterDefinition.CustomAttributes.Select(t => t.AttributeType).ToArray(), out TypeSpec[] typeSpecs);
-            return new ParameterSpec(parameterDefinition, method, this, SpecRules);
+            return new ParameterSpec(parameterDefinition, method, this);
         }
 
         public ParameterSpec[] LoadParameterSpecs(ParameterDefinition[] parameterDefinitions, MethodSpec method)
@@ -611,7 +613,7 @@ namespace AssemblyAnalyser
 
         private FieldSpec CreateFieldSpec(FieldDefinition fieldInfo, TypeSpec declaringType)
         {
-            return new FieldSpec(fieldInfo, declaringType, this, SpecRules);
+            return new FieldSpec(fieldInfo, declaringType, this);
         }
 
         public FieldSpec[] LoadFieldSpecs(FieldDefinition[] fieldInfos, TypeSpec declaringType)
@@ -738,7 +740,7 @@ namespace AssemblyAnalyser
 
         private EventSpec CreateEventSpec(EventDefinition eventInfo, TypeSpec declaringType)
         {
-            return new EventSpec(eventInfo, declaringType, this, SpecRules);
+            return new EventSpec(eventInfo, declaringType, this);
         }
 
         public EventSpec[] LoadEventSpecs(EventDefinition[] eventInfos, TypeSpec declaringType)

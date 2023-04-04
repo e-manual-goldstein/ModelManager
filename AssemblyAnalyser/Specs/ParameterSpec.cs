@@ -14,8 +14,8 @@ namespace AssemblyAnalyser
         public bool IsOut { get; }
         public bool? IsSystemParameter { get; }
 
-        public ParameterSpec(ParameterDefinition parameterDefinition, MethodSpec method, ISpecManager specManager, List<IRule> rules)
-            : base(rules, specManager)
+        public ParameterSpec(ParameterDefinition parameterDefinition, MethodSpec method, ISpecManager specManager)
+            : base(specManager)
         {
             _parameterDefinition = parameterDefinition;
             Name = _parameterDefinition.Name;

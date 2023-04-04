@@ -10,7 +10,7 @@ namespace AssemblyAnalyser
         //this is the version which corresponds to the file found at FilePath
         ModuleDefinition _baseVersion;
         public ModuleSpec(ModuleDefinition module, string filePath,
-             ISpecManager specManager, List<IRule> rules) : this(module.Assembly.FullName, specManager, rules)
+             ISpecManager specManager) : this(module.Assembly.FullName, specManager)
         {
             Versions = new();
             _baseVersion = module;
@@ -20,7 +20,8 @@ namespace AssemblyAnalyser
             IsSystem = AssemblyLoader.IsSystemAssembly(filePath);
         }
 
-        ModuleSpec(string assemblyFullName, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        ModuleSpec(string assemblyFullName, ISpecManager specManager) 
+            : base(specManager)
         {
             //_representedModuleNames.Add(assemblyFullName);
             _specManager = specManager;

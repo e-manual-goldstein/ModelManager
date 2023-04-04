@@ -9,7 +9,8 @@ namespace AssemblyAnalyser
         const string BACKING_FIELD_SUFFIX = "k__BackingField";
         private FieldDefinition _fieldInfo;
 
-        public FieldSpec(FieldDefinition fieldInfo, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        public FieldSpec(FieldDefinition fieldInfo, TypeSpec declaringType, ISpecManager specManager) 
+            : base(specManager)
         {
             _fieldInfo = fieldInfo;
             DeclaringType = declaringType;

@@ -11,8 +11,8 @@ namespace AssemblyAnalyser
     {
         MethodDefinition _methodDefinition;
 
-        public MethodSpec(MethodDefinition methodDefinition, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules)
-            : base(rules, specManager)
+        public MethodSpec(MethodDefinition methodDefinition, TypeSpec declaringType, ISpecManager specManager)
+            : base(specManager)
         {
             _methodDefinition = methodDefinition;
             Name = methodDefinition.Name;
@@ -21,7 +21,7 @@ namespace AssemblyAnalyser
             DeclaringType = declaringType;
         }
 
-        protected MethodSpec(ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        protected MethodSpec(ISpecManager specManager) : base(specManager)
         {
 
         }

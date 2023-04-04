@@ -10,8 +10,8 @@ namespace AssemblyAnalyser
         private MethodDefinition _getter;
         private MethodDefinition _setter;
 
-        public PropertySpec(PropertyDefinition propertyInfo, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules) 
-            : base(rules, specManager)
+        public PropertySpec(PropertyDefinition propertyInfo, TypeSpec declaringType, ISpecManager specManager) 
+            : base(specManager)
         {
             _propertyDefinition = propertyInfo;
             Name = propertyInfo.Name;

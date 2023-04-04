@@ -17,7 +17,7 @@ namespace AssemblyAnalyser
 
         private static TypeSpec CreateNullSpec()
         {
-            var spec = new TypeSpec("null", "nullspec", null, new List<IRule>());
+            var spec = new TypeSpec("null", "nullspec", null);
             spec.Exclude("Null Spec");
             spec.SkipProcessing("Null Spec");
             spec.IsNullSpec = true;
@@ -30,7 +30,7 @@ namespace AssemblyAnalyser
         static int error_count = 1;
         public static TypeSpec CreateErrorSpec(string reason)
         {
-            var spec = new TypeSpec("ErrorSpec", $"{reason}{error_count++}", null, new List<IRule>());
+            var spec = new TypeSpec("ErrorSpec", $"{reason}{error_count++}", null);
             spec.Exclude(reason);
             spec.SkipProcessing(reason);
             spec.IsErrorSpec = true;
@@ -42,8 +42,8 @@ namespace AssemblyAnalyser
 
         TypeDefinition _typeDefinition;
         TypeReference _typeReference;
-        public TypeSpec(TypeReference typeReference, ISpecManager specManager, List<IRule> rules)
-            : this($"{typeReference.Namespace}.{ typeReference.Name}", typeReference.FullName, specManager, rules)
+        public TypeSpec(TypeReference typeReference, ISpecManager specManager)
+            : this($"{typeReference.Namespace}.{ typeReference.Name}", typeReference.FullName, specManager)
         {
             _typeReference = typeReference;
             _typeDefinition = (typeReference is TypeDefinition typeDefinition) ? typeDefinition : null;
@@ -57,8 +57,8 @@ namespace AssemblyAnalyser
             IsSystemType = Module?.IsSystem;
         }
 
-        TypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager, List<IRule> rules) 
-            : base(rules, specManager)
+        TypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager) 
+            : base(specManager)
         {
             UniqueTypeName = uniqueTypeName;
             FullTypeName = fullTypeName;
@@ -69,6 +69,7 @@ namespace AssemblyAnalyser
         public string Namespace { get; set; }
         public bool? IsInterface { get; private set; }
         public bool? IsSystemType { get; }
+        public bool IsArray { get; }
 
         #region BuildSpec
 

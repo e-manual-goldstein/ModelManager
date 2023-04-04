@@ -15,11 +15,14 @@ namespace AssemblyAnalyser
         protected bool Included => _included ??= !IsExcluded() && IsIncluded();
         protected ISpecManager _specManager;
 
-        public AbstractSpec(List<IRule> rules, ISpecManager specManager)
+        public AbstractSpec(ISpecManager specManager)
         {
             _specManager = specManager;
-            InclusionRules = rules.OfType<InclusionRule>().ToList();
-            ExclusionRules = rules.OfType<ExclusionRule>().ToList();            
+            if (specManager != null)
+            {
+                InclusionRules.AddRange(specManager.SpecRules.OfType<InclusionRule>());
+                ExclusionRules.AddRange(specManager.SpecRules.OfType<ExclusionRule>());
+            }
         }
 
         public string Name { get; protected set; }
@@ -95,8 +98,8 @@ namespace AssemblyAnalyser
             ExclusionRules.Add(new ExclusionRule(s => true));
         }
 
-        public List<ExclusionRule> ExclusionRules { get; private set; }
-        public List<InclusionRule> InclusionRules { get; private set; }
+        public List<ExclusionRule> ExclusionRules { get; private set; } = new List<ExclusionRule>();
+        public List<InclusionRule> InclusionRules { get; private set; } = new List<InclusionRule>();
         #endregion
 
         #region Skip Processing

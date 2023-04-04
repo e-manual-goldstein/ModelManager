@@ -10,7 +10,8 @@ namespace AssemblyAnalyser
         private MethodDefinition _adder;
         private MethodDefinition _remover;
 
-        public EventSpec(EventDefinition eventInfo, TypeSpec declaringType, ISpecManager specManager, List<IRule> rules) : base(rules, specManager)
+        public EventSpec(EventDefinition eventInfo, TypeSpec declaringType, ISpecManager specManager) 
+            : base(specManager)
         {
             _eventInfo = eventInfo;
             _adder = eventInfo.AddMethod;

@@ -12,7 +12,7 @@ namespace AssemblyAnalyser
         void ProcessAll(bool includeSystem = true, bool parallelProcessing = true);
         ISpecDependency RegisterOperandDependency(object operand, MethodSpec methodSpec);
         //void RegisterDependency(ISpec dependingSpec, ModuleDefinition targetSpec);
-        
 
+        IRule[] SpecRules { get; }
     }
 }
