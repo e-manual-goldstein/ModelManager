@@ -509,6 +509,25 @@ namespace AssemblyAnalyser
             return matchingMethods.SingleOrDefault();
         }
 
+        public MethodSpec MatchMethodReference(MethodReference methodReference)
+        {
+            var parameterSpecs = _specManager.TryLoadParameterSpecs(() => methodReference.Parameters.ToArray(), null);
+            _specManager.TryLoadTypeSpecs(() => methodReference.GenericParameters.ToArray(), out TypeSpec[] genericTypeArgumentSpecs);
+            var matchingMethods = Methods.Where(m
+                    => m.Name == methodReference.Name
+                    && m.Parameters.Length == methodReference.Parameters.Count
+                    && m.HasExactParameters(parameterSpecs)
+                    && m.HasExactGenericTypeArguments(genericTypeArgumentSpecs)
+                    );
+            if (matchingMethods.Count() > 1)
+            {
+                var methodArray = matchingMethods.ToArray();
+                _specManager.AddFault(FaultSeverity.Error, $"Multiple Methods found for signature. MethodName:{methodReference.Name}");
+                return null;
+            }
+            return matchingMethods.SingleOrDefault();
+        }
+
         private void RegisterDependentTypeForModule(TypeSpec typeSpec)
         {
             if (Module == null)

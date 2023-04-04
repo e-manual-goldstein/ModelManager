@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Mono.Cecil;
 namespace AssemblyAnalyser
@@ -12,12 +13,24 @@ namespace AssemblyAnalyser
         public ModuleSpec(ModuleDefinition module, string filePath,
              ISpecManager specManager) : this(module.Assembly.FullName, specManager)
         {
+            AddSearchDirectory(module, filePath);
             Versions = new();
             _baseVersion = module;
             Versions.Add(module.Assembly.FullName, module.Assembly.Name);
             ModuleShortName = module.Assembly.Name.Name;
             FilePath = filePath;
             IsSystem = AssemblyLoader.IsSystemAssembly(filePath);
+        }
+
+        private void AddSearchDirectory(ModuleDefinition module, string filePath)
+        {
+            if (module.AssemblyResolver is DefaultAssemblyResolver defaultAssemblyResolver)
+            {
+                if (!defaultAssemblyResolver.GetSearchDirectories().Contains(Path.GetDirectoryName(filePath)))
+                {
+                    defaultAssemblyResolver.AddSearchDirectory(Path.GetDirectoryName(filePath));
+                }
+            }
         }
 
         ModuleSpec(string assemblyFullName, ISpecManager specManager) 

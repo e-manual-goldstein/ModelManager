@@ -25,13 +25,12 @@ namespace AssemblyAnalyser.Tests
             _exceptionManager = new ExceptionManager();
             _loggerProvider = NSubstitute.Substitute.For<ILoggerProvider>();
             _specManager = new SpecManager(_loggerProvider, _exceptionManager);
+            
             var filePath = "..\\..\\..\\..\\AssemblyAnalyser.TestData\\bin\\Debug\\net6.0\\AssemblyAnalyser.TestData.dll";
-            var module = Mono.Cecil.ModuleDefinition.ReadModule(Path.GetFullPath(filePath));
-            _moduleSpec = _specManager.LoadModuleSpec(module);
+            _moduleSpec = _specManager.LoadModuleSpec(Path.GetFullPath(filePath));
             _moduleSpec.Process();
             var vbFilePath = "..\\..\\..\\..\\AssemblyAnalyser.VBTestData\\bin\\Debug\\net35\\AssemblyAnalyser.VBTestData.dll";
-            var vbModule = Mono.Cecil.ModuleDefinition.ReadModule(Path.GetFullPath(vbFilePath));
-            _vbModuleSpec = _specManager.LoadModuleSpec(vbModule);
+            _vbModuleSpec = _specManager.LoadModuleSpec(Path.GetFullPath(vbFilePath)); 
             _vbModuleSpec.Process();
             //_specManager.ProcessLoadedProperties();
             _basicClassSpec = _moduleSpec.TypeSpecs

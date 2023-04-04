@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Mono.Cecil.Cil;
 using AssemblyAnalyser.Specs;
 
 namespace AssemblyAnalyser
@@ -17,6 +16,7 @@ namespace AssemblyAnalyser
         Dictionary<string, string> _workingFiles;
         readonly ILogger _logger;
         readonly IExceptionManager _exceptionManager;
+        readonly DefaultAssemblyResolver _assemblyResolver;
         object _lock = new object();
         private bool _disposed;
 
@@ -24,9 +24,16 @@ namespace AssemblyAnalyser
         {            
             _logger = loggerProvider.CreateLogger("Spec Manager");
             _exceptionManager = exceptionManager;
+            _assemblyResolver = CreateAssemblyResolver();
+
         }
-        
-        
+
+        private DefaultAssemblyResolver CreateAssemblyResolver()
+        {
+            var resolver = new DefaultAssemblyResolver();            
+            return resolver;
+        }
+                
         List<IRule> _specRules = new List<IRule>();
         public IRule[] SpecRules => _specRules.ToArray();
         
@@ -144,6 +151,16 @@ namespace AssemblyAnalyser
                 throw new NotImplementedException();
             }
             return _moduleSpecs.GetOrAdd(module.Assembly.Name.Name, (key) => CreateFullModuleSpec(module));            
+        } 
+        
+        public ModuleSpec LoadModuleSpec(string moduleFilePath)
+        {
+            var readerParameters = new ReaderParameters()
+            {
+                AssemblyResolver = _assemblyResolver
+            };
+            var moduleDefinition = ModuleDefinition.ReadModule(moduleFilePath, readerParameters);
+            return LoadModuleSpec(moduleDefinition);
         }
 
         public ModuleSpec[] LoadReferencedModules(ModuleDefinition baseModule)
@@ -200,8 +217,7 @@ namespace AssemblyAnalyser
                     AddFault(FaultSeverity.Warning, $"Asssembly not found {assemblyReference.FullName}");
                     return null;
                 }
-                var referencedModule = ModuleDefinition.ReadModule(assemblyLocation);
-                var moduleSpec = _moduleSpecs.GetOrAdd(assemblyReference.Name, (name) => CreateFullModuleSpec(referencedModule));
+                var moduleSpec = LoadModuleSpec(assemblyLocation);
                 moduleSpec.AddModuleVersion(assemblyReference);
                 return moduleSpec;
 
@@ -299,9 +315,17 @@ namespace AssemblyAnalyser
         private void TryGetTypeDefinition(ref TypeReference type)
         {
             TypeDefinition typeDefinition = null;
+            ModuleDefinition moduleDefinition = null;
             try
             {
-                typeDefinition = type.Resolve();
+                if ((moduleDefinition = type.Module) != null)
+                {
+                    if (moduleDefinition.AssemblyResolver != null)
+                    {
+                        //moduleDefinition.AssemblyResolver.Resolve(type.Mo);
+                    }
+                    typeDefinition = type.Resolve();
+                }
             }
             catch (AssemblyResolutionException assemblyResolutionException)
             {
@@ -412,20 +436,13 @@ namespace AssemblyAnalyser
         public MethodSpec LoadMethodSpec(MethodReference method)
         {
             var methodDefinition = method as MethodDefinition;
-            try
-            {
-                methodDefinition = method.Resolve();                    
-            }
-            catch
-            {
-            }
             if (methodDefinition == null)
             {
                 try
                 {
                     var module = LoadReferencedModuleByScopeName(method.Module, method.DeclaringType.Scope);
                     var type = module.GetTypeSpec(method.DeclaringType);
-                    return type.GetMethodSpec(method) ?? new MissingMethodSpec(method, this);
+                    return type.MatchMethodReference(method);
                 }
                 catch
                 {

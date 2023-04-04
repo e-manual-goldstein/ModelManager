@@ -37,6 +37,6 @@ namespace AssemblyAnalyser.Extensions
                 }
             }
             return match.Success ? match.Groups["FileNameNoExtension"].Value : scope.Name;
-        }
+        }        
     }
 }

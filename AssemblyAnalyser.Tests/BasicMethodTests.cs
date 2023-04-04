@@ -25,8 +25,7 @@ namespace AssemblyAnalyser.Tests
             _loggerProvider = NSubstitute.Substitute.For<ILoggerProvider>();
             _specManager = new SpecManager(_loggerProvider, _exceptionManager);
             var filePath = "..\\..\\..\\..\\AssemblyAnalyser.TestData\\bin\\Debug\\net6.0\\AssemblyAnalyser.TestData.dll";
-            var module = Mono.Cecil.ModuleDefinition.ReadModule(Path.GetFullPath(filePath));
-            _moduleSpec = _specManager.LoadModuleSpec(module);
+            _moduleSpec = _specManager.LoadModuleSpec(Path.GetFullPath(filePath));
             _moduleSpec.Process();
             foreach (var typeSpec in _moduleSpec.TypeSpecs)
             {
