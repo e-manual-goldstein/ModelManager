@@ -2,6 +2,7 @@
 using Mono.Cecil;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AssemblyAnalyser
 {
@@ -9,7 +10,6 @@ namespace AssemblyAnalyser
     {
         ParameterDefinition _parameterDefinition;
 
-        public TypeSpec ParameterType { get; private set; }
         public MethodSpec Method { get; }
         public bool IsOut { get; }
         public bool? IsSystemParameter { get; }
@@ -29,13 +29,23 @@ namespace AssemblyAnalyser
             return _parameterDefinition.CustomAttributes.ToArray();
         }
 
+        public bool IsParams => Attributes.Any(a => a.Name == "ParamArrayAttribute");
+
+        TypeSpec _parameterType;
+        public TypeSpec ParameterType => _parameterType ??= TryGetParameterType();
+
         protected override void BuildSpec()
         {
-            if (_specManager.TryLoadTypeSpec(() => _parameterDefinition.ParameterType, out TypeSpec returnTypeSpec))
+            _parameterType = TryGetParameterType();
+        }
+
+        private TypeSpec TryGetParameterType()
+        {
+            if (_specManager.TryLoadTypeSpec(() => _parameterDefinition.ParameterType, out TypeSpec parameterTypeSpec))
             {
-                ParameterType = returnTypeSpec;
-                returnTypeSpec.RegisterAsDependentParameterSpec(this);
-            }            
+                parameterTypeSpec.RegisterAsDependentParameterSpec(this);
+            }
+            return parameterTypeSpec;
         }
 
         public override string ToString()

@@ -9,7 +9,7 @@ using System.Reflection;
 namespace AssemblyAnalyser.Tests
 {
     [TestClass]
-    public class BasicPropertyTests
+    public class BasicFieldTests
     {
         ISpecManager _specManager;
         ILoggerProvider _loggerProvider;
@@ -41,33 +41,25 @@ namespace AssemblyAnalyser.Tests
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicClass");
         }
 
-        #region Basic Property Tests
+        #region Basic Field Tests
         
-        [TestMethod]
-        public void BasicPropertySpecIsNotNull_Test()
-        {
-            Assert.IsNotNull(_basicClassSpec.GetPropertySpec("PublicProperty"));
-        }
+        //[TestMethod]
+        //public void BasicFieldSpecIsNotNull_Test()
+        //{
+        //    Assert.IsNotNull(_basicClassSpec.GetFieldSpec("PublicField"));
+        //}
 
-        [TestMethod]
-        public void BasicPropertySpecLinkedToInterfaceImplementationMember_Test()
-        {
-            var interfaceImplementation = _basicClassSpec.GetPropertySpec("ReadOnlyInterfaceImpl");
+        //[TestMethod]
+        //public void BasicFieldWithArrayTypeHasOwnSpec_Test()
+        //{
+        //    var stringField = _basicClassSpec.GetFieldSpec("PublicField");
+        //    var stringArrayField = _basicClassSpec.GetFieldSpec("ArrayField");
 
-            Assert.IsNotNull(interfaceImplementation.Implements);
-        }
+        //    var stringSpec = stringField.FieldType;
+        //    var stringArraySpec = stringArrayField.FieldType;
 
-        [TestMethod]
-        public void BasicPropertyWithArrayTypeHasOwnSpec_Test()
-        {
-            var stringProperty = _basicClassSpec.GetPropertySpec("PublicProperty");
-            var stringArrayProperty = _basicClassSpec.GetPropertySpec("ArrayProperty");
-
-            var stringSpec = stringProperty.PropertyType;
-            var stringArraySpec = stringArrayProperty.PropertyType;
-
-            Assert.AreNotSame(stringSpec, stringArraySpec);
-        }
+        //    Assert.AreNotSame(stringSpec, stringArraySpec);
+        //}
 
         #endregion
 

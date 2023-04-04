@@ -295,7 +295,8 @@ namespace AssemblyAnalyser
             }
             foreach (var interfaceMethod in interfaceSpec.Methods)
             {
-                var methodSpec = MatchMethodSpecByNameAndParameterType(interfaceMethod.Name, interfaceMethod.Parameters);
+                var methodSpec = MatchMethodSpecByNameAndParameterType(interfaceMethod.Name, interfaceMethod.Parameters
+                    , interfaceMethod.GenericTypeArguments);
                 if (methodSpec == null)
                 {
                     _specManager.AddFault(FaultSeverity.Warning, $"{this} does not implement {interfaceMethod}");
@@ -353,7 +354,7 @@ namespace AssemblyAnalyser
         }
 
         private List<TypeSpec> _subTypes = new List<TypeSpec>();
-
+        public TypeSpec[] GetSubTypes => _subTypes.ToArray();
         public void AddSubType(TypeSpec typeSpec)
         {
             if (!_subTypes.Contains(typeSpec))
@@ -363,7 +364,10 @@ namespace AssemblyAnalyser
             }
         }
 
-        public TypeSpec[] GetSubTypes() => _subTypes.ToArray();
+        public void RegisterAsGenericTypeArgumentFor(MethodSpec methodSpec)
+        {
+            _specManager.AddFault("Implementation not finished for 'RegisterAsGenericTypeArgumentFor'");
+        }
 
         List<IMemberSpec> _resultTypeSpecs = new List<IMemberSpec>();
         public IMemberSpec[] ResultTypeSpecs => _resultTypeSpecs.ToArray();
@@ -472,14 +476,18 @@ namespace AssemblyAnalyser
             return Methods.Where(m => m.Name == methodName).ToArray();
         }
 
-        public MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs)
+        public MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs
+            , TypeSpec[] genericTypeArgumentSpecs)
         {
             var matchingMethods = Methods.Where(m
                     => m.Name == methodName
                     && m.Parameters.Length == parameterSpecs.Length
-                    && m.HasExactParameters(parameterSpecs));
+                    && m.HasExactParameters(parameterSpecs)
+                    && m.HasExactGenericTypeArguments(genericTypeArgumentSpecs)
+                    );
             if (matchingMethods.Count() > 1)
             {
+                var methodArray = matchingMethods.ToArray();
                 _specManager.AddFault(FaultSeverity.Error, $"Multiple Methods found for signature. MethodName:{methodName}");
                 return null;
             }

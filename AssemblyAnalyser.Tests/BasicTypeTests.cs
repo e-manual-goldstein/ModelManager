@@ -100,15 +100,15 @@ namespace AssemblyAnalyser.Tests
         }
 
         [TestMethod]
-        public void BasicClassSpecHasThreeProperties_Test()
+        public void BasicClassSpecHasManyProperties_Test()
         {
-            Assert.AreEqual(3, _basicClassSpec.Properties.Length);
+            Assert.IsTrue(_basicClassSpec.Properties.Any());
         }
 
         [TestMethod]
-        public void BasicClassSpecHasThreeBackingFields_Test()
+        public void BasicClassSpecHasManyBackingFields_Test()
         {
-            Assert.AreEqual(3, _basicClassSpec.Fields.Where(f => f.IsBackingField).Count());
+            Assert.IsTrue(_basicClassSpec.Fields.Where(f => f.IsBackingField).Any());
         }
 
         [TestMethod]

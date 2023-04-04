@@ -18,10 +18,17 @@ namespace AssemblyAnalyser.TestData.Basics
 
         public string PublicProperty { get; set; }
 
+        public string[] ArrayProperty { get; set; }
+
         [Basic]
         public DateTime PublicMethod()
         {
             return DateTime.Now;
+        }
+
+        public void PublicMethodWithArrayParameter(string[] stringParam)
+        {
+
         }
 
         public void PublicMethodWithParameters(string stringParam, Guid guidParam)

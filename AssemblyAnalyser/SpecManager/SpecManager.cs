@@ -263,7 +263,7 @@ namespace AssemblyAnalyser
 
         private TypeSpec LoadFullTypeSpec(TypeDefinition type)
         {
-            var typeSpec = _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type), (key) => CreateFullTypeSpec(type));
+            var typeSpec = _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, type.IsArray), (key) => CreateFullTypeSpec(type));
             if (!typeSpec.HasDefinition)
             {
                 typeSpec.AddDefinition(type);
@@ -271,24 +271,25 @@ namespace AssemblyAnalyser
             return typeSpec;
         }
 
-        private string CreateUniqueTypeSpecName(TypeReference type)
+        private string CreateUniqueTypeSpecName(TypeReference type, bool isArray)
         {
             var moduleName = type.Scope.GetScopeNameWithoutExtension();
-            return $"{moduleName}_{type.FullName}";
+            var suffix = isArray ? "[]" : null;
+            return $"{moduleName}_{type.FullName}{suffix}";
         }
 
         private TypeSpec LoadFullTypeSpec(TypeReference type)
         {
+            bool typeReferenceIsArray = type.IsArray; //Resolving TypeReference to TypeDefinition causes loss of IsArray definition
             if (!type.IsDefinition && !(type.IsGenericInstance || type.IsGenericParameter))
             {
                 TryGetTypeDefinition(ref type);
             }
-            return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type), (key) => CreateFullTypeSpec(type));
+            return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateFullTypeSpec(type));
         }
 
         private TypeSpec CreateFullTypeSpec(TypeReference type)
         {
-            AddMessage($"Creating new TypeSpec for {CreateUniqueTypeSpecName(type)}");
             var spec = new TypeSpec(type, this, SpecRules);
             return spec;
         }
@@ -302,7 +303,7 @@ namespace AssemblyAnalyser
             }
             catch (AssemblyResolutionException assemblyResolutionException)
             {
-                AddFault($"Failed to resolve Type {type}: {assemblyResolutionException.Message}");
+                AddFault($"Failed to resolve TypeDefinition {type}: {assemblyResolutionException.Message}");
             }
             if (typeDefinition == null)
             {

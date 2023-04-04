@@ -34,6 +34,9 @@ namespace AssemblyAnalyser
         ParameterSpec[] _parameters;
         public ParameterSpec[] Parameters => _parameters ??= _specManager.TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray(), this);
 
+        TypeSpec[] _genericTypeArguments;
+        public TypeSpec[] GenericTypeArguments => _genericTypeArguments ??= TryGetGenericTypeArguments();
+
         List<TypeSpec> _localVariableTypes = new List<TypeSpec>();
         public TypeSpec[] LocalVariableTypes => _localVariableTypes.ToArray();
         List<TypeSpec> _exceptionCatchTypes = new List<TypeSpec>();
@@ -64,6 +67,18 @@ namespace AssemblyAnalyser
                 returnTypeSpec.RegisterAsResultType(this);
             }
             return returnTypeSpec;
+        }
+
+        private TypeSpec[] TryGetGenericTypeArguments()
+        {
+            if (_specManager.TryLoadTypeSpecs(() => _methodDefinition.GenericParameters.ToArray(), out TypeSpec[] genericArgumentSpecs))
+            {
+                foreach (var genericArgSpec in genericArgumentSpecs)
+                {
+                    genericArgSpec.RegisterAsGenericTypeArgumentFor(this);
+                }
+            }
+            return genericArgumentSpecs;
         }
 
         protected override CustomAttribute[] GetAttributes()
@@ -158,14 +173,36 @@ namespace AssemblyAnalyser
 
         public bool HasExactParameters(ParameterSpec[] parameterSpecs)
         {
-            for (int i = 0; i < parameterSpecs.Length; i++)
+            if (parameterSpecs.Length == Parameters.Length)
             {
-                if (Parameters[i].ParameterType != parameterSpecs[i].ParameterType || Parameters[i].IsOut != parameterSpecs[i].IsOut)
+                for (int i = 0; i < parameterSpecs.Length; i++)
                 {
-                    return false;
+                    if (Parameters[i].ParameterType != parameterSpecs[i].ParameterType 
+                        || Parameters[i].IsOut != parameterSpecs[i].IsOut
+                        || Parameters[i].IsParams != parameterSpecs[i].IsParams)
+                    {
+                        return false;
+                    }
                 }
+                return true;
             }
-            return true;
+            return false;
+        }
+
+        public bool HasExactGenericTypeArguments(TypeSpec[] genericTypeArgumentSpecs)
+        {
+            if (genericTypeArgumentSpecs.Length == GenericTypeArguments.Length)
+            {
+                for (int i = 0; i < GenericTypeArguments.Length; i++)
+                {
+                    if (GenericTypeArguments[i] != genericTypeArgumentSpecs[i]) { }
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            return false;
         }
     }
 }
