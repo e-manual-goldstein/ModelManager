@@ -20,6 +20,14 @@ namespace AssemblyAnalyser.TestData.Basics
 
         public string[] ArrayProperty { get; set; }
 
+        public string this[int index]
+        {
+            get
+            {
+                return ArrayProperty[index];
+            }
+        }
+
         [Basic]
         public DateTime PublicMethod()
         {

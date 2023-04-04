@@ -7,5 +7,7 @@ namespace AssemblyAnalyser
         bool IsExcluded();
 
         bool IsIncluded();
+
+        bool IsSystem { get; }
     }
 }

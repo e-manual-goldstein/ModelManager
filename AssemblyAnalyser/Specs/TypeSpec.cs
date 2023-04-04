@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Microsoft.Extensions.Logging;
 using Mono.Cecil;
-using AssemblyAnalyser.Specs;
 using System;
+using System.Reflection;
 
 namespace AssemblyAnalyser
 {
@@ -54,7 +53,7 @@ namespace AssemblyAnalyser
                 specManager.AddFault(FaultSeverity.Warning, $"Could not find matching TypeDefinition for {FullTypeName}");
             }
             IsInterface = _typeDefinition?.IsInterface;
-            IsSystemType = Module?.IsSystem;
+            IsSystem = Module?.IsSystem ?? true;
         }
 
         TypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager) 
@@ -68,7 +67,7 @@ namespace AssemblyAnalyser
         public string FullTypeName { get; }
         public string Namespace { get; set; }
         public bool? IsInterface { get; private set; }
-        public bool? IsSystemType { get; }
+        //public bool? IsSystemType { get; }
         public bool IsArray { get; }
 
         #region BuildSpec
@@ -202,7 +201,22 @@ namespace AssemblyAnalyser
 
         public PropertySpec GetPropertySpec(string name)
         {
-            return _properties.Where(p => p.Name == name).SingleOrDefault();
+            return Properties.Where(p => !p.Parameters.Any() && p.Name == name).SingleOrDefault();
+        }
+
+        public PropertySpec MatchPropertySpecByNameAndParameterType(string name, ParameterSpec[] parameterSpecs)
+        {
+            var matchingProperties = Properties.Where(p
+                    => p.Name == name
+                    && p.Parameters.Length == parameterSpecs.Length
+                    && p.HasExactParameters(parameterSpecs));
+            if (matchingProperties.Count() > 1)
+            {
+                var methodArray = matchingProperties.ToArray();
+                _specManager.AddFault(FaultSeverity.Error, $"Multiple Properties found for signature. PropertyName:{name}");
+                return null;
+            }
+            return matchingProperties.SingleOrDefault();            
         }
 
         FieldSpec[] _fields;
@@ -390,7 +404,7 @@ namespace AssemblyAnalyser
             if (!_dependentParameterSpecs.Contains(parameterSpec))
             {
                 _dependentParameterSpecs.Add(parameterSpec);
-                RegisterDependentTypeForModule(parameterSpec.Method.DeclaringType);
+                RegisterDependentTypeForModule(parameterSpec.Member.DeclaringType);
             }
         }
 

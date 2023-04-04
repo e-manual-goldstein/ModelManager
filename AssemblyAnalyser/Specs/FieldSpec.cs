@@ -14,14 +14,14 @@ namespace AssemblyAnalyser
         {
             _fieldInfo = fieldInfo;
             DeclaringType = declaringType;
-            IsSystemField = declaringType.IsSystemType;
+            IsSystem = declaringType.IsSystem;
             IsBackingField = fieldInfo.Name.EndsWith(BACKING_FIELD_SUFFIX);
             IsEventField = fieldInfo.DeclaringType.Events.Where(e => e.FullName == fieldInfo.FullName).Count() == 1;
         }
 
         public string FieldName => _fieldInfo.Name;
         public TypeSpec FieldType { get; private set; }
-        public bool? IsSystemField { get; set; }
+        
         public bool IsBackingField { get; set; }
         public bool IsEventField { get; set; }
         public TypeSpec DeclaringType { get; }

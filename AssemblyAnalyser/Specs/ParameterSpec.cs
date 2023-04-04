@@ -10,17 +10,17 @@ namespace AssemblyAnalyser
     {
         ParameterDefinition _parameterDefinition;
 
-        public MethodSpec Method { get; }
+        public IMemberSpec Member { get; }
         public bool IsOut { get; }
         public bool? IsSystemParameter { get; }
 
-        public ParameterSpec(ParameterDefinition parameterDefinition, MethodSpec method, ISpecManager specManager)
+        public ParameterSpec(ParameterDefinition parameterDefinition, IMemberSpec member, ISpecManager specManager)
             : base(specManager)
         {
             _parameterDefinition = parameterDefinition;
             Name = _parameterDefinition.Name;
-            IsSystemParameter = method.IsSystemMethod;
-            Method = method;
+            IsSystemParameter = member.IsSystem;
+            Member = member;
             IsOut = parameterDefinition.IsOut;
         }
 

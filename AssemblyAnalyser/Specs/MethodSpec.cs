@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace AssemblyAnalyser
 {
-    public class MethodSpec : AbstractSpec, IMemberSpec, IImplementsSpec<MethodSpec>
+    public class MethodSpec : AbstractSpec, IMemberSpec, IHasParameters, IImplementsSpec<MethodSpec>
     {
         MethodDefinition _methodDefinition;
 
@@ -16,7 +16,7 @@ namespace AssemblyAnalyser
         {
             _methodDefinition = methodDefinition;
             Name = methodDefinition.Name;
-            IsSystemMethod = declaringType.IsSystemType;
+            IsSystem = declaringType.IsSystem;
             IsConstructor = methodDefinition.IsConstructor;
             DeclaringType = declaringType;
         }
@@ -171,23 +171,23 @@ namespace AssemblyAnalyser
             return true;
         }
 
-        public bool HasExactParameters(ParameterSpec[] parameterSpecs)
-        {
-            if (parameterSpecs.Length == Parameters.Length)
-            {
-                for (int i = 0; i < parameterSpecs.Length; i++)
-                {
-                    if (Parameters[i].ParameterType != parameterSpecs[i].ParameterType 
-                        || Parameters[i].IsOut != parameterSpecs[i].IsOut
-                        || Parameters[i].IsParams != parameterSpecs[i].IsParams)
-                    {
-                        return false;
-                    }
-                }
-                return true;
-            }
-            return false;
-        }
+        //public bool HasExactParameters(ParameterSpec[] parameterSpecs)
+        //{
+        //    if (parameterSpecs.Length == Parameters.Length)
+        //    {
+        //        for (int i = 0; i < parameterSpecs.Length; i++)
+        //        {
+        //            if (Parameters[i].ParameterType != parameterSpecs[i].ParameterType 
+        //                || Parameters[i].IsOut != parameterSpecs[i].IsOut
+        //                || Parameters[i].IsParams != parameterSpecs[i].IsParams)
+        //            {
+        //                return false;
+        //            }
+        //        }
+        //        return true;
+        //    }
+        //    return false;
+        //}
 
         public bool HasExactGenericTypeArguments(TypeSpec[] genericTypeArgumentSpecs)
         {

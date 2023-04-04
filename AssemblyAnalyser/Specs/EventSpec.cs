@@ -17,7 +17,7 @@ namespace AssemblyAnalyser
             _adder = eventInfo.AddMethod;
             _remover = eventInfo.RemoveMethod;
             DeclaringType = declaringType;
-            IsSystemEvent = declaringType.IsSystemType;
+            IsSystem = declaringType.IsSystem;
         }
 
         public MethodSpec Adder { get; private set; }

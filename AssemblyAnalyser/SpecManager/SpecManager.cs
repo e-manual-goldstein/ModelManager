@@ -555,23 +555,23 @@ namespace AssemblyAnalyser
             }
         }
 
-        private ParameterSpec LoadParameterSpec(ParameterDefinition parameterDefinition, MethodSpec method)
+        private ParameterSpec LoadParameterSpec(ParameterDefinition parameterDefinition, IMemberSpec member)
         {
-            return _parameterSpecs.GetOrAdd(parameterDefinition, CreateParameterSpec(parameterDefinition, method));
+            return _parameterSpecs.GetOrAdd(parameterDefinition, CreateParameterSpec(parameterDefinition, member));
         }
 
-        private ParameterSpec CreateParameterSpec(ParameterDefinition parameterDefinition, MethodSpec method)
+        private ParameterSpec CreateParameterSpec(ParameterDefinition parameterDefinition, IMemberSpec member)
         {
             TryLoadTypeSpecs(() => parameterDefinition.CustomAttributes.Select(t => t.AttributeType).ToArray(), out TypeSpec[] typeSpecs);
-            return new ParameterSpec(parameterDefinition, method, this);
+            return new ParameterSpec(parameterDefinition, member, this);
         }
 
-        public ParameterSpec[] LoadParameterSpecs(ParameterDefinition[] parameterDefinitions, MethodSpec method)
+        public ParameterSpec[] LoadParameterSpecs(ParameterDefinition[] parameterDefinitions, IMemberSpec member)
         {
-            return parameterDefinitions?.Select(p => LoadParameterSpec(p, method)).ToArray();
+            return parameterDefinitions?.Select(p => LoadParameterSpec(p, member)).ToArray();
         }
 
-        public ParameterSpec[] TryLoadParameterSpecs(Func<ParameterDefinition[]> parameterDefinitions, MethodSpec method)
+        public ParameterSpec[] TryLoadParameterSpecs(Func<ParameterDefinition[]> parameterDefinitions, IMemberSpec member)
         {
             ParameterDefinition[] parameterInfos = null;
             try
@@ -586,7 +586,7 @@ namespace AssemblyAnalyser
             {
 
             }
-            return LoadParameterSpecs(parameterInfos, method);
+            return LoadParameterSpecs(parameterInfos, member);
         }
 
         #endregion
@@ -599,7 +599,7 @@ namespace AssemblyAnalyser
 
         public void ProcessLoadedFields(bool includeSystem = true)
         {
-            foreach (var (fieldName, field) in Fields.Where(t => includeSystem || t.Value.IsSystemField.Equals(false)))
+            foreach (var (fieldName, field) in Fields.Where(t => includeSystem || !t.Value.IsSystem))
             {
                 field.Process();
             }

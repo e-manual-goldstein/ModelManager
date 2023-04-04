@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace AssemblyAnalyser
 {
-    public class PropertySpec : AbstractSpec, IMemberSpec, IImplementsSpec<PropertySpec>
+    public class PropertySpec : AbstractSpec, IMemberSpec, IHasParameters, IImplementsSpec<PropertySpec>
     {
         private PropertyDefinition _propertyDefinition;
         private MethodDefinition _getter;
@@ -18,7 +18,7 @@ namespace AssemblyAnalyser
             _getter = propertyInfo.GetMethod;
             _setter = propertyInfo.SetMethod;            
             DeclaringType = declaringType;
-            IsSystemProperty = declaringType.IsSystemType;
+            IsSystem = declaringType.IsSystem;
         }
 
         public MethodSpec Getter { get; private set; }
@@ -32,6 +32,9 @@ namespace AssemblyAnalyser
         public bool? IsSystemProperty { get; }
 
         public PropertySpec Implements { get; set; }
+
+        ParameterSpec[] _parameters;
+        public ParameterSpec[] Parameters => _parameters ??= _specManager.TryLoadParameterSpecs(() => _propertyDefinition.Parameters.ToArray(), this);
 
         public IEnumerable<MethodDefinition> InnerMethods()
         {

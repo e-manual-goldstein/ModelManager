@@ -76,9 +76,9 @@ namespace AssemblyAnalyser.Tests
         }
 
         [TestMethod]
-        public void BasicClassSpecHasExactlyOneAttribute_Test()
+        public void BasicClassSpecHasBasicAttribute_Test()
         {
-            Assert.AreEqual(1, _basicClassSpec.Attributes.Length);
+            Assert.AreEqual(1, _basicClassSpec.Attributes.Where(a => a.Name == "BasicAttribute").Count());
         }
 
         [TestMethod]
