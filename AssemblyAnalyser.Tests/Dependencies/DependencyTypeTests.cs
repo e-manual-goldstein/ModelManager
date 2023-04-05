@@ -9,40 +9,19 @@ using System.Reflection;
 namespace AssemblyAnalyser.Tests
 {
     [TestClass]
-    public class DependencyTypeTests
+    public class InternalDependencyTypeTests : AbstractSpecTests
     {
-        ISpecManager _specManager;
-        ILoggerProvider _loggerProvider;
-        IExceptionManager _exceptionManager;
-        ModuleSpec _moduleSpec;
-        const string NAMESPACE = "AssemblyAnalyser.TestData.WithExternalDependencies";
-        private string[] CLASS_NAMES = new[] {
-            "ClassWithMethodBodyDependency",
-            "ClassWithMethodParameterDependency",
-            "ClassWithMethodReturnTypeDependency",
-            "ClassWithMethodGenericTypeParameterDependency",
-            "ClassWithInterfaceDependency",
-            "ClassWithPropertyDependency",
-            "ClassWithFieldDependency",
-            "ClassWithEventDependency" 
-        };
+        const string NAMESPACE = "AssemblyAnalyser.TestData.WithInternalDependencies";
+        const string METHOD_BODY = "ClassWithMethodBodyDependency";
+        const string PARAMETER = "ClassWithMethodParameterDependency";
+        const string RETURN_TYPE = "ClassWithMethodReturnTypeDependency";
+        const string GENERIC_TYPE = "ClassWithMethodGenericTypeParameterDependency";
+        const string INTERFACE = "ClassWithInterfaceDependency";
+        const string PROPERTY = "ClassWithPropertyDependency";
+        const string FIELD = "ClassWithFieldDependency";
+        const string EVENT = "ClassWithEventDependency";
 
-        [TestInitialize] 
-        public void Initialize() 
-        {
-            _exceptionManager = new ExceptionManager();
-            _loggerProvider = NSubstitute.Substitute.For<ILoggerProvider>();
-            _specManager = new SpecManager(_loggerProvider, _exceptionManager);
-            var filePath = "..\\..\\..\\..\\AssemblyAnalyser.TestData\\bin\\Debug\\net6.0\\AssemblyAnalyser.TestData.dll";
-            _moduleSpec = _specManager.LoadModuleSpec(Path.GetFullPath(filePath));
-            _moduleSpec.Process();
-            _specManager.ProcessSpecs(_moduleSpec.TypeSpecs, false);
-            //_specManager.ProcessLoadedProperties();
-            //_specManager.ProcessLoadedMethods();
-            //_specManager.ProcessLoadedFields();
-            //_specManager.ProcessLoadedParameters();
-            //_specManager.ProcessLoadedEvents();            
-        }
+        private string[] CLASS_NAMES = new[] { METHOD_BODY, PARAMETER, RETURN_TYPE, GENERIC_TYPE, INTERFACE, PROPERTY, FIELD, EVENT };
 
         #region Dependency Tests
         [TestMethod]
@@ -53,6 +32,20 @@ namespace AssemblyAnalyser.Tests
                 var classSpec = _moduleSpec.GetTypeSpec($"{NAMESPACE}.{className}");
                 Assert.IsNotNull(classSpec);
             }            
+        }
+
+        [TestMethod]
+        public void DependencyClassSpecRegistersMethodBodyDependency_Test()
+        {
+            var classSpec = _moduleSpec.GetTypeSpec($"{NAMESPACE}.{METHOD_BODY}");
+            classSpec.ForceRebuildSpec();
+
+            var basicClassMethodDependencies = _basicClassSpec.DependsOn
+                .OfType<MethodToTypeDependency>();
+
+            Assert.IsTrue(basicClassMethodDependencies.Select(d => d.DependsOn).Contains(classSpec));
+            Assert.IsNotNull(classSpec);
+            
         }
 
         //[TestMethod]

@@ -9,38 +9,22 @@ using System.Reflection;
 namespace AssemblyAnalyser.Tests
 {
     [TestClass]
-    public class BasicTypeTests
+    public class BasicTypeTests : AbstractSpecTests
     {
-        ISpecManager _specManager;
-        ILoggerProvider _loggerProvider;
-        IExceptionManager _exceptionManager;
-        ModuleSpec _moduleSpec;
-        TypeSpec _basicClassSpec;
         TypeSpec _basicInterfaceSpec;
         TypeSpec _basicAttribute;
         TypeSpec _basicDelegate;
 
-        [TestInitialize] 
-        public void Initialize() 
+        [TestInitialize]
+        public override void Initialize() 
         {
-            _exceptionManager = new ExceptionManager();
-            _loggerProvider = NSubstitute.Substitute.For<ILoggerProvider>();
-            _specManager = new SpecManager(_loggerProvider, _exceptionManager);
-            var filePath = "..\\..\\..\\..\\AssemblyAnalyser.TestData\\bin\\Debug\\net6.0\\AssemblyAnalyser.TestData.dll";
-            _moduleSpec = _specManager.LoadModuleSpec(Path.GetFullPath(filePath));            
-            _moduleSpec.Process();
-            foreach (var typeSpec in _moduleSpec.TypeSpecs)
-            {
-                typeSpec.Process();
-            }
+            base.Initialize();
             _specManager.ProcessLoadedProperties();
             _specManager.ProcessLoadedMethods();
             _specManager.ProcessLoadedFields();
             _specManager.ProcessLoadedParameters();
             _specManager.ProcessLoadedEvents();
             //_specManager.ProcessLoadedAttributes();
-            _basicClassSpec = _moduleSpec.TypeSpecs
-                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicClass");
             _basicInterfaceSpec = _moduleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.IBasicInterface");
             _basicAttribute = _moduleSpec.TypeSpecs

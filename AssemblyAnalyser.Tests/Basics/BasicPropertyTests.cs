@@ -9,32 +9,18 @@ using System.Reflection;
 namespace AssemblyAnalyser.Tests
 {
     [TestClass]
-    public class BasicPropertyTests
+    public class BasicPropertyTests : AbstractSpecTests
     {
-        ISpecManager _specManager;
-        ILoggerProvider _loggerProvider;
-        IExceptionManager _exceptionManager;
-        ModuleSpec _moduleSpec;
         ModuleSpec _vbModuleSpec;
-        TypeSpec _basicClassSpec;
         TypeSpec _basicVBClassSpec;
 
         [TestInitialize] 
-        public void Initialize() 
+        public override void Initialize() 
         {
-            _exceptionManager = new ExceptionManager();
-            _loggerProvider = NSubstitute.Substitute.For<ILoggerProvider>();
-            _specManager = new SpecManager(_loggerProvider, _exceptionManager);
-            
-            var filePath = "..\\..\\..\\..\\AssemblyAnalyser.TestData\\bin\\Debug\\net6.0\\AssemblyAnalyser.TestData.dll";
-            _moduleSpec = _specManager.LoadModuleSpec(Path.GetFullPath(filePath));
-            _moduleSpec.Process();
+            base.Initialize();
             var vbFilePath = "..\\..\\..\\..\\AssemblyAnalyser.VBTestData\\bin\\Debug\\net35\\AssemblyAnalyser.VBTestData.dll";
             _vbModuleSpec = _specManager.LoadModuleSpec(Path.GetFullPath(vbFilePath)); 
             _vbModuleSpec.Process();
-            //_specManager.ProcessLoadedProperties();
-            _basicClassSpec = _moduleSpec.TypeSpecs
-                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicClass");
             _basicVBClassSpec = _vbModuleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.VBTestData.Basics.BasicVBClass");
         }
