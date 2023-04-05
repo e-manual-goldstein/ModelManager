@@ -33,7 +33,7 @@ namespace AssemblyAnalyser.Extensions
                     (str) => $"Removed {match.Groups[1]} from {match.Groups[0]} leaving {match.Groups[2]}\t{scope.MetadataScopeType}");
                 if (match.Groups[1].Value != ".dll")
                 {
-
+                    Console.WriteLine($"Removed {match.Groups[1].Value} extension from Scope name");
                 }
             }
             return match.Success ? match.Groups["FileNameNoExtension"].Value : scope.Name;

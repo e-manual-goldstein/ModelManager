@@ -438,16 +438,16 @@ namespace AssemblyAnalyser
             var methodDefinition = method as MethodDefinition;
             if (methodDefinition == null)
             {
-                try
-                {
-                    var module = LoadReferencedModuleByScopeName(method.Module, method.DeclaringType.Scope);
-                    var type = module.GetTypeSpec(method.DeclaringType);
-                    return type.MatchMethodReference(method);
-                }
-                catch
-                {
-                    return new MissingMethodSpec(method, this);
-                }                
+                return new MissingMethodSpec(method, this);
+                //try
+                //{
+                //    var module = LoadReferencedModuleByScopeName(method.Module, method.DeclaringType.Scope);
+                //    var type = module.GetTypeSpec(method.DeclaringType);
+                //    return type.MatchMethodReference(method);
+                //}
+                //catch
+                //{
+                //}                
             }
             return _methodSpecs.GetOrAdd(methodDefinition, (key) => CreateMethodSpec(methodDefinition, LoadTypeSpec(methodDefinition.DeclaringType)));
         }

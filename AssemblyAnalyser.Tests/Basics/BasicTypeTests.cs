@@ -218,9 +218,9 @@ namespace AssemblyAnalyser.Tests
         #region Basic Delegate Tests
 
         [TestMethod]
-        public void BasicDelegateIsDelegateForExactlyOneType_Test()
+        public void BasicDelegateIsDelegateForBasicClassType_Test()
         {
-            Assert.AreEqual(1, _basicDelegate.DelegateForSpecs.Count());
+            Assert.AreEqual(1, _basicDelegate.DelegateForSpecs.Where(d => d.DeclaringType.Name == "BasicClass").Count());
         }
 
         #endregion

@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System;
 
-namespace AssemblyAnalyser.TestData.WithDependencies
+namespace AssemblyAnalyser.TestData.WithExternalDependencies
 {
     public class ClassWithMethodBodyDependency
     {        

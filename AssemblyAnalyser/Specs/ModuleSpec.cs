@@ -125,6 +125,12 @@ namespace AssemblyAnalyser
             return matchingByName.Single();
         }
 
+        public TypeSpec GetTypeSpec(string fullTypeName)
+        {
+            var matchingByName = TypeSpecs.Where(t => t.FullTypeName == fullTypeName).ToList();
+            return matchingByName.Single();
+        }
+
         public bool HasScopeName(string name)
         {
             return _baseVersion.Assembly.Name.Name == name;
