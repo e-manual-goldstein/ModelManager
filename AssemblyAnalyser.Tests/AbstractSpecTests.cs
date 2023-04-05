@@ -26,5 +26,16 @@ namespace AssemblyAnalyser.Tests
             _basicClassSpec = _moduleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicClass");
         }
+
+        [TestCleanup]
+        public virtual void Cleanup()
+        {
+            var specErrors = _specManager.Faults.Where(f => f.StartsWith("[Error]"));
+            foreach (var specError in specErrors)
+            {
+
+            }
+        }
+
     }
 }

@@ -40,14 +40,13 @@ namespace AssemblyAnalyser
         #endregion
 
         TypeDefinition _typeDefinition;
-        TypeReference _typeReference;
-        public TypeSpec(TypeReference typeReference, ISpecManager specManager)
-            : this($"{typeReference.Namespace}.{ typeReference.Name}", typeReference.FullName, specManager)
+        
+        public TypeSpec(TypeDefinition typeDefinition, ISpecManager specManager)
+            : this($"{typeDefinition.Namespace}.{ typeDefinition.Name}", typeDefinition.FullName, specManager)
         {
-            _typeReference = typeReference;
-            _typeDefinition = (typeReference is TypeDefinition typeDefinition) ? typeDefinition : null;
-            Name = typeReference.Name;
-            Namespace = typeReference.Namespace;
+            _typeDefinition = typeDefinition;
+            Name = typeDefinition.Name;
+            Namespace = typeDefinition.Namespace;
             if (_typeDefinition == null)
             {
                 specManager.AddFault(FaultSeverity.Warning, $"Could not find matching TypeDefinition for {FullTypeName}");
@@ -56,7 +55,7 @@ namespace AssemblyAnalyser
             IsSystem = Module?.IsSystem ?? true;
         }
 
-        TypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager) 
+        protected TypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager) 
             : base(specManager)
         {
             UniqueTypeName = uniqueTypeName;
@@ -66,7 +65,7 @@ namespace AssemblyAnalyser
         public string UniqueTypeName { get; }
         public string FullTypeName { get; }
         public string Namespace { get; set; }
-        public bool? IsInterface { get; private set; }
+        public bool? IsInterface { get; }
         //public bool? IsSystemType { get; }
         public bool IsArray { get; }
 
@@ -122,7 +121,12 @@ namespace AssemblyAnalyser
         }
 
         ModuleSpec _module;
-        public ModuleSpec Module => _module ??= _specManager.LoadReferencedModuleByScopeName(_typeReference.Module, _typeReference.Scope);
+        public ModuleSpec Module => _module ??= TryGetModule();
+
+        protected virtual ModuleSpec TryGetModule()
+        {
+            return _specManager.LoadReferencedModuleByScopeName(_typeDefinition.Module, _typeDefinition.Scope);
+        }
 
         TypeSpec _baseSpec;
         public TypeSpec BaseSpec => _baseSpec ??= CreateBaseSpec();
@@ -348,14 +352,16 @@ namespace AssemblyAnalyser
 
         public override string ToString()
         {
-            return $"{_typeReference.Namespace}_{_typeReference.FullName}" ?? UniqueTypeName;
+            return 
+                //$"{_typeDefinition.Namespace}_{_typeDefinition.FullName}" ?? 
+                UniqueTypeName;
         }
         
         private List<TypeSpec> _implementations = new List<TypeSpec>();
 
         public TypeSpec[] Implementations => _implementations.ToArray();
 
-        public void AddImplementation(TypeSpec typeSpec)
+        public virtual void AddImplementation(TypeSpec typeSpec)
         {
             if (IsInterface.Equals(false))
             {
@@ -387,7 +393,7 @@ namespace AssemblyAnalyser
         List<IMemberSpec> _resultTypeSpecs = new List<IMemberSpec>();
         public IMemberSpec[] ResultTypeSpecs => _resultTypeSpecs.ToArray();
 
-        public void RegisterAsResultType(IMemberSpec methodSpec)
+        public virtual void RegisterAsResultType(IMemberSpec methodSpec)
         {
             if (!_resultTypeSpecs.Contains(methodSpec))
             {
@@ -399,7 +405,7 @@ namespace AssemblyAnalyser
         List<ParameterSpec> _dependentParameterSpecs = new List<ParameterSpec>();
         public ParameterSpec[] DependentParameterSpecs => _dependentParameterSpecs.ToArray();
 
-        public void RegisterAsDependentParameterSpec(ParameterSpec parameterSpec)
+        public virtual void RegisterAsDependentParameterSpec(ParameterSpec parameterSpec)
         {
             if (!_dependentParameterSpecs.Contains(parameterSpec))
             {
@@ -411,7 +417,7 @@ namespace AssemblyAnalyser
         List<MethodSpec> _dependentMethodBodies = new List<MethodSpec>();
         public MethodSpec[] DependentMethodBodies => _dependentMethodBodies.ToArray();
 
-        public void RegisterDependentMethodSpec(MethodSpec methodSpec)
+        public virtual void RegisterDependentMethodSpec(MethodSpec methodSpec)
         {
             if (!_dependentMethodBodies.Contains(methodSpec))
             {
@@ -424,7 +430,7 @@ namespace AssemblyAnalyser
 
         public AbstractSpec[] DecoratorForSpecs => _decoratorForSpecs.ToArray();        
 
-        public void RegisterAsDecorator(AbstractSpec decoratedSpec)
+        public virtual void RegisterAsDecorator(AbstractSpec decoratedSpec)
         {
             if (!_decoratorForSpecs.Contains(decoratedSpec))
             {
@@ -449,7 +455,7 @@ namespace AssemblyAnalyser
 
         public bool HasDefinition => _typeDefinition != null;
         
-        public void RegisterAsDelegateFor(EventSpec eventSpec)
+        public virtual void RegisterAsDelegateFor(EventSpec eventSpec)
         {
             if (!_delegateFor.Contains(eventSpec))
             {
@@ -532,9 +538,10 @@ namespace AssemblyAnalyser
         {
             if (Module == null)
             {
-                _specManager.AddFault(FaultSeverity.Warning, $"Module not found for Type: {_typeReference}");
+                _specManager.AddFault(FaultSeverity.Warning, $"Module not found for Type: {_typeDefinition}");
                 return;
             }
+
             Module.RegisterDependentType(typeSpec);
         }
     }

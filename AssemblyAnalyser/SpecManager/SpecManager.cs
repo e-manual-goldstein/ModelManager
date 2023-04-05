@@ -246,6 +246,24 @@ namespace AssemblyAnalyser
             return spec;
         }
 
+        private bool TryGetModuleForTypeRefernce(TypeReference type, out ModuleSpec moduleSpec)
+        {
+            bool success = false;
+            var scopeName = type.Scope.GetScopeNameWithoutExtension();
+            var modules = _moduleSpecs.Where(m => m.Key == scopeName).Select(c => c.Value).ToList();
+            if (modules.Count > 1)
+            {
+                AddFault($"Multiple Modules found for {type.Namespace}.{type.Name}");
+                moduleSpec = null;
+            }
+            else
+            {
+                success = (moduleSpec = modules.SingleOrDefault()) != null;                
+            }
+            return success;
+        }
+
+
         #endregion
 
         #region Types
@@ -293,13 +311,44 @@ namespace AssemblyAnalyser
         {
             var moduleName = type.Scope.GetScopeNameWithoutExtension();
             var suffix = isArray ? "[]" : null;
+            if (type is GenericParameter genericParameter)
+            {
+                if (genericParameter.DeclaringMethod == null)
+                {
+                    return $"{moduleName}_{genericParameter.DeclaringType.FullName}<{type.FullName}>{suffix}";
+                }
+                else
+                {
+                    if (genericParameter.DeclaringType != null)
+                    {
+
+                    }
+                    else
+                    {
+                        var declaringMethod = genericParameter.DeclaringMethod;
+                        return $"{moduleName}_{declaringMethod.DeclaringType.FullName}.{declaringMethod.Name}<{type.FullName}>{suffix}";
+                    }
+                }
+            }
             return $"{moduleName}_{type.FullName}{suffix}";
         }
 
         private TypeSpec LoadFullTypeSpec(TypeReference type)
         {
             bool typeReferenceIsArray = type.IsArray; //Resolving TypeReference to TypeDefinition causes loss of IsArray definition
-            if (!type.IsDefinition && !(type.IsGenericInstance || type.IsGenericParameter))
+            if (type.IsGenericParameter)
+            {
+                if (type is GenericParameter genericParameter)
+                {
+                    return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateGenericParameterSpec(genericParameter));
+                }
+                if (TryGetModuleForTypeRefernce(type, out ModuleSpec moduleSpec))
+                {
+                    genericParameter = moduleSpec.GetGenericTypeDefinition(type);
+                    return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateGenericParameterSpec(genericParameter));
+                }                
+            }
+            if (!type.IsDefinition)
             {
                 TryGetTypeDefinition(ref type);
             }
@@ -308,8 +357,18 @@ namespace AssemblyAnalyser
 
         private TypeSpec CreateFullTypeSpec(TypeReference type)
         {
-            var spec = new TypeSpec(type, this);
-            return spec;
+            if (type is TypeDefinition typeDefinition)
+            {
+                var spec = new TypeSpec(typeDefinition, this);
+                return spec;
+            }
+            return new MissingTypeSpec($"{type.Namespace}.{type.Name}", type.FullName, this);
+        }
+
+        private TypeSpec CreateGenericParameterSpec(GenericParameter type)
+        {
+            var spec = new GenericParameterSpec(type, this);
+            return spec;            
         }
 
         private void TryGetTypeDefinition(ref TypeReference type)
@@ -333,26 +392,31 @@ namespace AssemblyAnalyser
             }
             if (typeDefinition == null)
             {
-                var scopeName = type.Scope.GetScopeNameWithoutExtension();
-                var modules = _moduleSpecs.Where(m => m.Key == scopeName).ToList();
-                if (!modules.Any())
+                if (TryGetModuleForTypeRefernce(type, out ModuleSpec moduleSpec))
                 {
-                    AddFault($"Module not found for {type.Namespace}.{type.Name}");
-                }
-                else if (modules.Count > 1)
-                {
-                    AddFault($"Multiple Modules found for {type.Namespace}.{type.Name}");
-                }
-                else
-                {
-                    var module = modules.Single();
-                    typeDefinition = module.Value.GetTypeDefinition(type);
+                    if (type.IsGenericParameter)
+                    {
+                        var genericParameter = moduleSpec.GetGenericTypeDefinition(type);
+                        if (genericParameter != null)
+                        {
+                            type = genericParameter;
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        typeDefinition = moduleSpec.GetTypeDefinition(type);
+                    }
                 }
             }
             if (typeDefinition != null)
             {
                 type = typeDefinition;
                 return;
+            }
+            if (type.IsGenericParameter || type.IsGenericInstance)
+            {
+
             }
             AddFault("Could not fully resolve TypeDefinition");
         }

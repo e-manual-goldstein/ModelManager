@@ -95,6 +95,20 @@ namespace AssemblyAnalyser
             return _baseVersion.GetType(typeReference.FullName);
         }
 
+        internal GenericParameter GetGenericTypeDefinition(TypeReference typeReference)
+        {
+            var typesWithGenericParameters = _baseVersion.Types.Where(t => t.HasGenericParameters).ToArray();
+            if (typeReference.DeclaringType != null)
+            {
+                var matchingType = typesWithGenericParameters.SingleOrDefault(t => t.FullName == typeReference.DeclaringType.FullName);
+                return matchingType.GenericParameters.SingleOrDefault(t => t.FullName == typeReference.FullName);
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+        }
+
         List<TypeSpec> _dependentTypes = new List<TypeSpec>();
 
         public TypeSpec[] DependentTypes => _dependentTypes.ToArray();

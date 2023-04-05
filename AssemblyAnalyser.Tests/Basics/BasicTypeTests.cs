@@ -208,5 +208,12 @@ namespace AssemblyAnalyser.Tests
         }
 
         #endregion
+
+        [TestCleanup]
+        public override void Cleanup()
+        {
+            var specErrors = _specManager.Faults.Where(f => f.StartsWith("[Error]"));
+            Assert.IsTrue(!specErrors.Any());
+        }
     }
 }
