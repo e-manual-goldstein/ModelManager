@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser.Specs
 {
-    internal class GenericParameterSpec : TypeSpec
+    public class GenericParameterSpec : TypeSpec
     {
         GenericParameter _genericParameter;
 
@@ -15,11 +15,32 @@ namespace AssemblyAnalyser.Specs
             : base($"{genericParameter.Namespace}.{genericParameter.Name}", genericParameter.FullName, specManager)
         {
             _genericParameter = genericParameter;
+            Name = _genericParameter.Name;
+            HasDefaultConstructorConstraint = _genericParameter.Attributes.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint);
         }
+
+        public bool HasDefaultConstructorConstraint { get; }
 
         protected override ModuleSpec TryGetModule()
         {
             return _specManager.LoadReferencedModuleByScopeName(_genericParameter.Module, _genericParameter.Scope);
         }
+
+        protected override TypeSpec CreateBaseSpec()
+        {
+            foreach (var constraint in _genericParameter.Constraints)
+            {
+                if (_specManager.TryLoadTypeSpec(() => constraint.ConstraintType, out TypeSpec typeSpec))
+                {
+                    if (typeSpec.IsClass)
+                    {
+                        return typeSpec;
+                    }
+                }
+            }
+            return null;
+        }
+
+        public override bool IsGenericParameter => true;
     }
 }

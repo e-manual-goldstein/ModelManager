@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using AssemblyAnalyser.Specs;
 using Mono.Cecil;
 namespace AssemblyAnalyser
 {
@@ -43,7 +45,7 @@ namespace AssemblyAnalyser
                 
         public string ModuleShortName { get; }
         public string FilePath { get; }
-        public bool IsSystem { get; }
+        
         public string ModuleFullName { get; }
 
         Dictionary<string, AssemblyNameReference> Versions { get; }
@@ -89,13 +91,13 @@ namespace AssemblyAnalyser
             return ModuleFullName;
         }
 
-        internal TypeDefinition GetTypeDefinition(TypeReference typeReference)
+        public TypeDefinition GetTypeDefinition(TypeReference typeReference)
         {
             var types = _baseVersion.Types.ToArray();
             return _baseVersion.GetType(typeReference.FullName);
         }
 
-        internal GenericParameter GetGenericTypeDefinition(TypeReference typeReference)
+        public GenericParameter GetGenericParameter(TypeReference typeReference)
         {
             var typesWithGenericParameters = _baseVersion.Types.Where(t => t.HasGenericParameters).ToArray();
             if (typeReference.DeclaringType != null)
@@ -106,6 +108,22 @@ namespace AssemblyAnalyser
             else
             {
                 throw new NotImplementedException();
+            }
+        }
+
+        List<GenericInstanceSpec> _genericTypeImplementations = new List<GenericInstanceSpec>();
+
+        public GenericInstanceSpec[] GenericTypeImplementations => _genericTypeImplementations.ToArray();
+
+        public void AddGenericTypeImplementation(GenericInstanceSpec genericInstance)
+        {
+            if (TypeSpecs.Contains(genericInstance))
+            {
+
+            }
+            if (!_genericTypeImplementations.Contains(genericInstance))
+            {
+                _genericTypeImplementations.Add(genericInstance);
             }
         }
 
@@ -142,7 +160,7 @@ namespace AssemblyAnalyser
         public TypeSpec GetTypeSpec(string fullTypeName)
         {
             var matchingByName = TypeSpecs.Where(t => t.FullTypeName == fullTypeName).ToList();
-            return matchingByName.Single();
+            return matchingByName.SingleOrDefault();
         }
 
         public bool HasScopeName(string name)

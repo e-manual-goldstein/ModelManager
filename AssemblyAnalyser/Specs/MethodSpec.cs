@@ -26,8 +26,10 @@ namespace AssemblyAnalyser
 
         }
 
-        TypeSpec _resultType;
-        public TypeSpec ResultType => _resultType ??= TryGetReturnType();
+        TypeSpec IMemberSpec.ResultType => ReturnType;
+
+        TypeSpec _returnType;
+        public TypeSpec ReturnType => _returnType ??= TryGetReturnType();
 
         public TypeSpec DeclaringType { get; }
 
@@ -49,7 +51,7 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            _resultType = TryGetReturnType();
+            _returnType = TryGetReturnType();
             _parameters = _specManager.TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray(), this);
             if (_methodDefinition.Body is MethodBody body)
             {

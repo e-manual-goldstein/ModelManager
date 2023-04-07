@@ -20,6 +20,13 @@ namespace AssemblyAnalyser.Tests
         }
 
         [TestMethod]
+        public void BasicMethodSpecHasReturnTypeSpec_Test()
+        {
+            var method = _basicClassSpec.GetMethodSpecs("PublicMethod").SingleOrDefault();
+            Assert.IsNotNull(method.ReturnType);
+        }
+
+        [TestMethod]
         public void BasicMethodSpecLinkedToInterfaceImplementationMember_Test()
         {
             var interfaceImplementation = _basicClassSpec.GetMethodSpecs("PublicMethod").SingleOrDefault();

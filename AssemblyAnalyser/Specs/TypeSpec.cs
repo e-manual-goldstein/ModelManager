@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using Mono.Cecil;
 using System;
 using System.Reflection;
+using AssemblyAnalyser.Specs;
 
 namespace AssemblyAnalyser
 {
@@ -53,6 +54,7 @@ namespace AssemblyAnalyser
             }
             IsInterface = _typeDefinition?.IsInterface;
             IsSystem = Module?.IsSystem ?? true;
+            IsClass = typeDefinition.IsClass;
         }
 
         protected TypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager) 
@@ -66,6 +68,7 @@ namespace AssemblyAnalyser
         public string FullTypeName { get; }
         public string Namespace { get; set; }
         public bool? IsInterface { get; }
+        public bool IsClass { get; }
         //public bool? IsSystemType { get; }
         public bool IsArray { get; }
 
@@ -92,10 +95,15 @@ namespace AssemblyAnalyser
             _methods = CreateMethodSpecs();
             _properties = CreatePropertySpecs();
             _events = CreateEventSpecs();
-            _attributes = _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this);
+            _attributes = CreateAttributSpecs();
             ProcessInterfaceImplementations();
             ProcessCompilerGenerated();
             ProcessGenerics();
+        }
+
+        protected virtual TypeSpec[] CreateAttributSpecs()
+        {
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this);
         }
 
         protected override CustomAttribute[] GetAttributes()
@@ -105,7 +113,7 @@ namespace AssemblyAnalyser
 
         private void ProcessCompilerGenerated()
         {
-            IsCompilerGenerated = _typeDefinition.CustomAttributes.OfType<CompilerGeneratedAttribute>().Any();
+            IsCompilerGenerated = _typeDefinition?.CustomAttributes.OfType<CompilerGeneratedAttribute>().Any() ?? false;
             if (IsCompilerGenerated)
             {
                 if (_typeDefinition.DeclaringType != null)
@@ -131,7 +139,7 @@ namespace AssemblyAnalyser
         TypeSpec _baseSpec;
         public TypeSpec BaseSpec => _baseSpec ??= CreateBaseSpec();
 
-        private TypeSpec CreateBaseSpec()
+        protected virtual TypeSpec CreateBaseSpec()
         {
             if (_specManager.TryLoadTypeSpec(() => _typeDefinition.BaseType, out TypeSpec typeSpec))
             {
@@ -146,12 +154,19 @@ namespace AssemblyAnalyser
         TypeSpec[] _interfaces;
         public TypeSpec[] Interfaces => _interfaces ??= CreateInterfaceSpecs();
 
-        private TypeSpec[] CreateInterfaceSpecs()
+        protected virtual TypeSpec[] CreateInterfaceSpecs()
         {
             if (_specManager.TryLoadTypeSpecs(() => _typeDefinition.Interfaces.Select(i => i.InterfaceType).ToArray(), out TypeSpec[] specs))
             {
                 foreach (var interfaceSpec in specs.Where(s => !s.IsNullSpec))
                 {
+                    if (interfaceSpec is GenericInstanceSpec genericInstanceSpec)
+                    {
+                        Module.AddGenericTypeImplementation(genericInstanceSpec);
+                    }
+                    else
+                    {
+                    }
                     interfaceSpec.AddImplementation(this);
                 }
             }
@@ -161,7 +176,7 @@ namespace AssemblyAnalyser
         TypeSpec[] _nestedTypes;
         public TypeSpec[] NestedTypes => _nestedTypes ??= CreateNestedTypeSpecs();
 
-        private TypeSpec[] CreateNestedTypeSpecs()
+        protected virtual TypeSpec[] CreateNestedTypeSpecs()
         {
             if (_specManager.TryLoadTypeSpecs(() => _typeDefinition.NestedTypes.Where(n => n.DeclaringType == _typeDefinition).ToArray()
                 , out TypeSpec[] specs))
@@ -226,7 +241,7 @@ namespace AssemblyAnalyser
         FieldSpec[] _fields;
         public FieldSpec[] Fields => _fields ??= CreateFieldSpecs();
 
-        private FieldSpec[] CreateFieldSpecs()
+        protected virtual FieldSpec[] CreateFieldSpecs()
         {
             var specs = _specManager.TryLoadFieldSpecs(() => _typeDefinition.Fields.Where(m => m.DeclaringType == _typeDefinition).ToArray(), this);
             return specs;
@@ -235,20 +250,30 @@ namespace AssemblyAnalyser
         EventSpec[] _events;
         public EventSpec[] Events => _events ??= CreateEventSpecs();
 
-        private EventSpec[] CreateEventSpecs()
+        protected virtual EventSpec[] CreateEventSpecs()
         {
             var specs = _specManager.TryLoadEventSpecs(() => _typeDefinition.Events.Where(m => m.DeclaringType == _typeDefinition).ToArray(), this);
             return specs;
         }
 
         TypeSpec[] _genericTypeParamters;
-        public TypeSpec[] GenericTypeParameters => _genericTypeParamters;
+        public TypeSpec[] GenericTypeParameters => _genericTypeParamters ??= CreateGenericTypeParameters();
+
+        protected virtual TypeSpec[] CreateGenericTypeParameters()
+        {
+            _specManager.TryLoadTypeSpecs(() => _typeDefinition.GenericParameters.ToArray(), out TypeSpec[] typeSpecs);
+            return typeSpecs;
+        }
+
 
         #region Generic Type Flags
 
         private void ProcessGenerics()
         {
-            //IsGenericType = _typeDefinition.IsGenericInstance;
+            if (IsGenericInstance)
+            {
+
+            }
             //IsGenericTypeDefinition = _typeDefinition.IsGenericInstance; // This seems to be never unequal to IsGenericType
             //if (IsGenericType)
             //{
@@ -271,19 +296,11 @@ namespace AssemblyAnalyser
             //{
 
             //}
-            //IsGenericParameter = type.IsGenericParameter;
             //IsGenericTypeParameter = type.IsGenericTypeParameter;
         }
 
-        public bool IsGenericType { get; private set; }
-
-        public bool IsGenericParameter { get; private set; }
-
-        public bool IsGenericTypeDefinition { get; private set; }
-
-        public bool ContainsGenericParameters { get; private set; }
-
-        public bool IsGenericTypeParameter { get; private set; }
+        public virtual bool IsGenericInstance => false;
+        public virtual bool IsGenericParameter => false;
 
         #endregion
 

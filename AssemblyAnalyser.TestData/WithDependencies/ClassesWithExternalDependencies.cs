@@ -1,5 +1,4 @@
 ﻿using AssemblyAnalyser.TestData.Basics;
-using AssemblyAnalyser.TestData.Complex;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;

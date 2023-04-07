@@ -330,7 +330,19 @@ namespace AssemblyAnalyser
                     }
                 }
             }
+            if (type is GenericInstanceType genericInstanceType)
+            {
+                return CreateGenericArgumentsAggregateName(moduleName, genericInstanceType);                
+            }
             return $"{moduleName}_{type.FullName}{suffix}";
+        }
+
+        private string CreateGenericArgumentsAggregateName(string moduleName, GenericInstanceType genericType)
+        {
+            var prefix = $"{moduleName}_{genericType.Namespace}.{genericType.Name}<";
+            var argumentNames = genericType.GenericArguments.Select(g => CreateUniqueTypeSpecName(g, false)).ToArray();
+            var argumentString = argumentNames.Aggregate((a, b) => $"{a}, {b}");
+            return $"{prefix}{argumentString}>";
         }
 
         private TypeSpec LoadFullTypeSpec(TypeReference type)
@@ -342,11 +354,20 @@ namespace AssemblyAnalyser
                 {
                     return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateGenericParameterSpec(genericParameter));
                 }
-                if (TryGetModuleForTypeRefernce(type, out ModuleSpec moduleSpec))
-                {
-                    genericParameter = moduleSpec.GetGenericTypeDefinition(type);
-                    return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateGenericParameterSpec(genericParameter));
-                }                
+                //if (TryGetModuleForTypeRefernce(type, out ModuleSpec moduleSpec))
+                //{
+                //    genericParameter = moduleSpec.GetGenericParameter(type);
+                //    return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateGenericParameterSpec(genericParameter));
+                //}
+                throw new NotImplementedException();
+            }
+            if (type.HasGenericParameters && type is TypeDefinition genericTypeDefinition)
+            {
+                return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateGenericTypeSpec(genericTypeDefinition));
+            }
+            if (type is GenericInstanceType genericInstanceType)
+            {
+                return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateGenericInstanceSpec(genericInstanceType));
             }
             if (!type.IsDefinition)
             {
@@ -371,32 +392,33 @@ namespace AssemblyAnalyser
             return spec;            
         }
 
+        private TypeSpec CreateGenericTypeSpec(TypeDefinition typeDefinition)
+        {
+            var spec = new GenericTypeSpec(typeDefinition, this);
+            return spec;
+        }
+
+        private TypeSpec CreateGenericInstanceSpec(GenericInstanceType type)
+        {
+            var spec = new GenericInstanceSpec(type, this);
+            return spec;
+        }
+
         private void TryGetTypeDefinition(ref TypeReference type)
         {
             TypeDefinition typeDefinition = null;
-            ModuleDefinition moduleDefinition = null;
-            try
+            if (type.IsGenericInstance)
             {
-                if ((moduleDefinition = type.Module) != null)
-                {
-                    if (moduleDefinition.AssemblyResolver != null)
-                    {
-                        //moduleDefinition.AssemblyResolver.Resolve(type.Mo);
-                    }
-                    typeDefinition = type.Resolve();
-                }
+                throw new ArgumentException("Cannot have TypeDefinition for Generic Instance");
             }
-            catch (AssemblyResolutionException assemblyResolutionException)
-            {
-                AddFault($"Failed to resolve TypeDefinition {type}: {assemblyResolutionException.Message}");
-            }
+            typeDefinition = TryResolveTypeDefinition(type);          
             if (typeDefinition == null)
             {
                 if (TryGetModuleForTypeRefernce(type, out ModuleSpec moduleSpec))
                 {
                     if (type.IsGenericParameter)
                     {
-                        var genericParameter = moduleSpec.GetGenericTypeDefinition(type);
+                        var genericParameter = moduleSpec.GetGenericParameter(type);
                         if (genericParameter != null)
                         {
                             type = genericParameter;
@@ -414,13 +436,30 @@ namespace AssemblyAnalyser
                 type = typeDefinition;
                 return;
             }
-            if (type.IsGenericParameter || type.IsGenericInstance)
-            {
-
-            }
             AddFault("Could not fully resolve TypeDefinition");
         }
 
+        private TypeDefinition TryResolveTypeDefinition(TypeReference type)
+        {
+            ModuleDefinition moduleDefinition = null;
+            try
+            {
+                if ((moduleDefinition = type.Module) != null)
+                {
+                    if (moduleDefinition.AssemblyResolver != null)
+                    {
+                        //moduleDefinition.AssemblyResolver.Resolve(type.Mo);
+                    }
+                    return type.Resolve();
+                }
+            }
+            catch (AssemblyResolutionException assemblyResolutionException)
+            {
+                AddFault($"Failed to resolve TypeDefinition {type}: {assemblyResolutionException.Message}");
+            }
+            return null;
+        }
+        
         public bool TryLoadTypeSpec(Func<TypeReference> getType, out TypeSpec typeSpec)
         {
             bool success = false;

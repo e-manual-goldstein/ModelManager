@@ -31,7 +31,7 @@ namespace AssemblyAnalyser.Specs
 
         public override void RegisterAsDecorator(AbstractSpec decoratedSpec)
         {
-            _specManager.AddFault(FaultSeverity.Error, $"Missing TypeSpec for {UniqueTypeName}");
+            //_specManager.AddFault(FaultSeverity.Error, $"Missing TypeSpec for {UniqueTypeName}");
         }
 
         public override void RegisterAsDelegateFor(EventSpec eventSpec)
