@@ -3,16 +3,19 @@ using System.Linq;
 
 namespace AssemblyAnalyser.TestData.Generics
 {
+    [NotTested]
     public interface IGenericInterface<TGenericForInterface> 
     {
         TGenericForInterface GenericProperty { get; set; }
     }
 
+    [NotTested]
     public interface IGenericInterfaceWithTypeConstraints<TGenericForInterface> where TGenericForInterface : BasicClass
     {
         public TGenericForInterface GenericProperty { get; set; }
     }
 
+    [NotTested]
     public interface IInterfaceWithGenericMethods
     {
         public TGenericForMethod MethodWithGenericReturnType<TGenericForMethod>();

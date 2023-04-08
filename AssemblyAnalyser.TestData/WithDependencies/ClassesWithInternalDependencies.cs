@@ -3,6 +3,7 @@ using System;
 
 namespace AssemblyAnalyser.TestData.WithInternalDependencies
 {
+    [NotTested]
     public class ClassWithMethodBodyDependency
     {        
         public string MethodWithDependencyInBody()
@@ -12,6 +13,7 @@ namespace AssemblyAnalyser.TestData.WithInternalDependencies
         }        
     }
 
+    [NotTested]
     public class ClassWithMethodParameterDependency
     {
         public void MethodWithParameterDependency(BasicClass basicClass)
@@ -20,6 +22,7 @@ namespace AssemblyAnalyser.TestData.WithInternalDependencies
         }
     }
 
+    [NotTested]
     public class ClassWithMethodReturnTypeDependency
     {
         public BasicClass MethodWithReturnTypeDependency()
@@ -28,6 +31,7 @@ namespace AssemblyAnalyser.TestData.WithInternalDependencies
         }
     }
 
+    [NotTested]
     public class ClassWithMethodGenericTypeParameterDependency
     {
         public void MethodWithGenericTypeParameterDependency<TGeneric>() where TGeneric : BasicClass
@@ -36,21 +40,25 @@ namespace AssemblyAnalyser.TestData.WithInternalDependencies
         }
     }
 
+    [NotTested]
     public class ClassWithInterfaceDependency : IReadWriteInterface
     {
         public int Id { get; set; }
     }
 
+    [NotTested]
     public class ClassWithPropertyDependency
     {
         public BasicClass BasicClassProperty { get; set; }
     }
 
+    [NotTested]
     public class ClassWithFieldDependency
     {
         public BasicClass BasicClassField;
     }
 
+    [NotTested]
     public class ClassWithEventDependency
     {
         public event BasicDelegate BasicEvent;

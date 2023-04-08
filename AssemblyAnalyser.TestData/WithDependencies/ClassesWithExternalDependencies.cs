@@ -6,6 +6,7 @@ using System;
 
 namespace AssemblyAnalyser.TestData.WithExternalDependencies
 {
+    [NotTested]
     public class ClassWithMethodBodyDependency
     {        
         public string MethodWithDependencyInBody()
@@ -15,6 +16,7 @@ namespace AssemblyAnalyser.TestData.WithExternalDependencies
         }        
     }
 
+    [NotTested]
     public class ClassWithMethodParameterDependency
     {
         public void MethodWithParameterDependency(JObject jObjectParam)
@@ -23,6 +25,7 @@ namespace AssemblyAnalyser.TestData.WithExternalDependencies
         }
     }
 
+    [NotTested]
     public class ClassWithMethodReturnTypeDependency
     {
         public JObject MethodWithReturnTypeDependency()
@@ -31,6 +34,7 @@ namespace AssemblyAnalyser.TestData.WithExternalDependencies
         }
     }
 
+    [NotTested]
     public class ClassWithMethodGenericTypeParameterDependency
     {
         public void MethodWithGenericTypeParameterDependency<TGeneric>() where TGeneric : JObject
@@ -39,6 +43,7 @@ namespace AssemblyAnalyser.TestData.WithExternalDependencies
         }
     }
 
+    [NotTested]
     public class ClassWithInterfaceDependency : IJsonLineInfo
     {
         public int LineNumber { get; }
@@ -50,16 +55,19 @@ namespace AssemblyAnalyser.TestData.WithExternalDependencies
         }
     }
 
+    [NotTested]
     public class ClassWithPropertyDependency
     {
         public JObject JObjectProperty { get; set; }
     }
 
+    [NotTested]
     public class ClassWithFieldDependency
     {
         public JObject JObjectField;
     }
 
+    [NotTested]
     public class ClassWithEventDependency
     {
         public event ExtensionDataGetter JObjectEvent;

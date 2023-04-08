@@ -113,6 +113,7 @@ namespace AssemblyAnalyser
 
         private void ProcessCompilerGenerated()
         {
+            //Might be obsolete under Mono.Cecil
             IsCompilerGenerated = _typeDefinition?.CustomAttributes.OfType<CompilerGeneratedAttribute>().Any() ?? false;
             if (IsCompilerGenerated)
             {

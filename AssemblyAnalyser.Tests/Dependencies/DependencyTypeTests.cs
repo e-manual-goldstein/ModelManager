@@ -36,6 +36,25 @@ namespace AssemblyAnalyser.Tests
             }            
         }
 
+        [TestMethod]
+        public void AnonymousTypeDependency_Test()
+        {
+            var classSpec = _moduleSpec.GetTypeSpec($"{NAMESPACE}.ClassWithAnonymousTypeInMethodBody");
+            classSpec.ForceRebuildSpec();
+            var method = classSpec.GetMethodSpecs("MethodWithAnonymousTypeInBody").SingleOrDefault();
+            method.ForceRebuildSpec();
+        }
+
+
+        [TestMethod]
+        public void LambdaTypeDependency_Test()
+        {
+            var classSpec = _moduleSpec.GetTypeSpec($"{NAMESPACE}.ClassWithLambdaInMethodBody");
+            classSpec.ForceRebuildSpec();
+            var method = classSpec.GetMethodSpecs("MethodWithLambdaInBody").SingleOrDefault();
+            method.ForceRebuildSpec();
+        }
+
         [TestMethod] //Dependencies have not been finalised
         public void DependencyClassSpecRegistersMethodBodyDependency_Test()
         {
