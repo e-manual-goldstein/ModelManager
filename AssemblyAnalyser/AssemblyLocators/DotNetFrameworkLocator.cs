@@ -84,7 +84,7 @@ namespace AssemblyAnalyser
             try
             {
                 var assemblyFileName = $"{assemblyName.ParseShortName()}.dll";
-                var matches = _filePathsForLocator.Where(r => Path.GetFileName(r) == assemblyFileName);
+                var matches = _filePathsForLocator.Where(r => Path.GetFileName(r).Equals(assemblyFileName, StringComparison.CurrentCultureIgnoreCase));
                 if (!matches.Any())
                 {
                     if (!_assemblyPathCache.FilePaths.TryGetValue(assemblyName, out assembly))

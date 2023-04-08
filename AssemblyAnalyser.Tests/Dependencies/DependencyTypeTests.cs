@@ -12,6 +12,7 @@ namespace AssemblyAnalyser.Tests
     public class InternalDependencyTypeTests : AbstractSpecTests
     {
         const string NAMESPACE = "AssemblyAnalyser.TestData.WithInternalDependencies";
+
         const string METHOD_BODY = "ClassWithMethodBodyDependency";
         const string PARAMETER = "ClassWithMethodParameterDependency";
         const string RETURN_TYPE = "ClassWithMethodReturnTypeDependency";
