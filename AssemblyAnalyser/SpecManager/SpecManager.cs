@@ -67,6 +67,7 @@ namespace AssemblyAnalyser
 
         public void AddMessage(string msg)
         {
+            Console.WriteLine(msg);
             _messages.Add(msg);
         }
 
@@ -511,6 +512,13 @@ namespace AssemblyAnalyser
             {
                 //TODO Ignore For Now
             }
+            return success;
+        }
+
+        public bool TryLoadTypeSpecs<TSpec>(Func<TypeReference[]> getTypes, out TSpec[] tSpecs)
+        {
+            bool success = TryLoadTypeSpecs(getTypes, out TypeSpec[] typeSpecs);
+            tSpecs = success ? typeSpecs.Cast<TSpec>().ToArray() : Array.Empty<TSpec>();
             return success;
         }
 

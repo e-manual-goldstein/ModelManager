@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AssemblyAnalyser.Specs
+namespace AssemblyAnalyser
 {
     public class GenericParameterSpec : TypeSpec
     {
@@ -42,5 +42,17 @@ namespace AssemblyAnalyser.Specs
         }
 
         public override bool IsGenericParameter => true;
+
+        public void RegisterAsGenericTypeArgumentFor(MethodSpec methodSpec)
+        {
+            _specManager.AddFault(FaultSeverity.Warning, "Implementation not finished for 'RegisterAsGenericTypeArgumentFor'");
+        }
+
+        internal bool IsValidGenericTypeMatchFor(GenericParameterSpec genericTypeArgumentSpec)
+        {
+            _specManager.AddFault(FaultSeverity.Warning, "Implementation not finished for 'IsValidGenericTypeMatchFor'");
+            return BaseSpec == genericTypeArgumentSpec.BaseSpec
+                && HasDefaultConstructorConstraint == genericTypeArgumentSpec.HasDefaultConstructorConstraint;
+        }
     }
 }

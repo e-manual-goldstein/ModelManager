@@ -9,6 +9,7 @@ namespace AssemblyAnalyser
         IReadOnlyDictionary<string, TypeSpec> Types { get; }
         bool TryLoadTypeSpec(Func<TypeReference> getType, out TypeSpec typeSpec);
         bool TryLoadTypeSpecs(Func<TypeReference[]> value, out TypeSpec[] typeSpecs);
+        bool TryLoadTypeSpecs<TSpec>(Func<TypeReference[]> value, out TSpec[] typeSpecs);
         TypeSpec[] TryLoadTypesForModule(ModuleDefinition module);
         void ProcessAllLoadedTypes(bool includeSystem = true, bool parallelProcessing = true);        
     }

@@ -21,9 +21,5 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Cecil\Mono.Cecil.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Specs\Generics\" />
-  </ItemGroup>
   
 </Project>

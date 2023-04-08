@@ -36,8 +36,8 @@ namespace AssemblyAnalyser
         ParameterSpec[] _parameters;
         public ParameterSpec[] Parameters => _parameters ??= _specManager.TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray(), this);
 
-        TypeSpec[] _genericTypeArguments;
-        public TypeSpec[] GenericTypeArguments => _genericTypeArguments ??= TryGetGenericTypeArguments();
+        GenericParameterSpec[] _genericTypeArguments;
+        public GenericParameterSpec[] GenericTypeArguments => _genericTypeArguments ??= TryGetGenericTypeArguments();
 
         List<TypeSpec> _localVariableTypes = new List<TypeSpec>();
         public TypeSpec[] LocalVariableTypes => _localVariableTypes.ToArray();
@@ -71,9 +71,9 @@ namespace AssemblyAnalyser
             return returnTypeSpec;
         }
 
-        private TypeSpec[] TryGetGenericTypeArguments()
+        private GenericParameterSpec[] TryGetGenericTypeArguments()
         {
-            if (_specManager.TryLoadTypeSpecs(() => _methodDefinition.GenericParameters.ToArray(), out TypeSpec[] genericArgumentSpecs))
+            if (_specManager.TryLoadTypeSpecs(() => _methodDefinition.GenericParameters.ToArray(), out GenericParameterSpec[] genericArgumentSpecs))
             {
                 foreach (var genericArgSpec in genericArgumentSpecs)
                 {
@@ -191,13 +191,13 @@ namespace AssemblyAnalyser
         //    return false;
         //}
 
-        public bool HasExactGenericTypeArguments(TypeSpec[] genericTypeArgumentSpecs)
+        public bool HasExactGenericTypeArguments(GenericParameterSpec[] genericTypeArgumentSpecs)
         {
             if (genericTypeArgumentSpecs.Length == GenericTypeArguments.Length)
             {
                 for (int i = 0; i < GenericTypeArguments.Length; i++)
                 {
-                    if (GenericTypeArguments[i] != genericTypeArgumentSpecs[i]) { }
+                    if (!GenericTypeArguments[i].IsValidGenericTypeMatchFor(genericTypeArgumentSpecs[i]))
                     {
                         return false;
                     }

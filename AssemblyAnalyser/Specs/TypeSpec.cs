@@ -194,7 +194,7 @@ namespace AssemblyAnalyser
         MethodSpec[] _methods;
         public MethodSpec[] Methods => _methods ??= CreateMethodSpecs();
 
-        private MethodSpec[] CreateMethodSpecs()
+        protected virtual MethodSpec[] CreateMethodSpecs()
         {
             if (_typeDefinition == null)
             {
@@ -208,7 +208,7 @@ namespace AssemblyAnalyser
         PropertySpec[] _properties;
         public PropertySpec[] Properties => _properties ??= CreatePropertySpecs();
 
-        private PropertySpec[] CreatePropertySpecs()
+        protected virtual PropertySpec[] CreatePropertySpecs()
         {
             if (_typeDefinition == null)
             {
@@ -257,12 +257,12 @@ namespace AssemblyAnalyser
             return specs;
         }
 
-        TypeSpec[] _genericTypeParamters;
-        public TypeSpec[] GenericTypeParameters => _genericTypeParamters ??= CreateGenericTypeParameters();
+        GenericParameterSpec[] _genericTypeParamters;
+        public GenericParameterSpec[] GenericTypeParameters => _genericTypeParamters ??= CreateGenericTypeParameters();
 
-        protected virtual TypeSpec[] CreateGenericTypeParameters()
+        protected virtual GenericParameterSpec[] CreateGenericTypeParameters()
         {
-            _specManager.TryLoadTypeSpecs(() => _typeDefinition.GenericParameters.ToArray(), out TypeSpec[] typeSpecs);
+            _specManager.TryLoadTypeSpecs(() => _typeDefinition.GenericParameters.ToArray(), out GenericParameterSpec[] typeSpecs);
             return typeSpecs;
         }
 
@@ -309,7 +309,7 @@ namespace AssemblyAnalyser
         {
             if (IsInterface != true) // Skip unless explicitly labelled as NOT an interface
             {
-                foreach (var interfaceSpec in Interfaces)
+                foreach (var interfaceSpec in Interfaces.Where(i => !i.IsGenericInstance))
                 {
                     RegisterMemberImplementations(interfaceSpec);
                 }
@@ -363,7 +363,15 @@ namespace AssemblyAnalyser
         {
             if (NestedIn != null)
             {
-                _specManager.AddFault(FaultSeverity.Error, $"NestedIn already set for Type {this}");
+                if (NestedIn != typeSpec)
+                {
+                    _specManager.AddFault(FaultSeverity.Error, $"NestedIn already set for Type {this}");
+                }
+                else
+                {
+                    _specManager.AddMessage($"NestedIn already set to this value: {typeSpec}");
+                }
+                return;
             }
             NestedIn = typeSpec;
         }
@@ -401,11 +409,6 @@ namespace AssemblyAnalyser
                 _subTypes.Add(typeSpec);
                 RegisterDependentTypeForModule(typeSpec);
             }
-        }
-
-        public void RegisterAsGenericTypeArgumentFor(MethodSpec methodSpec)
-        {
-            _specManager.AddFault("Implementation not finished for 'RegisterAsGenericTypeArgumentFor'");
         }
 
         List<IMemberSpec> _resultTypeSpecs = new List<IMemberSpec>();
@@ -516,7 +519,7 @@ namespace AssemblyAnalyser
         }
 
         public MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs
-            , TypeSpec[] genericTypeArgumentSpecs)
+            , GenericParameterSpec[] genericTypeArgumentSpecs)
         {
             var matchingMethods = Methods.Where(m
                     => m.Name == methodName
@@ -536,7 +539,7 @@ namespace AssemblyAnalyser
         public MethodSpec MatchMethodReference(MethodReference methodReference)
         {
             var parameterSpecs = _specManager.TryLoadParameterSpecs(() => methodReference.Parameters.ToArray(), null);
-            _specManager.TryLoadTypeSpecs(() => methodReference.GenericParameters.ToArray(), out TypeSpec[] genericTypeArgumentSpecs);
+            _specManager.TryLoadTypeSpecs(() => methodReference.GenericParameters.ToArray(), out GenericParameterSpec[] genericTypeArgumentSpecs);
             var matchingMethods = Methods.Where(m
                     => m.Name == methodReference.Name
                     && m.Parameters.Length == methodReference.Parameters.Count

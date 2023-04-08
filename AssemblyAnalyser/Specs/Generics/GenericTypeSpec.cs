@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AssemblyAnalyser.Specs
+namespace AssemblyAnalyser
 {
     public class GenericTypeSpec : TypeSpec
     {

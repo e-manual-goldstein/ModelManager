@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AssemblyAnalyser.Specs
+namespace AssemblyAnalyser
 {
     public class GenericInstanceSpec : TypeSpec
     {
@@ -67,6 +67,16 @@ namespace AssemblyAnalyser.Specs
             return InstanceOf.Interfaces;
         }
 
+        protected override MethodSpec[] CreateMethodSpecs()
+        {
+            return InstanceOf.Methods;
+        }
+
+        protected override PropertySpec[] CreatePropertySpecs()
+        {
+            return InstanceOf.Properties;
+        }
+
         protected override TypeSpec[] CreateNestedTypeSpecs()
         {
             return InstanceOf.NestedTypes;
@@ -87,12 +97,12 @@ namespace AssemblyAnalyser.Specs
             return InstanceOf.Attributes;
         }
 
-        TypeSpec[] _genericTypeArguments;
-        public TypeSpec[] GenericTypeArguments => _genericTypeArguments ??= TryGetGenericTypeArguments();
+        GenericParameterSpec[] _genericTypeArguments;
+        public GenericParameterSpec[] GenericTypeArguments => _genericTypeArguments ??= TryGetGenericTypeArguments();
 
-        private TypeSpec[] TryGetGenericTypeArguments()
+        private GenericParameterSpec[] TryGetGenericTypeArguments()
         {
-            _specManager.TryLoadTypeSpecs(() => _genericInstance.GenericArguments.ToArray(), out TypeSpec[] typeSpecs);
+            _specManager.TryLoadTypeSpecs(() => _genericInstance.GenericArguments.ToArray(), out GenericParameterSpec[] typeSpecs);
             return typeSpecs;
         }
 
@@ -101,9 +111,9 @@ namespace AssemblyAnalyser.Specs
             return _specManager.LoadReferencedModuleByScopeName(_genericInstance.Module, _genericInstance.Scope);
         }
 
-        protected override TypeSpec[] CreateGenericTypeParameters()
+        protected override GenericParameterSpec[] CreateGenericTypeParameters()
         {
-            _specManager.TryLoadTypeSpecs(() => _genericInstance.GenericParameters.ToArray(), out TypeSpec[] typeSpecs);
+            _specManager.TryLoadTypeSpecs(() => _genericInstance.GenericParameters.ToArray(), out GenericParameterSpec[] typeSpecs);
             return typeSpecs;
         }
     }
