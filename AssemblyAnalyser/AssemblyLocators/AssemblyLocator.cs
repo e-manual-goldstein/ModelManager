@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -45,6 +46,17 @@ namespace AssemblyAnalyser
 
         public static AssemblyLocator GetLocator(ModuleDefinition module)
         {
+            var customAttributes = module.GetCustomAttributes().Distinct();
+            if (customAttributes.Any())
+            {
+                foreach (var customAttribute in customAttributes)
+                {
+                    if (customAttribute.AttributeType.FullName == typeof(TargetFrameworkAttribute).FullName)
+                    {
+                        var frameworkVersion = customAttribute.ConstructorArguments[0].Value;
+                    }
+                }
+            }
             if (!string.IsNullOrEmpty(module.RuntimeVersion))
             {
                 var locator = CreateOrGetLocatorForRuntimeVersion(module.RuntimeVersion);
