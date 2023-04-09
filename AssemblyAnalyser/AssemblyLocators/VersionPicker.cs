@@ -65,11 +65,15 @@ namespace AssemblyAnalyser.AssemblyLocators
 
         class StringVersion
         {
-            const string versionPattern = @"^(?'major'0|[1-9]\d*)\.(?'minor'0|[1-9]\d*)\.(?'patch'0|[1-9]\d*)(?:-(?'prerelease'(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?'buildmetadata'[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$";
+            const string versionPattern = @"^(?'major'0|[1-9]\d*)\.(?'minor'0|[1-9]\d*)(\.(?'patch'0|[1-9]\d*))?(?:-(?'prerelease'(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?'buildmetadata'[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$";
             public StringVersion(string version) 
             {
                 FullSemver = version;
                 var match = Regex.Match(version, versionPattern);
+                if (!match.Success)
+                {
+
+                }
                 major = match.Groups["major"].Value;
                 minor = match.Groups["minor"].Value;
                 patch = match.Groups["patch"].Value;
@@ -91,7 +95,7 @@ namespace AssemblyAnalyser.AssemblyLocators
             public int Minor => int.Parse(minor);
 
             string patch;
-            public int Patch => int.Parse(patch);
+            public int Patch => string.IsNullOrEmpty(patch) ? 0 : int.Parse(patch);
             
             string preRelease;
             public string PreRelease => preRelease;

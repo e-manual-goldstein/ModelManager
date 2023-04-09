@@ -33,13 +33,13 @@ namespace AssemblyAnalyser
             {
                 return CreateOrGetLocatorForRuntimeVersion("v4.0.30319");
             }
-            if (!string.IsNullOrEmpty(imageRuntimeVersion))
-            {
-                return GetLocatorForImageRuntimeVersion(imageRuntimeVersion);
-            }
             if (!string.IsNullOrEmpty(targetFrameworkVersion))
             {
                 return GetLocatorForFrameworkVersion(targetFrameworkVersion);
+            }
+            if (!string.IsNullOrEmpty(imageRuntimeVersion))
+            {
+                return GetLocatorForImageRuntimeVersion(imageRuntimeVersion);
             }
             return CreateOrGetLocatorForRuntimeVersion("v4.0.30319");
         }
@@ -53,7 +53,15 @@ namespace AssemblyAnalyser
                 {
                     if (customAttribute.AttributeType.FullName == typeof(TargetFrameworkAttribute).FullName)
                     {
-                        var frameworkVersion = customAttribute.ConstructorArguments[0].Value;
+                        var frameworkVersion = $"{customAttribute.ConstructorArguments[0].Value}";
+                        if (frameworkVersion.StartsWith(".NETCoreApp"))
+                        {
+                            return CreateOrGetDotNetCoreLocatorForVersion(frameworkVersion);
+                        }
+                        else
+                        {
+
+                        }
                     }
                 }
             }
@@ -86,6 +94,11 @@ namespace AssemblyAnalyser
         private static AssemblyLocator CreateOrGetLocatorForFrameworkVersion(string targetFrameworkVersion)
         {
             return _targetFrameworkCache.GetOrAdd(targetFrameworkVersion, (imageRuntimeVersion) => new DotNetFrameworkLocator(imageRuntimeVersion));
+        }
+
+        private static AssemblyLocator CreateOrGetDotNetCoreLocatorForVersion(string targetFrameworkVersion)
+        {
+            return _targetFrameworkCache.GetOrAdd(targetFrameworkVersion, (targetFrameworkVersion) => new DotNetCoreLocator(targetFrameworkVersion));
         }
 
         protected ConcurrentDictionary<string, string> _locatedAssembliesByName = new ConcurrentDictionary<string, string>();

@@ -1,4 +1,5 @@
 ﻿using AssemblyAnalyser;
+using AssemblyAnalyser.AssemblyLocators;
 using AssemblyAnalyser.Extensions;
 using Newtonsoft.Json;
 using System;
@@ -6,37 +7,42 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace AssemblyAnalyser
 {
     public class DotNetCoreLocator : AssemblyLocator
     {
-        string _imageRuntimeVersion;
+        string _targetVersion;
+        string _bestAvailableVersion;
 
         AssemblyPathCache _assemblyPathCache;
 
         string _baseDotNetPath = "C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\";
         
-        public DotNetCoreLocator(string imageRuntimeVersion) : base()
+        public DotNetCoreLocator(string targetVersion) : base()
         {
-            _imageRuntimeVersion = imageRuntimeVersion;
-            _assemblyPathCache = AssemblyPathCache.LoadPathCache($"AssemblyLookup_{imageRuntimeVersion}.txt");
+            _targetVersion = targetVersion;
+            _bestAvailableVersion = DetermineBestAvailableVersion(targetVersion);
+            _assemblyPathCache = AssemblyPathCache.LoadPathCache($"AssemblyLookup_{targetVersion}.txt");
             LoadFilePaths(GetBaseFilePathsForLocator());
         }
 
-        public DotNetCoreLocator() : base()
+        public string DotNetVersion => _bestAvailableVersion;
+
+        private string DetermineBestAvailableVersion(string fullVersionName)
         {
-            throw new NotImplementedException();
+            var targetVersion = Regex.Match(fullVersionName, "\\.NETCoreApp,Version=v(?'SemVer'.*)").Groups["SemVer"].Value;
+            var installedVersions = Directory.EnumerateDirectories(_baseDotNetPath)
+                .Select(d => d.Replace(_baseDotNetPath, ""));
+            return installedVersions.Contains(targetVersion) ? targetVersion : 
+                VersionPicker.PickBestVersion(installedVersions.ToArray(), targetVersion);
         }
 
         protected override List<string> GetBaseFilePathsForLocator()
         {
             var paths = new List<string>();
-            
-            var frameworkDllPaths = Directory.GetFiles(_baseDotNetPath, "*.dll", SearchOption.AllDirectories);
-
-            paths.AddRange(frameworkDllPaths.Where(path => !path.Contains("Temporary ASP.NET Files", StringComparison.CurrentCultureIgnoreCase)));
-
+            paths.AddRange(Directory.GetFiles(Path.Combine(_baseDotNetPath, _bestAvailableVersion), "*.dll", SearchOption.AllDirectories));            
             return paths;
         }
 
