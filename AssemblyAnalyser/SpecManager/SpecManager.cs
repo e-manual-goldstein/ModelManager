@@ -169,14 +169,14 @@ namespace AssemblyAnalyser
             var specs = new List<ModuleSpec>();
             var locator = AssemblyLocator.GetLocator(baseModule);
             foreach (var assemblyReference in baseModule.AssemblyReferences)
-            {
+            {                
                 var moduleSpec = LoadReferencedModuleByFullName(baseModule, assemblyReference.FullName);
                 if (moduleSpec != null)
                 {
                     specs.Add(moduleSpec);
                 }
             }
-            return specs.OrderBy(s => s.FilePath).ToArray();            
+            return specs.OrderBy(s => s.FilePath).ToArray();
         }
 
         public ModuleSpec LoadReferencedModuleByFullName(ModuleDefinition module, string referencedModuleName)

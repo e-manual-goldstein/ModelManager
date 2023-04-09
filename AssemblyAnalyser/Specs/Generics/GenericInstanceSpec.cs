@@ -97,12 +97,12 @@ namespace AssemblyAnalyser
             return InstanceOf.Attributes;
         }
 
-        GenericParameterSpec[] _genericTypeArguments;
-        public GenericParameterSpec[] GenericTypeArguments => _genericTypeArguments ??= TryGetGenericTypeArguments();
+        TypeSpec[] _genericTypeArguments;
+        public TypeSpec[] GenericTypeArguments => _genericTypeArguments ??= TryGetGenericTypeArguments();
 
-        private GenericParameterSpec[] TryGetGenericTypeArguments()
+        private TypeSpec[] TryGetGenericTypeArguments()
         {
-            _specManager.TryLoadTypeSpecs(() => _genericInstance.GenericArguments.ToArray(), out GenericParameterSpec[] typeSpecs);
+            _specManager.TryLoadTypeSpecs(() => _genericInstance.GenericArguments.ToArray(), out TypeSpec[] typeSpecs);
             return typeSpecs;
         }
 
