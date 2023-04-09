@@ -328,15 +328,23 @@ namespace AssemblyAnalyser
             }
             foreach (var interfaceMethod in interfaceSpec.Methods)
             {
-                var methodSpec = MatchMethodSpecByNameAndParameterType(interfaceMethod.Name, interfaceMethod.Parameters
-                    , interfaceMethod.GenericTypeArguments);
-                if (methodSpec == null)
+                var methodOverride = Methods.SingleOrDefault(m => m.Overrides.Contains(interfaceMethod));
+                if (methodOverride != null)
                 {
-                    _specManager.AddFault(FaultSeverity.Error, $"{this} does not implement {interfaceMethod}");
+                    methodOverride.Implements = interfaceMethod;                 
                 }
                 else
                 {
-                    methodSpec.Implements = methodSpec;
+                    var methodSpec = MatchMethodSpecByNameAndParameterType(interfaceMethod.Name, interfaceMethod.Parameters
+                        , interfaceMethod.GenericTypeArguments);
+                    if (methodSpec == null)
+                    {
+                        _specManager.AddFault(FaultSeverity.Error, $"{this} does not implement {interfaceMethod}");
+                    }
+                    else
+                    {
+                        methodSpec.Implements = interfaceMethod;
+                    }
                 }
             }
         }
