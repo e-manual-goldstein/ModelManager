@@ -15,27 +15,22 @@ namespace AssemblyAnalyser
             : base($"{genericInstance.Namespace}.{genericInstance.Name}", genericInstance.FullName, specManager)
         {
             _genericInstance = genericInstance;
-            Name = _genericInstance.Name;
+            Name = _genericInstance.Name;            
         }
 
         public override bool IsGenericInstance => true;
 
         protected override void BuildSpec()
         {
-            if (FullTypeName != null && _genericInstance != null)
-            {
-                BuildSpecInternal();
-            }
-            else
-            {
-                _specManager.AddFault(FaultSeverity.Error, "Cannot build Spec with null FullTypeName");
-            }
+            BuildSpecInternal();            
             _instanceOf = TryGetInstanceOfType();
             _genericTypeArguments = TryGetGenericTypeArguments();
         }
 
         TypeSpec _instanceOf;
         public TypeSpec InstanceOf => _instanceOf ??= TryGetInstanceOfType();
+
+        public override bool IsInterface => InstanceOf.IsInterface;
 
         private TypeSpec TryGetInstanceOfType()
         {
@@ -115,6 +110,11 @@ namespace AssemblyAnalyser
         {
             _specManager.TryLoadTypeSpecs(() => _genericInstance.GenericParameters.ToArray(), out GenericParameterSpec[] typeSpecs);
             return typeSpecs;
+        }
+
+        protected override void ProcessInterfaceImplementations()
+        {
+            //No processing required for instances of Generic Types
         }
     }
 }

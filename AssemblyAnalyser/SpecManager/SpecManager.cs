@@ -167,7 +167,6 @@ namespace AssemblyAnalyser
         public ModuleSpec[] LoadReferencedModules(ModuleDefinition baseModule)
         {
             var specs = new List<ModuleSpec>();
-            var locator = AssemblyLocator.GetLocator(baseModule);
             foreach (var assemblyReference in baseModule.AssemblyReferences)
             {                
                 var moduleSpec = LoadReferencedModuleByFullName(baseModule, assemblyReference.FullName);
@@ -226,13 +225,8 @@ namespace AssemblyAnalyser
             catch (FileNotFoundException ex)
             {
                 _exceptionManager.Handle(ex);
-                AddFault(FaultSeverity.Warning, $"Unable to load assembly {assemblyReference.FullName}. Required by {assemblyReference}");
+                AddFault(FaultSeverity.Error, $"Unable to load assembly {assemblyReference.FullName}. Required by {assemblyReference}");
             }
-            catch
-            {
-                AddFault(FaultSeverity.Warning, $"Unable to load assembly {assemblyReference.FullName}. Required by {assemblyReference}");
-            }
-
             return null;
         }
 
@@ -541,7 +535,7 @@ namespace AssemblyAnalyser
         
         public void ProcessLoadedMethods(bool includeSystem = true, bool parallelProcessing = true)
         {
-            ProcessSpecs(Methods.Values.Where(t => includeSystem || t.IsSystemMethod.Equals(false)), parallelProcessing);
+            ProcessSpecs(Methods.Values.Where(t => includeSystem || !t.IsSystem), parallelProcessing);
         }
 
         public MethodSpec LoadMethodSpec(MethodReference method)
@@ -560,31 +554,30 @@ namespace AssemblyAnalyser
                 //{
                 //}                
             }
-            return _methodSpecs.GetOrAdd(methodDefinition, (key) => CreateMethodSpec(methodDefinition, LoadTypeSpec(methodDefinition.DeclaringType)));
+            return _methodSpecs.GetOrAdd(methodDefinition, (key) => CreateMethodSpec(methodDefinition));
         }
 
-        public MethodSpec LoadMethodSpec(MethodDefinition method, TypeSpec declaringType)
+        public MethodSpec LoadMethodSpec(MethodDefinition method)
         {
             if (method == null)
             {
                 return null;
             }
-            return _methodSpecs.GetOrAdd(method, (key) => CreateMethodSpec(method, declaringType));
+            return _methodSpecs.GetOrAdd(method, (key) => CreateMethodSpec(method));
         }
 
-        private MethodSpec CreateMethodSpec(MethodDefinition method, TypeSpec declaringType)
+        private MethodSpec CreateMethodSpec(MethodDefinition method)
         {
-            declaringType ??= LoadFullTypeSpec(method.DeclaringType);
-            var spec = new MethodSpec(method, declaringType, this);
+            var spec = new MethodSpec(method, this);
             return spec;
         }
 
-        public MethodSpec[] LoadMethodSpecs(MethodDefinition[] methodDefinitions, TypeSpec declaringType)
+        public MethodSpec[] LoadMethodSpecs(MethodDefinition[] methodDefinitions)
         {
-            return methodDefinitions.Select(m => LoadMethodSpec(m, declaringType)).ToArray();
+            return methodDefinitions.Select(m => LoadMethodSpec(m)).ToArray();
         }
 
-        public MethodSpec[] TryLoadMethodSpecs(Func<MethodDefinition[]> getMethods, TypeSpec declaringType)
+        public MethodSpec[] TryLoadMethodSpecs(Func<MethodDefinition[]> getMethods)
         {
             MethodDefinition[] methods = null;
             try
@@ -604,9 +597,13 @@ namespace AssemblyAnalyser
             {
                 methods ??= Array.Empty<MethodDefinition>();
             }
-            return LoadMethodSpecs(methods, declaringType);
+            return LoadMethodSpecs(methods);
         }
 
+        public MethodSpec[] LoadSpecsForMethodReferences(MethodReference[] methodReferences)
+        {
+            return TryLoadMethodSpecs(() => methodReferences.Select(m => m.Resolve()).ToArray());            
+        }
 
         #endregion
 

@@ -7,10 +7,10 @@ namespace AssemblyAnalyser
     public interface IMethodSpecManager
     {
         IReadOnlyDictionary<MethodDefinition, MethodSpec> Methods { get; }
-        MethodSpec LoadMethodSpec(MethodDefinition getter, TypeSpec declaringType);
+        MethodSpec LoadMethodSpec(MethodDefinition methodDefinition);
 
-        //MethodSpec[] TryLoadMethodSpecs(Func<MethodInfo[]> value, TypeSpec declaringType);
-        MethodSpec[] TryLoadMethodSpecs(Func<MethodDefinition[]> value, TypeSpec declaringType);
+        MethodSpec[] LoadSpecsForMethodReferences(MethodReference[] methodReferences);
+        MethodSpec[] TryLoadMethodSpecs(Func<MethodDefinition[]> value);
 
         void ProcessLoadedMethods(bool includeSystem = true, bool parallelProcessing = true);
         //void ProcessMethods(IEnumerable<MethodSpec> methods, bool includeSystem = true);

@@ -6,11 +6,7 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
-    public enum FaultSeverity
+    public interface IHasGenericParameters
     {
-        Error,
-        Warning,
-        Information,
-        Debug,
     }
 }

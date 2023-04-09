@@ -18,14 +18,14 @@ namespace AssemblyAnalyser.TestData.Generics
     [NotTested]
     public interface IInterfaceWithGenericMethods
     {
-        public TGenericForMethod MethodWithGenericReturnType<TGenericForMethod>();
+        public TGenericForInterfaceMethod MethodWithGenericReturnType<TGenericForInterfaceMethod>();
 
-        public void MethodWithGenericTypeConstraints<TGenericForMethod>() where TGenericForMethod : BasicClass;
+        public void MethodWithGenericTypeConstraints<TGenericForInterfaceMethod>() where TGenericForInterfaceMethod : BasicClass;
 
-        public void MethodWithGenericParameter<TGenericForMethod>(TGenericForMethod generic);
+        public void MethodWithGenericParameter<TGenericForInterfaceMethod>(TGenericForInterfaceMethod generic);
 
-        public TSecondGenericForMethod MethodWithMultipleGenericTypeArguments<TFirstGenericForMethod, TSecondGenericForMethod>(TFirstGenericForMethod firstGeneric);
+        public TSecondGenericForMethod MethodWithMultipleGenericTypeArguments<TFirstGenericForInterfaceMethod, TSecondGenericForMethod>(TFirstGenericForInterfaceMethod firstGeneric);
 
-        public IQueryable<TNestedGeneric> MethodWithNestedGenericType<TNestedGeneric>();
+        public IQueryable<TNestedGenericForInterface> MethodWithNestedGenericType<TNestedGenericForInterface>();
     }
 }

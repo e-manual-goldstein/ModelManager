@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 
 namespace AssemblyAnalyser
 {
-    public class DotNetCoreLocator : AssemblyLocator
+    public class DotNetStandardLocator : AssemblyLocator
     {
         string _targetVersion;
         string _bestAvailableVersion;
@@ -20,7 +20,7 @@ namespace AssemblyAnalyser
 
         string _baseDotNetPath = "C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\";
         
-        public DotNetCoreLocator(string targetVersion) : base()
+        public DotNetStandardLocator(string targetVersion) : base()
         {
             _targetVersion = targetVersion;
             _bestAvailableVersion = DetermineBestAvailableVersion(targetVersion);
@@ -33,7 +33,7 @@ namespace AssemblyAnalyser
 
         private string DetermineBestAvailableVersion(string fullVersionName)
         {
-            var targetVersion = Regex.Match(fullVersionName, "\\.NETCoreApp,Version=v(?'SemVer'.*)").Groups["SemVer"].Value;
+            var targetVersion = Regex.Match(fullVersionName, "\\.NETStandard,Version=v(?'SemVer'.*)").Groups["SemVer"].Value;
             var installedVersions = Directory.EnumerateDirectories(_baseDotNetPath)
                 .Select(d => d.Replace(_baseDotNetPath, ""));
             return installedVersions.Contains(targetVersion) ? targetVersion : 

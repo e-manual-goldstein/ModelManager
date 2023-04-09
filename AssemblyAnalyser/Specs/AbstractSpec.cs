@@ -26,7 +26,7 @@ namespace AssemblyAnalyser
         }
 
         public string Name { get; protected set; }
-        public bool IsSystem { get; protected set; }
+        public virtual bool IsSystem { get; protected set; }
         protected TypeSpec[] _attributes;
         public TypeSpec[] Attributes => _attributes ??= _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this);
 

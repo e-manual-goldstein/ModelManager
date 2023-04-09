@@ -12,36 +12,37 @@ namespace AssemblyAnalyser.Specs
         public MissingTypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager) 
             : base(fullTypeName, uniqueTypeName, specManager)
         {
+            specManager.AddFault(FaultSeverity.Error, $"Missing Type Spec for '{fullTypeName}'");
         }
 
         public override void AddImplementation(TypeSpec typeSpec)
         {
-            _specManager.AddFault(FaultSeverity.Error, $"Missing TypeSpec for {UniqueTypeName}");
+            _specManager.AddFault(FaultSeverity.Information, $"Missing TypeSpec for {UniqueTypeName}");
         }
 
         public override void RegisterAsDependentParameterSpec(ParameterSpec parameterSpec)
         {
-            _specManager.AddFault(FaultSeverity.Error, $"Missing TypeSpec for {UniqueTypeName}");
+            _specManager.AddFault(FaultSeverity.Information, $"Missing TypeSpec for {UniqueTypeName}");
         }
 
         public override void RegisterAsResultType(IMemberSpec methodSpec)
         {
-            _specManager.AddFault(FaultSeverity.Error, $"Missing TypeSpec for {UniqueTypeName}");
+            _specManager.AddFault(FaultSeverity.Information, $"Missing TypeSpec for {UniqueTypeName}");
         }
 
         public override void RegisterAsDecorator(AbstractSpec decoratedSpec)
         {
-            //_specManager.AddFault(FaultSeverity.Error, $"Missing TypeSpec for {UniqueTypeName}");
+            _specManager.AddFault(FaultSeverity.Information, $"Missing TypeSpec for {UniqueTypeName}");
         }
 
         public override void RegisterAsDelegateFor(EventSpec eventSpec)
         {
-            _specManager.AddFault(FaultSeverity.Error, $"Missing TypeSpec for {UniqueTypeName}");            
+            _specManager.AddFault(FaultSeverity.Information, $"Missing TypeSpec for {UniqueTypeName}");            
         }
 
         public override void RegisterDependentMethodSpec(MethodSpec methodSpec)
         {
-            _specManager.AddFault(FaultSeverity.Error, $"Missing TypeSpec for {UniqueTypeName}");            
+            _specManager.AddFault(FaultSeverity.Information, $"Missing TypeSpec for {UniqueTypeName}");            
         }
     }
 }

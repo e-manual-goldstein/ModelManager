@@ -43,8 +43,8 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            Adder = _specManager.LoadMethodSpec(_adder, DeclaringType);
-            Remover = _specManager.LoadMethodSpec(_remover, DeclaringType);
+            Adder = _specManager.LoadMethodSpec(_adder);
+            Remover = _specManager.LoadMethodSpec(_remover);
             if (_specManager.TryLoadTypeSpec(() => _eventInfo.EventType, out TypeSpec typeSpec))
             {
                 EventType = typeSpec;

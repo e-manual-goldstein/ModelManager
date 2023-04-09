@@ -48,8 +48,8 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            Getter = _specManager.LoadMethodSpec(_getter, DeclaringType);
-            Setter = _specManager.LoadMethodSpec(_setter, DeclaringType);
+            Getter = _specManager.LoadMethodSpec(_getter);
+            Setter = _specManager.LoadMethodSpec(_setter);
             _propertyType = TryGetPropertyType();
             _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }

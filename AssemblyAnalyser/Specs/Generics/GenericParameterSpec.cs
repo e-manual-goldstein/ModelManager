@@ -43,16 +43,25 @@ namespace AssemblyAnalyser
 
         public override bool IsGenericParameter => true;
 
+        IHasGenericParameters _genericParameterFor;
+        public IHasGenericParameters GenericParameterFor => _genericParameterFor;
+
         public void RegisterAsGenericTypeArgumentFor(MethodSpec methodSpec)
         {
-            _specManager.AddFault(FaultSeverity.Warning, "Implementation not finished for 'RegisterAsGenericTypeArgumentFor'");
+            _genericParameterFor = methodSpec;
+            _specManager.AddFault(FaultSeverity.Information, "Implementation not finished for 'RegisterAsGenericTypeArgumentFor'");
         }
 
         internal bool IsValidGenericTypeMatchFor(GenericParameterSpec genericTypeArgumentSpec)
         {
-            _specManager.AddFault(FaultSeverity.Warning, "Implementation not finished for 'IsValidGenericTypeMatchFor'");
+            _specManager.AddFault(FaultSeverity.Information, "Implementation not finished for 'IsValidGenericTypeMatchFor'");
             return BaseSpec == genericTypeArgumentSpec.BaseSpec
                 && HasDefaultConstructorConstraint == genericTypeArgumentSpec.HasDefaultConstructorConstraint;
+        }
+
+        public override bool MatchesSpec(TypeSpec typeSpec)
+        {
+            return (typeSpec is GenericParameterSpec genericParameterSpec) ? IsValidGenericTypeMatchFor(genericParameterSpec) : false;
         }
     }
 }

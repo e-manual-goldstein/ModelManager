@@ -52,5 +52,12 @@ namespace AssemblyAnalyser
         {
             return $"{ParameterType.Name} {Name}";
         }
+
+        internal bool MatchesParameter(ParameterSpec parameterSpec)
+        {
+            return ParameterType.MatchesSpec(parameterSpec.ParameterType)
+                    && IsOut == parameterSpec.IsOut
+                    && IsParams == parameterSpec.IsParams;            
+        }
     }
 }

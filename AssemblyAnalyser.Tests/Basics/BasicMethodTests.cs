@@ -11,8 +11,22 @@ namespace AssemblyAnalyser.Tests
     [TestClass]
     public class BasicMethodTests : AbstractSpecTests
     {
+        ModuleSpec _vbModuleSpec;
+        TypeSpec _basicVBClassSpec;
+
+        [TestInitialize]
+        public override void Initialize()
+        {
+            base.Initialize();
+            var vbFilePath = "..\\..\\..\\..\\AssemblyAnalyser.VBTestData\\bin\\Debug\\net35\\AssemblyAnalyser.VBTestData.dll";
+            _vbModuleSpec = _specManager.LoadModuleSpec(Path.GetFullPath(vbFilePath));
+            _vbModuleSpec.Process();
+            _basicVBClassSpec = _vbModuleSpec.TypeSpecs
+                .Single(d => d.FullTypeName == "AssemblyAnalyser.VBTestData.Basics.BasicVBClass");
+        }
+
         #region Basic Method Tests
-        
+
         [TestMethod]
         public void BasicMethodSpecIsNotNull_Test()
         {
@@ -45,6 +59,29 @@ namespace AssemblyAnalyser.Tests
         #endregion
 
         #region Method Overloading Tests
+
+        [TestMethod]
+        //This is a test specifically for Types defined with Method members whose names do not match those of the implemented interfaces
+        //This feature appears to only be possible in VisualBasic and not C#
+        public void BasicMethodWithAlternateNameHasOverride_Test()
+        {
+            var alternateNamedFunction = _basicVBClassSpec.Methods.Where(p => p.Name == "AlternateNamedFunction").Single();
+
+            Assert.IsNotNull(alternateNamedFunction.Overrides);
+            Assert.IsTrue(alternateNamedFunction.Overrides.Any());
+        }
+
+        [TestMethod]
+        //This is a test specifically for Types defined with Method members whose names do not match those of the implemented interfaces
+        //This feature appears to only be possible in VisualBasic and not C#
+        public void BasicMethodWithAlternateNameMatchesInterfaceImplementation_Test()
+        {
+            var alternateNamedFunction = _basicVBClassSpec.Methods.Where(p => p.Name == "AlternateNamedFunction").Single();
+            alternateNamedFunction.DeclaringType.ForceRebuildSpec();
+
+            Assert.IsNotNull(alternateNamedFunction.Implements);
+            
+        }
 
         [TestMethod]
         public void BasicMethodHasFourOverloads_Test()

@@ -46,23 +46,23 @@ namespace AssemblyAnalyser
 
         public static AssemblyLocator GetLocator(ModuleDefinition module)
         {
-            var customAttributes = module.GetCustomAttributes().Distinct();
-            if (customAttributes.Any())
-            {
-                foreach (var customAttribute in customAttributes)
-                {
-                    if (customAttribute.AttributeType.FullName == typeof(TargetFrameworkAttribute).FullName)
-                    {
-                        var frameworkVersion = $"{customAttribute.ConstructorArguments[0].Value}";
-                        if (frameworkVersion.StartsWith(".NETCoreApp"))
-                        {
-                            return CreateOrGetDotNetCoreLocatorForVersion(frameworkVersion);
-                        }
-                        else
-                        {
 
-                        }
-                    }
+            var targetFrameworkAttribute = module.GetCustomAttributes()
+                .SingleOrDefault(t => t.AttributeType.FullName == typeof(TargetFrameworkAttribute).FullName);
+            if (targetFrameworkAttribute != null)
+            {
+                var frameworkVersion = $"{targetFrameworkAttribute.ConstructorArguments[0].Value}";
+                if (frameworkVersion.StartsWith(".NETCoreApp"))
+                {
+                    var locator = CreateOrGetDotNetCoreLocatorForVersion(frameworkVersion);
+                    locator.AddDirectory(Path.GetDirectoryName(module.FileName));
+                    return locator;
+                }
+                else if (frameworkVersion.StartsWith(".NETStandard"))
+                {
+                    var locator = CreateOrGetDotNetStandardLocatorForVersion(frameworkVersion);
+                    locator.AddDirectory(Path.GetDirectoryName(module.FileName));
+                    return locator;
                 }
             }
             if (!string.IsNullOrEmpty(module.RuntimeVersion))
@@ -101,6 +101,11 @@ namespace AssemblyAnalyser
             return _targetFrameworkCache.GetOrAdd(targetFrameworkVersion, (targetFrameworkVersion) => new DotNetCoreLocator(targetFrameworkVersion));
         }
 
+        private static AssemblyLocator CreateOrGetDotNetStandardLocatorForVersion(string targetFrameworkVersion)
+        {
+            return _targetFrameworkCache.GetOrAdd(targetFrameworkVersion, (targetFrameworkVersion) => new DotNetStandardLocator(targetFrameworkVersion));
+        }
+
         protected ConcurrentDictionary<string, string> _locatedAssembliesByName = new ConcurrentDictionary<string, string>();
 
         private static ConcurrentDictionary<string, AssemblyLocator> _runtimeImageCache = new ConcurrentDictionary<string, AssemblyLocator>();
@@ -113,9 +118,16 @@ namespace AssemblyAnalyser
             _filePathsForLocator = _filePathsForLocator.Union(filePaths).Distinct().ToList();
         }
 
+        ConcurrentDictionary<string, string[]> _addedDirectories = new ConcurrentDictionary<string, string[]>();
+
         internal void AddDirectory(string directory)
         {
-            LoadFilePaths(Directory.GetFiles(directory, "*.dll", SearchOption.AllDirectories));
+            string[] getFiles(string dir)
+            {
+                return Directory.GetFiles(dir, "*.dll", SearchOption.AllDirectories);
+            }
+            var filePaths = _addedDirectories.GetOrAdd(directory, getFiles);
+            LoadFilePaths(filePaths);
         }
 
         public static bool IsSystemAssembly(string assemblyLocation)

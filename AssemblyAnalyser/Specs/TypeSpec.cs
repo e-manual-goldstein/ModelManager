@@ -9,7 +9,7 @@ using AssemblyAnalyser.Specs;
 
 namespace AssemblyAnalyser
 {
-    public class TypeSpec : AbstractSpec
+    public class TypeSpec : AbstractSpec, IHasGenericParameters
     {
         #region Null Spec
 
@@ -48,11 +48,6 @@ namespace AssemblyAnalyser
             _typeDefinition = typeDefinition;
             Name = typeDefinition.Name;
             Namespace = typeDefinition.Namespace;
-            if (_typeDefinition == null)
-            {
-                specManager.AddFault(FaultSeverity.Warning, $"Could not find matching TypeDefinition for {FullTypeName}");
-            }
-            IsInterface = _typeDefinition?.IsInterface;
             IsSystem = Module?.IsSystem ?? true;
             IsClass = typeDefinition.IsClass;
         }
@@ -67,7 +62,7 @@ namespace AssemblyAnalyser
         public string UniqueTypeName { get; }
         public string FullTypeName { get; }
         public string Namespace { get; set; }
-        public bool? IsInterface { get; }
+        public virtual bool IsInterface => _typeDefinition.IsInterface;
         public bool IsClass { get; }
         //public bool? IsSystemType { get; }
         public bool IsArray { get; }
@@ -114,7 +109,8 @@ namespace AssemblyAnalyser
         private void ProcessCompilerGenerated()
         {
             //Might be obsolete under Mono.Cecil
-            IsCompilerGenerated = _typeDefinition?.CustomAttributes.OfType<CompilerGeneratedAttribute>().Any() ?? false;
+            IsCompilerGenerated = _typeDefinition?.CustomAttributes
+                .Where(d => d.AttributeType.FullName == typeof(CompilerGeneratedAttribute).FullName).Any() ?? false;
             if (IsCompilerGenerated)
             {
                 if (_typeDefinition.DeclaringType != null)
@@ -198,10 +194,10 @@ namespace AssemblyAnalyser
         {
             if (_typeDefinition == null)
             {
-                _specManager.AddFault(FaultSeverity.Warning, $"Unable to determine MethodSpecs for {this}");
+                _specManager.AddFault(FaultSeverity.Error, $"Unable to determine MethodSpecs for {this}");
                 return Array.Empty<MethodSpec>();
             }
-            var specs = _specManager.TryLoadMethodSpecs(() => _typeDefinition.Methods.Where(m => m.DeclaringType == _typeDefinition).ToArray(), this);
+            var specs = _specManager.TryLoadMethodSpecs(() => _typeDefinition.Methods.Where(m => m.DeclaringType == _typeDefinition).ToArray());
             return specs;
         }
 
@@ -305,7 +301,7 @@ namespace AssemblyAnalyser
 
         #endregion
 
-        private void ProcessInterfaceImplementations()
+        protected virtual void ProcessInterfaceImplementations()
         {
             if (IsInterface != true) // Skip unless explicitly labelled as NOT an interface
             {
@@ -323,7 +319,7 @@ namespace AssemblyAnalyser
                 var propertySpec = GetPropertySpec(interfaceProperty.Name);
                 if (propertySpec == null)
                 {
-                    _specManager.AddFault(FaultSeverity.Warning, $"{this} does not implement {interfaceProperty}");
+                    _specManager.AddFault(FaultSeverity.Error, $"{this} does not implement {interfaceProperty}");
                 }
                 else
                 {
@@ -336,7 +332,7 @@ namespace AssemblyAnalyser
                     , interfaceMethod.GenericTypeArguments);
                 if (methodSpec == null)
                 {
-                    _specManager.AddFault(FaultSeverity.Warning, $"{this} does not implement {interfaceMethod}");
+                    _specManager.AddFault(FaultSeverity.Error, $"{this} does not implement {interfaceMethod}");
                 }
                 else
                 {
@@ -503,6 +499,11 @@ namespace AssemblyAnalyser
             return false;
         }
 
+        public virtual bool MatchesSpec(TypeSpec typeSpec)
+        {
+            return Equals(typeSpec);
+        }
+
         public MethodSpec GetMethodSpec(MethodReference method)
         {
             var matchingMethods = Methods.Where(m => m.IsSpecFor(method)).ToList();
@@ -521,12 +522,13 @@ namespace AssemblyAnalyser
         public MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs
             , GenericParameterSpec[] genericTypeArgumentSpecs)
         {
-            var matchingMethods = Methods.Where(m
+            var nameAndParameterCountMatches = Methods.Where(m
                     => m.Name == methodName
-                    && m.Parameters.Length == parameterSpecs.Length
+                    && m.Parameters.Length == parameterSpecs.Length).ToArray();
+            var matchingMethods = nameAndParameterCountMatches.Where(m
+                    => m.HasExactGenericTypeArguments(genericTypeArgumentSpecs)
                     && m.HasExactParameters(parameterSpecs)
-                    && m.HasExactGenericTypeArguments(genericTypeArgumentSpecs)
-                    );
+                    ).ToArray();
             if (matchingMethods.Count() > 1)
             {
                 var methodArray = matchingMethods.ToArray();
@@ -540,19 +542,7 @@ namespace AssemblyAnalyser
         {
             var parameterSpecs = _specManager.TryLoadParameterSpecs(() => methodReference.Parameters.ToArray(), null);
             _specManager.TryLoadTypeSpecs(() => methodReference.GenericParameters.ToArray(), out GenericParameterSpec[] genericTypeArgumentSpecs);
-            var matchingMethods = Methods.Where(m
-                    => m.Name == methodReference.Name
-                    && m.Parameters.Length == methodReference.Parameters.Count
-                    && m.HasExactParameters(parameterSpecs)
-                    && m.HasExactGenericTypeArguments(genericTypeArgumentSpecs)
-                    );
-            if (matchingMethods.Count() > 1)
-            {
-                var methodArray = matchingMethods.ToArray();
-                _specManager.AddFault(FaultSeverity.Error, $"Multiple Methods found for signature. MethodName:{methodReference.Name}");
-                return null;
-            }
-            return matchingMethods.SingleOrDefault();
+            return MatchMethodSpecByNameAndParameterType(methodReference.Name, parameterSpecs, genericTypeArgumentSpecs);
         }
 
         private void RegisterDependentTypeForModule(TypeSpec typeSpec)

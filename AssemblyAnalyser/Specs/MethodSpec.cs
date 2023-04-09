@@ -1,24 +1,21 @@
 ﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
-using Mono.Collections.Generic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace AssemblyAnalyser
 {
-    public class MethodSpec : AbstractSpec, IMemberSpec, IHasParameters, IImplementsSpec<MethodSpec>
+    public class MethodSpec : AbstractSpec, IMemberSpec, IHasParameters, IHasGenericParameters, IImplementsSpec<MethodSpec>
     {
         MethodDefinition _methodDefinition;
 
-        public MethodSpec(MethodDefinition methodDefinition, TypeSpec declaringType, ISpecManager specManager)
+        public MethodSpec(MethodDefinition methodDefinition, ISpecManager specManager)
             : base(specManager)
         {
             _methodDefinition = methodDefinition;
             Name = methodDefinition.Name;
-            IsSystem = declaringType.IsSystem;
             IsConstructor = methodDefinition.IsConstructor;
-            DeclaringType = declaringType;
         }
 
         protected MethodSpec(ISpecManager specManager) : base(specManager)
@@ -31,7 +28,11 @@ namespace AssemblyAnalyser
         TypeSpec _returnType;
         public TypeSpec ReturnType => _returnType ??= TryGetReturnType();
 
-        public TypeSpec DeclaringType { get; }
+        TypeSpec _declaringType;
+        public TypeSpec DeclaringType => _declaringType ??= TryGetDeclaringType();
+
+        MethodSpec[] _overrides;
+        public MethodSpec[] Overrides => _overrides ??= TryGetOverrides();
 
         ParameterSpec[] _parameters;
         public ParameterSpec[] Parameters => _parameters ??= _specManager.TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray(), this);
@@ -41,10 +42,12 @@ namespace AssemblyAnalyser
 
         List<TypeSpec> _localVariableTypes = new List<TypeSpec>();
         public TypeSpec[] LocalVariableTypes => _localVariableTypes.ToArray();
+        
         List<TypeSpec> _exceptionCatchTypes = new List<TypeSpec>();
         public TypeSpec[] ExceptionCatchTypes => _exceptionCatchTypes.ToArray();
 
-        public bool? IsSystemMethod { get; }
+        public override bool IsSystem => DeclaringType.IsSystem;
+
         public bool IsConstructor { get; }
         
         public MethodSpec Implements { get; set; }
@@ -71,6 +74,12 @@ namespace AssemblyAnalyser
             return returnTypeSpec;
         }
 
+        private TypeSpec TryGetDeclaringType()
+        {
+            _specManager.TryLoadTypeSpec(() => _methodDefinition.DeclaringType, out TypeSpec declaringTypeSpec);
+            return declaringTypeSpec;
+        }
+
         private GenericParameterSpec[] TryGetGenericTypeArguments()
         {
             if (_specManager.TryLoadTypeSpecs(() => _methodDefinition.GenericParameters.ToArray(), out GenericParameterSpec[] genericArgumentSpecs))
@@ -81,6 +90,11 @@ namespace AssemblyAnalyser
                 }
             }
             return genericArgumentSpecs;
+        }
+
+        private MethodSpec[] TryGetOverrides()
+        {
+            return _specManager.LoadSpecsForMethodReferences(_methodDefinition.Overrides.ToArray());
         }
 
         protected override CustomAttribute[] GetAttributes()

@@ -9,9 +9,7 @@ namespace AssemblyAnalyser
             {
                 for (int i = 0; i < parameterSpecs.Length; i++)
                 {
-                    if (hasParameters.Parameters[i].ParameterType != parameterSpecs[i].ParameterType
-                        || hasParameters.Parameters[i].IsOut != parameterSpecs[i].IsOut
-                        || hasParameters.Parameters[i].IsParams != parameterSpecs[i].IsParams)
+                    if (!hasParameters.Parameters[i].MatchesParameter(parameterSpecs[i]))
                     {
                         return false;
                     }
