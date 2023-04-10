@@ -7,20 +7,19 @@ namespace AssemblyAnalyser
     public class PropertySpec : AbstractSpec, IMemberSpec, IHasParameters, IImplementsSpec<PropertySpec>
     {
         private PropertyDefinition _propertyDefinition;
-        private MethodDefinition _getter;
-        private MethodDefinition _setter;
 
         public PropertySpec(PropertyDefinition propertyDefinition, ISpecManager specManager) 
             : base(specManager)
         {
             _propertyDefinition = propertyDefinition;
             Name = propertyDefinition.Name;
-            _getter = propertyDefinition.GetMethod;
-            _setter = propertyDefinition.SetMethod;
         }
 
-        public MethodSpec Getter { get; private set; }
-        public MethodSpec Setter { get; private set; }
+        private MethodSpec _getter;
+        public MethodSpec Getter => _getter ??= TryGetGetter();
+
+        private MethodSpec _setter;
+        public MethodSpec Setter => _setter ??= TryGetSetter();
 
         TypeSpec IMemberSpec.ResultType => PropertyType;
         TypeSpec _propertyType;
@@ -31,14 +30,23 @@ namespace AssemblyAnalyser
 
         public override bool IsSystem => DeclaringType.IsSystem;
 
-        public PropertySpec Implements { get; set; }
+        PropertySpec _implements;
+        public PropertySpec Implements => _implements;
+
+        public void RegisterAsImplementation(PropertySpec implementedSpec)
+        {
+            _implements = implementedSpec;
+            _specManager.AddFault(FaultSeverity.Debug, "Is there a scenario where an implemented Property does not match both the underlying Getter and Setter?");
+            Getter?.RegisterAsImplementation(implementedSpec.Getter);
+            Setter?.RegisterAsImplementation(implementedSpec.Setter);
+        }
 
         ParameterSpec[] _parameters;
         public ParameterSpec[] Parameters => _parameters ??= _specManager.TryLoadParameterSpecs(() => _propertyDefinition.Parameters.ToArray(), this);
 
         public IEnumerable<MethodDefinition> InnerMethods()
         {
-            return new[] { _getter, _setter };
+            return new[] { _propertyDefinition.GetMethod, _propertyDefinition.SetMethod };
         }
 
         public IEnumerable<MethodSpec> InnerSpecs()
@@ -48,8 +56,8 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            Getter = _specManager.LoadMethodSpec(_getter);
-            Setter = _specManager.LoadMethodSpec(_setter);
+            _getter = TryGetGetter();
+            _setter = TryGetSetter();
             _propertyType = GetPropertyType();
             _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }
@@ -65,6 +73,18 @@ namespace AssemblyAnalyser
                 typeSpec.RegisterAsResultType(this);
             }
             return typeSpec;
+        }
+
+        private MethodSpec TryGetGetter()
+        {
+            var spec = _specManager.LoadMethodSpec(_propertyDefinition.GetMethod);
+            return spec;
+        }
+
+        private MethodSpec TryGetSetter()
+        {
+            var spec = _specManager.LoadMethodSpec(_propertyDefinition.SetMethod);
+            return spec;
         }
 
         private TypeSpec GetDeclaringType()

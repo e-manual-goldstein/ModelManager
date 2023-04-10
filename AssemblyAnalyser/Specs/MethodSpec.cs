@@ -16,6 +16,7 @@ namespace AssemblyAnalyser
             _methodDefinition = methodDefinition;
             Name = methodDefinition.Name;
             IsConstructor = methodDefinition.IsConstructor;
+            IsSpecialName = methodDefinition.IsSpecialName;
         }
 
         protected MethodSpec(ISpecManager specManager) : base(specManager)
@@ -49,8 +50,15 @@ namespace AssemblyAnalyser
         public override bool IsSystem => DeclaringType.IsSystem;
 
         public bool IsConstructor { get; }
-        
-        public MethodSpec Implements { get; set; }
+        public bool IsSpecialName { get; }
+
+        MethodSpec _implements;
+        public MethodSpec Implements => _implements;
+
+        public void RegisterAsImplementation(MethodSpec interfaceProperty)
+        {
+            _implements = interfaceProperty;
+        }
 
         protected override void BuildSpec()
         {

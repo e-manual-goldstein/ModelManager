@@ -313,30 +313,37 @@ namespace AssemblyAnalyser
                 }
                 else
                 {
-                    propertySpec.Implements = interfaceProperty;
+                    propertySpec.RegisterAsImplementation(interfaceProperty);
                 }
             }
-            foreach (var interfaceMethod in interfaceSpec.Methods)
+            foreach (var interfaceMethod in interfaceSpec.Methods.Where(m => !m.IsSpecialName))
             {
-                var methodOverride = Methods.SingleOrDefault(m => m.Overrides.Contains(interfaceMethod));
-                if (methodOverride != null)
+                if (!MatchMethodByOverride(interfaceMethod))
                 {
-                    methodOverride.Implements = interfaceMethod;                 
-                }
-                else
-                {
-                    var methodSpec = MatchMethodSpecByNameAndParameterType(interfaceMethod.Name, interfaceMethod.Parameters
-                        , interfaceMethod.GenericTypeArguments);
+                    var methodSpec = MatchMethodSpecByNameAndParameterType(interfaceMethod.Name, interfaceMethod.Parameters,
+                        interfaceMethod.GenericTypeArguments);
                     if (methodSpec == null)
                     {
                         _specManager.AddFault(FaultSeverity.Error, $"{this} does not implement {interfaceMethod}");
                     }
                     else
                     {
-                        methodSpec.Implements = interfaceMethod;
+                        methodSpec.RegisterAsImplementation(interfaceMethod);
                     }
                 }
             }
+        }
+
+        private bool MatchMethodByOverride(MethodSpec interfaceMethod)
+        {
+            var overrides = GetAllMethodSpecs().Where(f => !f.IsSpecialName && f.Overrides.Any()).ToDictionary(f => f, g => g.Overrides);
+            var methodOverride = GetAllMethodSpecs().SingleOrDefault(m => m.Overrides.Contains(interfaceMethod));
+            if (methodOverride != null)
+            {
+                methodOverride.RegisterAsImplementation(interfaceMethod);
+                return true;
+            }
+            return false;
         }
 
         public virtual bool IsNullSpec => false;
@@ -526,7 +533,7 @@ namespace AssemblyAnalyser
         public MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs
             , GenericParameterSpec[] genericTypeArgumentSpecs)
         {
-            var nameAndParameterCountMatches = Methods.Where(m
+            var nameAndParameterCountMatches = GetAllMethodSpecs().Where(m
                     => m.Name == methodName
                     && m.Parameters.Length == parameterSpecs.Length).ToArray();
             var matchingMethods = nameAndParameterCountMatches.Where(m
@@ -535,7 +542,6 @@ namespace AssemblyAnalyser
                     ).ToArray();
             if (matchingMethods.Count() > 1)
             {
-                var methodArray = matchingMethods.ToArray();
                 _specManager.AddFault(FaultSeverity.Error, $"Multiple Methods found for signature. MethodName:{methodName}");
                 return null;
             }

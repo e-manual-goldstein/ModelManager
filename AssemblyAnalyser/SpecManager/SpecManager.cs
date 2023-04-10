@@ -56,6 +56,9 @@ namespace AssemblyAnalyser
                 case FaultSeverity.Warning:
                     _logger.Log(LogLevel.Warning, faultMessage);
                     break;
+                case FaultSeverity.Information:
+                    _logger.Log(LogLevel.Information, faultMessage);
+                    break;
                 default:
                     _logger.Log(LogLevel.Debug, faultMessage);
                     break;
@@ -215,8 +218,9 @@ namespace AssemblyAnalyser
                 var assemblyLocation = locator.LocateAssemblyByName(assemblyReference.FullName);
                 if (string.IsNullOrEmpty(assemblyLocation))
                 {
-                    AddFault(FaultSeverity.Warning, $"Asssembly not found {assemblyReference.FullName}");
-                    return null;
+                    var missingModuleSpec = _moduleSpecs.GetOrAdd(assemblyReference.Name, (key) => CreateMissingModuleSpec(assemblyReference));
+                    missingModuleSpec.AddModuleVersion(assemblyReference);
+                    return missingModuleSpec;
                 }
                 var moduleSpec = LoadModuleSpec(assemblyLocation);
                 moduleSpec.AddModuleVersion(assemblyReference);
@@ -239,6 +243,12 @@ namespace AssemblyAnalyser
         private ModuleSpec CreateFullModuleSpec(ModuleDefinition module)
         {
             var spec = new ModuleSpec(module, module.FileName, this);
+            return spec;
+        }
+
+        private ModuleSpec CreateMissingModuleSpec(AssemblyNameReference assemblyNameReference)
+        {
+            var spec = new MissingModuleSpec(assemblyNameReference, this);
             return spec;
         }
 

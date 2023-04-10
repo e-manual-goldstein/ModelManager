@@ -24,6 +24,13 @@ namespace AssemblyAnalyser
             IsSystem = AssemblyLoader.IsSystemAssembly(filePath);
         }
 
+        protected ModuleSpec(string assemblyFullName, ISpecManager specManager) 
+            : base(specManager)
+        {
+            _specManager = specManager;
+            ModuleFullName = assemblyFullName;
+        }
+
         private void AddSearchDirectory(ModuleDefinition module, string filePath)
         {
             if (module.AssemblyResolver is DefaultAssemblyResolver defaultAssemblyResolver)
@@ -35,20 +42,12 @@ namespace AssemblyAnalyser
             }
         }
 
-        ModuleSpec(string assemblyFullName, ISpecManager specManager) 
-            : base(specManager)
-        {
-            //_representedModuleNames.Add(assemblyFullName);
-            _specManager = specManager;
-            ModuleFullName = assemblyFullName;
-        }
-                
-        public string ModuleShortName { get; }
+        public string ModuleShortName { get; protected set; }
         public string FilePath { get; }
         
         public string ModuleFullName { get; }
 
-        Dictionary<string, AssemblyNameReference> Versions { get; }
+        protected Dictionary<string, AssemblyNameReference> Versions { get; set; }
         
         public void AddModuleVersion(AssemblyNameReference reference)
         {
