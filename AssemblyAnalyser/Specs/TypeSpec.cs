@@ -11,21 +11,6 @@ namespace AssemblyAnalyser
 {
     public class TypeSpec : AbstractSpec, IHasGenericParameters
     {
-        #region Null Spec
-
-        public static TypeSpec NullSpec = CreateNullSpec();
-
-        private static TypeSpec CreateNullSpec()
-        {
-            var spec = new TypeSpec("null", "nullspec", null);
-            spec.Exclude("Null Spec");
-            spec.SkipProcessing("Null Spec");
-            spec.IsNullSpec = true;
-            return spec;
-        }
-
-        #endregion
-
         #region Error Spec
         static int error_count = 1;
         public static TypeSpec CreateErrorSpec(string reason)
@@ -204,20 +189,25 @@ namespace AssemblyAnalyser
         PropertySpec[] _properties;
         public PropertySpec[] Properties => _properties ??= CreatePropertySpecs();
 
+        public virtual PropertySpec[] GetAllPropertySpecs()
+        {
+            return Properties.Union(BaseSpec.GetAllPropertySpecs()).ToArray();
+        }
+
         protected virtual PropertySpec[] CreatePropertySpecs()
         {
             if (_typeDefinition == null)
             {
-                _specManager.AddFault(FaultSeverity.Warning, $"Unable to determine PropertySpecs for {this}");
+                _specManager.AddFault(FaultSeverity.Error, $"Unable to determine PropertySpecs for {this}");
                 return Array.Empty<PropertySpec>();
             }
-            var specs = _specManager.TryLoadPropertySpecs(() => _typeDefinition.Properties.Where(m => m.DeclaringType == _typeDefinition).ToArray(), this);
+            var specs = _specManager.TryLoadPropertySpecs(() => _typeDefinition.Properties.ToArray());
             return specs;
         }
 
         public PropertySpec GetPropertySpec(string name)
         {
-            return Properties.Where(p => !p.Parameters.Any() && p.Name == name).SingleOrDefault();
+            return Properties.Where(p => !p.Parameters.Any() && p.Name == name).SingleOrDefault() ?? BaseSpec.GetPropertySpec(name);
         }
 
         public PropertySpec MatchPropertySpecByNameAndParameterType(string name, ParameterSpec[] parameterSpecs)
@@ -349,7 +339,8 @@ namespace AssemblyAnalyser
             }
         }
 
-        public bool IsNullSpec { get; private set; }
+        public virtual bool IsNullSpec => false;
+
         public bool IsErrorSpec { get; private set; }
         public bool IsCompilerGenerated { get; private set; }
 
@@ -525,6 +516,11 @@ namespace AssemblyAnalyser
         public MethodSpec[] GetMethodSpecs(string methodName)
         {
             return Methods.Where(m => m.Name == methodName).ToArray();
+        }
+
+        public virtual MethodSpec[] GetAllMethodSpecs()
+        {
+            return Methods.Union(BaseSpec.GetAllMethodSpecs()).ToArray();
         }
 
         public MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs

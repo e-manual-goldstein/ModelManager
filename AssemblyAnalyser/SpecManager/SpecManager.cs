@@ -20,6 +20,7 @@ namespace AssemblyAnalyser
         object _lock = new object();
         private bool _disposed;
 
+
         public SpecManager(ILoggerProvider loggerProvider, IExceptionManager exceptionManager)
         {            
             _logger = loggerProvider.CreateLogger("Spec Manager");
@@ -287,7 +288,7 @@ namespace AssemblyAnalyser
         {
             if (type == null)
             {
-                return TypeSpec.NullSpec;
+                return _typeSpecs.GetOrAdd("Null Type Spec", (specName) => new NullTypeSpec(this));
             }
             return LoadFullTypeSpec(type);
         }
@@ -615,33 +616,29 @@ namespace AssemblyAnalyser
 
         public void ProcessLoadedProperties(bool includeSystem = true)
         {
-            foreach (var (propertyName, prop) in Properties.Where(t => includeSystem || t.Value.IsSystemProperty.Equals(false)))
+            foreach (var (propertyName, prop) in Properties.Where(t => includeSystem || !t.Value.IsSystem))
             {
                 prop.Process();
             }
         }
 
-        private PropertySpec LoadPropertySpec(PropertyDefinition propertyInfo, TypeSpec declaringType)
+        private PropertySpec LoadPropertySpec(PropertyDefinition propertyDefinition)
         {
-            PropertySpec propertySpec;
-            if (!_propertySpecs.TryGetValue(propertyInfo, out propertySpec))
-            {
-                _propertySpecs[propertyInfo] = propertySpec = CreatePropertySpec(propertyInfo, declaringType);
-            }
+            PropertySpec propertySpec = _propertySpecs.GetOrAdd(propertyDefinition, (def) => CreatePropertySpec(def));
             return propertySpec;
         }
 
-        private PropertySpec CreatePropertySpec(PropertyDefinition propertyInfo, TypeSpec declaringType)
+        private PropertySpec CreatePropertySpec(PropertyDefinition propertyInfo)
         {
-            return new PropertySpec(propertyInfo, declaringType, this);
+            return new PropertySpec(propertyInfo, this);
         }
 
-        public PropertySpec[] LoadPropertySpecs(PropertyDefinition[] propertyInfos, TypeSpec declaringType)
+        public PropertySpec[] LoadPropertySpecs(PropertyDefinition[] propertyInfos)
         {
-            return propertyInfos.Select(p => LoadPropertySpec(p, declaringType)).ToArray();
+            return propertyInfos.Select(p => LoadPropertySpec(p)).ToArray();
         }
 
-        public PropertySpec[] TryLoadPropertySpecs(Func<PropertyDefinition[]> getProperties, TypeSpec declaringType)
+        public PropertySpec[] TryLoadPropertySpecs(Func<PropertyDefinition[]> getProperties)
         {
             PropertyDefinition[] properties = null;
             try
@@ -661,7 +658,7 @@ namespace AssemblyAnalyser
             {
                 properties ??= Array.Empty<PropertyDefinition>();
             }
-            return LoadPropertySpecs(properties, declaringType);
+            return LoadPropertySpecs(properties);
         }
 
         #endregion

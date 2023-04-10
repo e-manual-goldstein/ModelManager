@@ -20,6 +20,13 @@ namespace AssemblyAnalyser.TestData.Basics
 
         public string[] ArrayProperty { get; set; }
 
+        public string PropertyWithUniqueName { get; set; }
+
+        public void MethodWithUniqueName(int property)
+        {
+
+        }
+
         public string this[int index]
         {
             get

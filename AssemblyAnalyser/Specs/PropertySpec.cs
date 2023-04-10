@@ -10,15 +10,13 @@ namespace AssemblyAnalyser
         private MethodDefinition _getter;
         private MethodDefinition _setter;
 
-        public PropertySpec(PropertyDefinition propertyInfo, TypeSpec declaringType, ISpecManager specManager) 
+        public PropertySpec(PropertyDefinition propertyDefinition, ISpecManager specManager) 
             : base(specManager)
         {
-            _propertyDefinition = propertyInfo;
-            Name = propertyInfo.Name;
-            _getter = propertyInfo.GetMethod;
-            _setter = propertyInfo.SetMethod;            
-            DeclaringType = declaringType;
-            IsSystem = declaringType.IsSystem;
+            _propertyDefinition = propertyDefinition;
+            Name = propertyDefinition.Name;
+            _getter = propertyDefinition.GetMethod;
+            _setter = propertyDefinition.SetMethod;
         }
 
         public MethodSpec Getter { get; private set; }
@@ -26,10 +24,12 @@ namespace AssemblyAnalyser
 
         TypeSpec IMemberSpec.ResultType => PropertyType;
         TypeSpec _propertyType;
-        public TypeSpec PropertyType => _propertyType ??= TryGetPropertyType();
-                
-        public TypeSpec DeclaringType { get; }
-        public bool? IsSystemProperty { get; }
+        public TypeSpec PropertyType => _propertyType ??= GetPropertyType();
+
+        TypeSpec _declaringType;
+        public TypeSpec DeclaringType => _declaringType ??= GetDeclaringType();
+
+        public override bool IsSystem => DeclaringType.IsSystem;
 
         public PropertySpec Implements { get; set; }
 
@@ -50,15 +50,28 @@ namespace AssemblyAnalyser
         {
             Getter = _specManager.LoadMethodSpec(_getter);
             Setter = _specManager.LoadMethodSpec(_setter);
-            _propertyType = TryGetPropertyType();
+            _propertyType = GetPropertyType();
             _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }
 
-        private TypeSpec TryGetPropertyType()
+        private TypeSpec GetPropertyType()
         {
-            if (_specManager.TryLoadTypeSpec(() => _propertyDefinition.PropertyType, out TypeSpec typeSpec))
+            if (!_specManager.TryLoadTypeSpec(() => _propertyDefinition.PropertyType, out TypeSpec typeSpec))
+            {
+                _specManager.AddFault(FaultSeverity.Error, $"Could not determine PropertyType for PropertySpec {this}");
+            }
+            else
             {
                 typeSpec.RegisterAsResultType(this);
+            }
+            return typeSpec;
+        }
+
+        private TypeSpec GetDeclaringType()
+        {
+            if (!_specManager.TryLoadTypeSpec(() => _propertyDefinition.DeclaringType, out TypeSpec typeSpec))
+            {
+                _specManager.AddFault(FaultSeverity.Error, $"Could not determine DeclaringType for PropertySpec {this}");
             }
             return typeSpec;
         }

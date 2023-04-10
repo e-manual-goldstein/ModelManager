@@ -13,6 +13,7 @@ namespace AssemblyAnalyser.Tests
     {
         ModuleSpec _vbModuleSpec;
         TypeSpec _basicVBClassSpec;
+        TypeSpec _basicSubClassSpec;
 
         [TestInitialize] 
         public override void Initialize() 
@@ -23,6 +24,8 @@ namespace AssemblyAnalyser.Tests
             _vbModuleSpec.Process();
             _basicVBClassSpec = _vbModuleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.VBTestData.Basics.BasicVBClass");
+            _basicSubClassSpec = _moduleSpec.TypeSpecs
+                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicSubClass");
         }
 
         #region Basic Property Tests
@@ -51,6 +54,40 @@ namespace AssemblyAnalyser.Tests
             var stringArraySpec = stringArrayProperty.PropertyType;
 
             Assert.AreNotSame(stringSpec, stringArraySpec);
+        }
+
+        [TestMethod]
+        public void BasicSubClassHasOnlyOneDeclaredProperty_Test()
+        {
+            Assert.AreEqual(1, _basicSubClassSpec.Properties.Count());
+        }
+
+        [TestMethod]
+        public void BasicSubClassInheritsBaseProperties_Test()
+        {
+            var declaredProperties = _basicSubClassSpec.Properties;
+            var allProperties = _basicSubClassSpec.GetAllPropertySpecs();
+
+            Assert.IsTrue(allProperties.Intersect(declaredProperties).Any());
+            Assert.IsTrue(allProperties.Except(declaredProperties).Any());
+        }
+
+        [TestMethod]
+        public void InheritedPropertyRepresentedBySameSpec_Test()
+        {
+            var publicPropertySpecs = _specManager.Properties.Values.Where(p => p.Name == "PropertyWithUniqueName");
+            
+            Assert.IsTrue(publicPropertySpecs.Any());
+            Assert.AreEqual(1, publicPropertySpecs.Count());
+
+            var publicPropertySpec = publicPropertySpecs.Single();
+            
+            var inheritedProperty = _basicSubClassSpec.GetPropertySpec("PropertyWithUniqueName");
+            var baseProperty = _basicClassSpec.GetPropertySpec("PropertyWithUniqueName");
+
+            Assert.AreEqual(inheritedProperty, publicPropertySpec);
+            Assert.AreEqual(inheritedProperty, baseProperty);
+            
         }
 
         [TestMethod]

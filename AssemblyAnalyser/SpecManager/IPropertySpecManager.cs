@@ -8,7 +8,7 @@ namespace AssemblyAnalyser
     {
         IReadOnlyDictionary<PropertyDefinition, PropertySpec> Properties { get; }
 
-        PropertySpec[] TryLoadPropertySpecs(Func<PropertyDefinition[]> value, TypeSpec declaringType);
+        PropertySpec[] TryLoadPropertySpecs(Func<PropertyDefinition[]> value);
         void ProcessLoadedProperties(bool includeSystem = true);
         
 

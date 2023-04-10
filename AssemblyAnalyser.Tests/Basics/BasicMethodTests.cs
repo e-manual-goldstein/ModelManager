@@ -13,6 +13,7 @@ namespace AssemblyAnalyser.Tests
     {
         ModuleSpec _vbModuleSpec;
         TypeSpec _basicVBClassSpec;
+        TypeSpec _basicSubClassSpec;
 
         [TestInitialize]
         public override void Initialize()
@@ -23,6 +24,8 @@ namespace AssemblyAnalyser.Tests
             _vbModuleSpec.Process();
             _basicVBClassSpec = _vbModuleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.VBTestData.Basics.BasicVBClass");
+            _basicSubClassSpec = _moduleSpec.TypeSpecs
+                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicSubClass");
         }
 
         #region Basic Method Tests
@@ -54,6 +57,24 @@ namespace AssemblyAnalyser.Tests
             methodWithOutParameter.ForceRebuildSpec();
             Assert.AreEqual(3, methodWithOutParameter.Parameters.Length);
             Assert.AreEqual(1, methodWithOutParameter.Parameters.Where(m => m.IsOut).Count());
+        }
+
+        [TestMethod]
+        public void InheritedMethodRepresentedBySameSpec_Test()
+        {
+            var publicMethodSpecs = _specManager.Methods.Values.Where(p => p.Name == "MethodWithUniqueName");
+
+            Assert.IsTrue(publicMethodSpecs.Any());
+            Assert.AreEqual(1, publicMethodSpecs.Count());
+
+            var publicMethodSpec = publicMethodSpecs.Single();
+
+            var inheritedMethod = _basicSubClassSpec.GetAllMethodSpecs().Where(m => m.Name == "MethodWithUniqueName").Single();
+            var baseMethod = _basicClassSpec.GetMethodSpecs("MethodWithUniqueName").Single();
+
+            Assert.AreEqual(inheritedMethod, publicMethodSpec);
+            Assert.AreEqual(inheritedMethod, baseMethod);
+
         }
 
         #endregion
