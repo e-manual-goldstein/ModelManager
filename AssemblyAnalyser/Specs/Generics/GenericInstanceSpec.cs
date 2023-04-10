@@ -11,11 +11,11 @@ namespace AssemblyAnalyser
     {
         GenericInstanceType _genericInstance;
 
-        public GenericInstanceSpec(GenericInstanceType genericInstance, ISpecManager specManager)
-            : base($"{genericInstance.Namespace}.{genericInstance.Name}", genericInstance.FullName, specManager)
+        public GenericInstanceSpec(GenericInstanceType genericInstance, string fullTypeName, ISpecManager specManager)
+            : base($"{genericInstance.Namespace}.{genericInstance.FullName}", fullTypeName, specManager)
         {
             _genericInstance = genericInstance;
-            Name = _genericInstance.Name;            
+            Name = _genericInstance.Name;
         }
 
         public GenericInstanceType GenericInstance => _genericInstance;
@@ -36,12 +36,13 @@ namespace AssemblyAnalyser
 
         private TypeSpec TryGetInstanceOfType()
         {
-            if (_specManager.TryLoadTypeSpec(() => _genericInstance.ElementType, out TypeSpec typeSpec))
+            if (!_specManager.TryLoadTypeSpec(() => _genericInstance.ElementType, out TypeSpec typeSpec))
             {
-                if (typeSpec is GenericTypeSpec genericType)
-                {
-                    genericType.RegisterAsInstanceOfGenericType(this);
-                }
+                _specManager.AddFault(FaultSeverity.Error, $"Could not load Instance");
+            }
+            if (typeSpec is GenericTypeSpec genericType)
+            {
+                genericType.RegisterAsInstanceOfGenericType(this);
             }
             return typeSpec;
         }

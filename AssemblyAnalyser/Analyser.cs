@@ -73,7 +73,7 @@ namespace AssemblyAnalyser
 
         public void BuildTypes()
         {
-            foreach (var typeSpec in _specManager.Types.Values)
+            foreach (var typeSpec in _specManager.TypeSpecs)
             {
                 typeSpec.Process();
             }
@@ -86,7 +86,7 @@ namespace AssemblyAnalyser
             return new List<string>() 
             {  
                 //$"Assemblies: {_specManager.Assemblies.Count()}",
-                $"Types: {_specManager.Types.Count()}",
+                $"Types: {_specManager.TypeSpecs.Count()}",
                 $"Properties {_specManager.Properties.Count()}",
                 $"Methods {_specManager.Methods.Count()}",
                 $"Fields {_specManager.Fields.Count()}"

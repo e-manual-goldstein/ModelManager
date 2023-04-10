@@ -83,7 +83,6 @@ namespace AssemblyAnalyser
         public void Reset()
         {
             _moduleSpecs.Clear();
-            _typeSpecs.Clear();
             _methodSpecs.Clear();
             _parameterSpecs.Clear();
             _propertySpecs.Clear();
@@ -112,7 +111,6 @@ namespace AssemblyAnalyser
         public void ProcessAll(bool includeSystem = true, bool parallelProcessing = true)
         {
             //ProcessAllAssemblies(includeSystem, parallelProcessing);
-            ProcessAllLoadedTypes(includeSystem, parallelProcessing);
             ProcessLoadedMethods(includeSystem, parallelProcessing);
             ProcessLoadedProperties(includeSystem);
             ProcessLoadedParameters(includeSystem);
@@ -155,7 +153,7 @@ namespace AssemblyAnalyser
             {
                 throw new NotImplementedException();
             }
-            return _moduleSpecs.GetOrAdd(module.Assembly.Name.Name, (key) => CreateFullModuleSpec(module));            
+            return _moduleSpecs.GetOrAdd(module.Assembly.Name.Name, (key) => CreateFullModuleSpec(module));
         } 
         
         public ModuleSpec LoadModuleSpec(string moduleFilePath)
@@ -274,204 +272,32 @@ namespace AssemblyAnalyser
 
         #region Types
 
-        public TypeSpec[] ProcessedTypes => Types.Values.Where(t => t.IsProcessed).OrderBy(s => s.FullTypeName).ToArray();
+        static NullTypeSpec _nullTypeSpec;
 
-        public IReadOnlyDictionary<string, TypeSpec> Types => _typeSpecs;
-
-        ConcurrentDictionary<string, TypeSpec> _typeSpecs = new ConcurrentDictionary<string, TypeSpec>();
-
-        public void ProcessAllLoadedTypes(bool includeSystem = true, bool parallelProcessing = true)
+        public TypeSpec GetNullTypeSpec()
         {
-            ProcessSpecs(Types.Values.Where(t => includeSystem || !t.Module.IsSystem).ToArray(), parallelProcessing);            
+            return _nullTypeSpec ??= new NullTypeSpec(this);
         }
 
-        public TypeSpec[] TryLoadTypesForModule(ModuleDefinition module)
-        {
-            var specs = new List<TypeSpec>();
-            var types = module.GetTypes();
-            TryLoadTypeSpecs(() => types.ToArray(), out TypeSpec[] typeSpecs);
-            
-            return typeSpecs;
-        }
+        public TypeSpec[] ProcessedTypes => TypeSpecs.Where(t => t.IsProcessed).OrderBy(s => s.FullTypeName).ToArray();
 
-        private TypeSpec LoadTypeSpec(TypeReference type)
-        {
-            if (type == null)
-            {
-                return _typeSpecs.GetOrAdd("Null Type Spec", (specName) => new NullTypeSpec(this));
-            }
-            return LoadFullTypeSpec(type);
-        }
+        public TypeSpec[] TypeSpecs => Modules.Values.SelectMany(m => m.TypeSpecs).ToArray();
 
-        private TypeSpec LoadFullTypeSpec(TypeDefinition type)
-        {
-            var typeSpec = _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, type.IsArray), (key) => CreateFullTypeSpec(type));
-            if (!typeSpec.HasDefinition)
-            {
-                typeSpec.AddDefinition(type);
-            }
-            return typeSpec;
-        }
-
-        private string CreateUniqueTypeSpecName(TypeReference type, bool isArray)
-        {
-            var moduleName = type.Scope.GetScopeNameWithoutExtension();
-            var suffix = isArray ? "[]" : null;
-            if (type is GenericParameter genericParameter)
-            {
-                if (genericParameter.DeclaringMethod == null)
-                {
-                    return $"{moduleName}_{genericParameter.DeclaringType.FullName}<{type.FullName}>{suffix}";
-                }
-                else
-                {
-                    if (genericParameter.DeclaringType != null)
-                    {
-
-                    }
-                    else
-                    {
-                        var declaringMethod = genericParameter.DeclaringMethod;
-                        return $"{moduleName}_{declaringMethod.DeclaringType.FullName}.{declaringMethod.Name}<{type.FullName}>{suffix}";
-                    }
-                }
-            }
-            if (type is GenericInstanceType genericInstanceType)
-            {
-                return CreateGenericArgumentsAggregateName(moduleName, genericInstanceType);                
-            }
-            return $"{moduleName}_{type.FullName}{suffix}";
-        }
-
-        private string CreateGenericArgumentsAggregateName(string moduleName, GenericInstanceType genericType)
-        {
-            var prefix = $"{moduleName}_{genericType.Namespace}.{genericType.Name}<";
-            var argumentNames = genericType.GenericArguments.Select(g => CreateUniqueTypeSpecName(g, false)).ToArray();
-            var argumentString = argumentNames.Aggregate((a, b) => $"{a}, {b}");
-            return $"{prefix}{argumentString}>";
-        }
-
-        private TypeSpec LoadFullTypeSpec(TypeReference type)
-        {
-            bool typeReferenceIsArray = type.IsArray; //Resolving TypeReference to TypeDefinition causes loss of IsArray definition
-            if (type.IsGenericParameter)
-            {
-                if (type is GenericParameter genericParameter)
-                {
-                    return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateGenericParameterSpec(genericParameter));
-                }
-                //if (TryGetModuleForTypeRefernce(type, out ModuleSpec moduleSpec))
-                //{
-                //    genericParameter = moduleSpec.GetGenericParameter(type);
-                //    return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateGenericParameterSpec(genericParameter));
-                //}
-                throw new NotImplementedException();
-            }
-            if (type.HasGenericParameters && type is TypeDefinition genericTypeDefinition)
-            {
-                return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateGenericTypeSpec(genericTypeDefinition));
-            }
-            if (type is GenericInstanceType genericInstanceType)
-            {
-                return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateGenericInstanceSpec(genericInstanceType));
-            }
-            if (!type.IsDefinition)
-            {
-                TryGetTypeDefinition(ref type);
-            }
-            return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateFullTypeSpec(type));
-        }
-
-        private TypeSpec CreateFullTypeSpec(TypeReference type)
-        {
-            if (type is TypeDefinition typeDefinition)
-            {
-                var spec = new TypeSpec(typeDefinition, this);
-                return spec;
-            }
-            return new MissingTypeSpec($"{type.Namespace}.{type.Name}", type.FullName, this);
-        }
-
-        private TypeSpec CreateGenericParameterSpec(GenericParameter type)
-        {
-            var spec = new GenericParameterSpec(type, this);
-            return spec;            
-        }
-
-        private TypeSpec CreateGenericTypeSpec(TypeDefinition typeDefinition)
-        {
-            var spec = new GenericTypeSpec(typeDefinition, this);
-            return spec;
-        }
-
-        private TypeSpec CreateGenericInstanceSpec(GenericInstanceType type)
-        {
-            var spec = new GenericInstanceSpec(type, this);
-            return spec;
-        }
-
-        private void TryGetTypeDefinition(ref TypeReference type)
-        {
-            TypeDefinition typeDefinition = null;
-            if (type.IsGenericInstance)
-            {
-                throw new ArgumentException("Cannot have TypeDefinition for Generic Instance");
-            }
-            typeDefinition = TryResolveTypeDefinition(type);          
-            if (typeDefinition == null)
-            {
-                if (TryGetModuleForTypeRefernce(type, out ModuleSpec moduleSpec))
-                {
-                    if (type.IsGenericParameter)
-                    {
-                        var genericParameter = moduleSpec.GetGenericParameter(type);
-                        if (genericParameter != null)
-                        {
-                            type = genericParameter;
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        typeDefinition = moduleSpec.GetTypeDefinition(type);
-                    }
-                }
-            }
-            if (typeDefinition != null)
-            {
-                type = typeDefinition;
-                return;
-            }
-            AddFault("Could not fully resolve TypeDefinition");
-        }
-
-        private TypeDefinition TryResolveTypeDefinition(TypeReference type)
-        {
-            ModuleDefinition moduleDefinition = null;
-            try
-            {
-                if ((moduleDefinition = type.Module) != null)
-                {
-                    if (moduleDefinition.AssemblyResolver != null)
-                    {
-                        //moduleDefinition.AssemblyResolver.Resolve(type.Mo);
-                    }
-                    return type.Resolve();
-                }
-            }
-            catch (AssemblyResolutionException assemblyResolutionException)
-            {
-                AddFault($"Failed to resolve TypeDefinition {type}: {assemblyResolutionException.Message}");
-            }
-            return null;
-        }
-        
         public bool TryLoadTypeSpec(Func<TypeReference> getType, out TypeSpec typeSpec)
         {
             bool success = false;
             try
             {
-                typeSpec = LoadTypeSpec(getType());
+                var type = getType();
+                if (type != null)
+                {
+                    ModuleSpec module = LoadModuleSpec(type.Module);
+                    module.TryLoadTypeSpec(getType, out typeSpec);
+                }
+                else
+                {
+                    typeSpec = GetNullTypeSpec();
+                }
                 success = true;
             }
             catch (TypeLoadException ex)
@@ -493,6 +319,12 @@ namespace AssemblyAnalyser
                 typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
             }
             return success;
+        }
+
+        public TypeSpec LoadTypeSpec(TypeReference typeReference)
+        {
+            ModuleSpec module = LoadModuleSpec(typeReference.Module);
+            return module.LoadTypeSpec(typeReference);
         }
 
         public bool TryLoadTypeSpecs(Func<TypeReference[]> getTypes, out TypeSpec[] typeSpecs)
@@ -580,6 +412,10 @@ namespace AssemblyAnalyser
         private MethodSpec CreateMethodSpec(MethodDefinition method)
         {
             var spec = new MethodSpec(method, this);
+            var synonyms = Methods.Where(m => m.Key.FullName == method.FullName && m.Key != method).ToArray();
+            if (synonyms.Any())
+            {
+            }
             return spec;
         }
 
@@ -814,7 +650,7 @@ namespace AssemblyAnalyser
 
         private TypeSpec LoadAttributeSpec(CustomAttribute attribute, AbstractSpec decoratedSpec)
         {
-            var attributeSpec = LoadFullTypeSpec(attribute.AttributeType);
+            var attributeSpec = LoadTypeSpec(attribute.AttributeType);
             _attributeSpecs.GetOrAdd(attributeSpec.FullTypeName, attributeSpec);
             attributeSpec.RegisterAsDecorator(decoratedSpec);
             return attributeSpec;
@@ -920,6 +756,8 @@ namespace AssemblyAnalyser
             };
             
         }
+
+        
 
         #endregion
 

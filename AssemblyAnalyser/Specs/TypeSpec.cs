@@ -36,8 +36,7 @@ namespace AssemblyAnalyser
             IsSystem = Module?.IsSystem ?? true;
             IsClass = typeDefinition.IsClass;
         }
-
-        
+                
         protected TypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager) 
             : base(specManager)
         {
@@ -493,19 +492,6 @@ namespace AssemblyAnalyser
         public void AddDefinition(TypeDefinition type)
         {
             _typeDefinition = type;
-        }
-
-        public bool IsSpecFor(TypeReference typeReference, bool moduleChecked = false)
-        {
-            if (moduleChecked || Module.IsSpecFor(typeReference))
-            {
-                return typeReference.FullName == _typeDefinition?.FullName;
-            }
-            else
-            {
-
-            }
-            return false;
         }
 
         public virtual bool MatchesSpec(TypeSpec typeSpec)
