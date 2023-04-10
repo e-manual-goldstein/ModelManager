@@ -37,12 +37,15 @@ namespace AssemblyAnalyser
             IsClass = typeDefinition.IsClass;
         }
 
+        
         protected TypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager) 
             : base(specManager)
         {
             UniqueTypeName = uniqueTypeName;
             FullTypeName = fullTypeName;
         }
+
+        public TypeDefinition Definition => _typeDefinition;
 
         public string UniqueTypeName { get; }
         public string FullTypeName { get; }

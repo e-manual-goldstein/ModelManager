@@ -17,6 +17,8 @@ namespace AssemblyAnalyser.Specs
             specManager.AddFault(FaultSeverity.Warning, $"Asssembly not found {missingAssembly.FullName}");
         }
 
+        public AssemblyNameReference MissingAssembly => _missingAssembly;
+
         public override bool IsSystem { get => base.IsSystem; protected set => base.IsSystem = value; }
 
         public override void RegisterAsRequiredBy(ISpecDependency specDependency)

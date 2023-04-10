@@ -15,6 +15,8 @@ namespace AssemblyAnalyser
             Name = propertyDefinition.Name;
         }
 
+        public PropertyDefinition Definition => _propertyDefinition;
+
         private MethodSpec _getter;
         public MethodSpec Getter => _getter ??= TryGetGetter();
 

@@ -6,19 +6,21 @@ namespace AssemblyAnalyser
 {
     public class EventSpec : AbstractSpec, IMemberSpec
     {
-        private EventDefinition _eventInfo;
+        private EventDefinition _eventDefinition;
         private MethodDefinition _adder;
         private MethodDefinition _remover;
 
         public EventSpec(EventDefinition eventInfo, TypeSpec declaringType, ISpecManager specManager) 
             : base(specManager)
         {
-            _eventInfo = eventInfo;
+            _eventDefinition = eventInfo;
             _adder = eventInfo.AddMethod;
             _remover = eventInfo.RemoveMethod;
             DeclaringType = declaringType;
             IsSystem = declaringType.IsSystem;
         }
+
+        public EventDefinition Definition => _eventDefinition;
 
         public MethodSpec Adder { get; private set; }
         public MethodSpec Remover { get; private set; }
@@ -34,7 +36,7 @@ namespace AssemblyAnalyser
         }
 
 
-        public string EventName => _eventInfo.Name;
+        public string EventName => _eventDefinition.Name;
         public TypeSpec EventType { get; private set; }
         public bool? IsSystemEvent { get; set; }
         public TypeSpec DeclaringType { get; }
@@ -45,7 +47,7 @@ namespace AssemblyAnalyser
         {
             Adder = _specManager.LoadMethodSpec(_adder);
             Remover = _specManager.LoadMethodSpec(_remover);
-            if (_specManager.TryLoadTypeSpec(() => _eventInfo.EventType, out TypeSpec typeSpec))
+            if (_specManager.TryLoadTypeSpec(() => _eventDefinition.EventType, out TypeSpec typeSpec))
             {
                 EventType = typeSpec;
                 EventType.RegisterAsDelegateFor(this);
@@ -55,12 +57,12 @@ namespace AssemblyAnalyser
 
         protected override CustomAttribute[] GetAttributes()
         {
-            return _eventInfo.CustomAttributes.ToArray();
+            return _eventDefinition.CustomAttributes.ToArray();
         }
                 
         public override string ToString()
         {
-            return _eventInfo.Name;
+            return _eventDefinition.Name;
         }
     }
 }

@@ -31,6 +31,8 @@ namespace AssemblyAnalyser
             ModuleFullName = assemblyFullName;
         }
 
+        public ModuleDefinition Definition => _baseVersion;
+
         private void AddSearchDirectory(ModuleDefinition module, string filePath)
         {
             if (module.AssemblyResolver is DefaultAssemblyResolver defaultAssemblyResolver)

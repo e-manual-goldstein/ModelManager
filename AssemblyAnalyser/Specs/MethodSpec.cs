@@ -24,6 +24,8 @@ namespace AssemblyAnalyser
 
         }
 
+        public MethodDefinition Definition => _methodDefinition;
+
         TypeSpec IMemberSpec.ResultType => ReturnType;
 
         TypeSpec _returnType;

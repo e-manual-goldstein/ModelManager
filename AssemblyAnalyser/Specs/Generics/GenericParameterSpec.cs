@@ -19,6 +19,8 @@ namespace AssemblyAnalyser
             HasDefaultConstructorConstraint = _genericParameter.Attributes.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint);
         }
 
+        public GenericParameter GenericParameter => _genericParameter;
+
         public bool HasDefaultConstructorConstraint { get; }
 
         protected override ModuleSpec TryGetModule()

@@ -18,6 +18,8 @@ namespace AssemblyAnalyser
             Name = _genericInstance.Name;            
         }
 
+        public GenericInstanceType GenericInstance => _genericInstance;
+
         public override bool IsGenericInstance => true;
 
         protected override void BuildSpec()

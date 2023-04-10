@@ -24,6 +24,8 @@ namespace AssemblyAnalyser
             IsOut = parameterDefinition.IsOut;
         }
 
+        public ParameterDefinition Definition => _parameterDefinition;
+
         protected override CustomAttribute[] GetAttributes()
         {
             return _parameterDefinition.CustomAttributes.ToArray();

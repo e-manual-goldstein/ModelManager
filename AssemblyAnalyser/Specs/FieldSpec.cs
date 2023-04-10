@@ -7,19 +7,21 @@ namespace AssemblyAnalyser
     public class FieldSpec : AbstractSpec, IMemberSpec
     {
         const string BACKING_FIELD_SUFFIX = "k__BackingField";
-        private FieldDefinition _fieldInfo;
+        private FieldDefinition _fieldDefinition;
 
         public FieldSpec(FieldDefinition fieldInfo, TypeSpec declaringType, ISpecManager specManager) 
             : base(specManager)
         {
-            _fieldInfo = fieldInfo;
+            _fieldDefinition = fieldInfo;
             DeclaringType = declaringType;
             IsSystem = declaringType.IsSystem;
             IsBackingField = fieldInfo.Name.EndsWith(BACKING_FIELD_SUFFIX);
             IsEventField = fieldInfo.DeclaringType.Events.Where(e => e.FullName == fieldInfo.FullName).Count() == 1;
         }
 
-        public string FieldName => _fieldInfo.Name;
+        public FieldDefinition Definition => _fieldDefinition;
+
+        public string FieldName => _fieldDefinition.Name;
         public TypeSpec FieldType { get; private set; }
         
         public bool IsBackingField { get; set; }
@@ -30,7 +32,7 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            if (_specManager.TryLoadTypeSpec(() => _fieldInfo.FieldType, out TypeSpec typeSpec))
+            if (_specManager.TryLoadTypeSpec(() => _fieldDefinition.FieldType, out TypeSpec typeSpec))
             {
                 FieldType = typeSpec;
                 FieldType.RegisterAsResultType(this);
@@ -40,12 +42,12 @@ namespace AssemblyAnalyser
 
         protected override CustomAttribute[] GetAttributes()
         {
-            return _fieldInfo.CustomAttributes.ToArray();
+            return _fieldDefinition.CustomAttributes.ToArray();
         }
 
         public override string ToString()
         {
-            return _fieldInfo.Name;
+            return _fieldDefinition.Name;
         }
     }
 }
