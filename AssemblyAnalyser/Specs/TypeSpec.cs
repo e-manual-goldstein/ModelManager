@@ -513,9 +513,9 @@ namespace AssemblyAnalyser
             return Methods.SingleOrDefault(m => m.IsSpecFor(method));
         }
 
-        public MethodSpec[] GetMethodSpecs(string methodName)
+        public MethodSpec[] GetMethodSpecs(string methodName, bool includeInherited = false)
         {
-            return Methods.Where(m => m.Name == methodName).ToArray();
+            return (includeInherited ? GetAllMethodSpecs() : Methods).Where(m => m.Name == methodName).ToArray();
         }
 
         public virtual MethodSpec[] GetAllMethodSpecs()
