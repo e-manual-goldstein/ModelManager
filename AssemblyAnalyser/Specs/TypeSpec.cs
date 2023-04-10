@@ -50,8 +50,8 @@ namespace AssemblyAnalyser
         public string FullTypeName { get; }
         public string Namespace { get; set; }
         public virtual bool IsInterface => _typeDefinition.IsInterface;
-        public bool IsClass { get; }
-        //public bool? IsSystemType { get; }
+
+        public bool IsClass { get; }        
         public bool IsArray { get; }
 
         #region BuildSpec
@@ -150,6 +150,7 @@ namespace AssemblyAnalyser
                     }
                     else
                     {
+
                     }
                     interfaceSpec.AddImplementation(this);
                 }
@@ -207,9 +208,9 @@ namespace AssemblyAnalyser
             return specs;
         }
 
-        public PropertySpec GetPropertySpec(string name)
+        public PropertySpec GetPropertySpec(string name, bool includeInherited = false)
         {
-            return Properties.Where(p => !p.Parameters.Any() && p.Name == name).SingleOrDefault() ?? BaseSpec.GetPropertySpec(name);
+            return (includeInherited ? GetAllPropertySpecs() : Properties).Where(p => !p.Parameters.Any() && p.Name == name).SingleOrDefault();
         }
 
         public PropertySpec MatchPropertySpecByNameAndParameterType(string name, ParameterSpec[] parameterSpecs)
@@ -308,7 +309,7 @@ namespace AssemblyAnalyser
         {
             foreach (var interfaceProperty in interfaceSpec.Properties)
             {
-                var propertySpec = GetPropertySpec(interfaceProperty.Name);
+                var propertySpec = GetPropertySpec(interfaceProperty.Name, true);
                 if (propertySpec == null)
                 {
                     _specManager.AddFault(FaultSeverity.Error, $"{this} does not implement {interfaceProperty}");

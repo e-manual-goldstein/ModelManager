@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
-    public interface IHasGenericParameters
+    public interface IHasGenericParameters : ISpec
     {
     }
 }

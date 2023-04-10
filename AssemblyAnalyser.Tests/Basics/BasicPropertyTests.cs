@@ -82,7 +82,7 @@ namespace AssemblyAnalyser.Tests
 
             var publicPropertySpec = publicPropertySpecs.Single();
             
-            var inheritedProperty = _basicSubClassSpec.GetPropertySpec("PropertyWithUniqueName");
+            var inheritedProperty = _basicSubClassSpec.GetPropertySpec("PropertyWithUniqueName", true);
             var baseProperty = _basicClassSpec.GetPropertySpec("PropertyWithUniqueName");
 
             Assert.AreEqual(inheritedProperty, publicPropertySpec);

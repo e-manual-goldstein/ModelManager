@@ -250,24 +250,6 @@ namespace AssemblyAnalyser
             return spec;
         }
 
-        private bool TryGetModuleForTypeRefernce(TypeReference type, out ModuleSpec moduleSpec)
-        {
-            bool success = false;
-            var scopeName = type.Scope.GetScopeNameWithoutExtension();
-            var modules = _moduleSpecs.Where(m => m.Key == scopeName).Select(c => c.Value).ToList();
-            if (modules.Count > 1)
-            {
-                AddFault($"Multiple Modules found for {type.Namespace}.{type.Name}");
-                moduleSpec = null;
-            }
-            else
-            {
-                success = (moduleSpec = modules.SingleOrDefault()) != null;                
-            }
-            return success;
-        }
-
-
         #endregion
 
         #region Types

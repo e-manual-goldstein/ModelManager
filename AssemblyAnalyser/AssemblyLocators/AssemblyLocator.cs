@@ -17,7 +17,7 @@ namespace AssemblyAnalyser
         protected List<string> _filePathsForLocator = new List<string>();
         protected const string BASE_FRAMEWORK_PATH = "C:\\Windows\\Microsoft.NET\\";
         protected const string GLOBAL_ASSEMBLY_CACHE_PATH = "C:\\Windows\\assembly";
-
+        protected const string BASE_DOTNET_PATH = "C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\";
         public AssemblyLocator()
         {            
         }
@@ -133,7 +133,8 @@ namespace AssemblyAnalyser
         public static bool IsSystemAssembly(string assemblyLocation)
         {
             return assemblyLocation.StartsWith(BASE_FRAMEWORK_PATH, StringComparison.CurrentCultureIgnoreCase) 
-                || assemblyLocation.StartsWith(GLOBAL_ASSEMBLY_CACHE_PATH, StringComparison.CurrentCultureIgnoreCase);
+                || assemblyLocation.StartsWith(GLOBAL_ASSEMBLY_CACHE_PATH, StringComparison.CurrentCultureIgnoreCase)
+                || assemblyLocation.StartsWith(BASE_DOTNET_PATH, StringComparison.CurrentCultureIgnoreCase);
         }
 
     }

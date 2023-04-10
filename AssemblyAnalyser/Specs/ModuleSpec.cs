@@ -25,7 +25,7 @@ namespace AssemblyAnalyser
             Versions.Add(module.Assembly.FullName, module.Assembly.Name);
             ModuleShortName = module.Assembly.Name.Name;
             FilePath = filePath;
-            IsSystem = AssemblyLoader.IsSystemAssembly(filePath);
+            IsSystem = AssemblyLocator.IsSystemAssembly(filePath);
         }
 
         protected ModuleSpec(string assemblyFullName, ISpecManager specManager)

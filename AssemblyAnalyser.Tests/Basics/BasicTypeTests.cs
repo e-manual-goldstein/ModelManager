@@ -19,6 +19,7 @@ namespace AssemblyAnalyser.Tests
         public override void Initialize() 
         {
             base.Initialize();
+            _specManager.ProcessSpecs(_moduleSpec.TypeSpecs, false);
             _specManager.ProcessLoadedProperties();
             _specManager.ProcessLoadedMethods();
             _specManager.ProcessLoadedFields();

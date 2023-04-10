@@ -1,4 +1,5 @@
-﻿using Mono.Cecil;
+﻿using AssemblyAnalyser.Specs;
+using Mono.Cecil;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,6 +29,11 @@ namespace AssemblyAnalyser
             return _specManager.LoadReferencedModuleByScopeName(_genericParameter.Module, _genericParameter.Scope);
         }
 
+        protected override void BuildSpec()
+        {
+            BuildSpecInternal();
+        }
+
         protected override TypeSpec CreateBaseSpec()
         {
             foreach (var constraint in _genericParameter.Constraints)
@@ -48,6 +54,8 @@ namespace AssemblyAnalyser
         IHasGenericParameters _genericParameterFor;
         public IHasGenericParameters GenericParameterFor => _genericParameterFor;
 
+        public override bool IsSystem => GenericParameterFor.IsSystem;
+
         public void RegisterAsGenericTypeArgumentFor(MethodSpec methodSpec)
         {
             _genericParameterFor = methodSpec;
@@ -64,6 +72,116 @@ namespace AssemblyAnalyser
         public override bool MatchesSpec(TypeSpec typeSpec)
         {
             return (typeSpec is GenericParameterSpec genericParameterSpec) ? IsValidGenericTypeMatchFor(genericParameterSpec) : false;
+        }
+
+        public override void RegisterAsRequiredBy(ISpecDependency specDependency)
+        {
+            base.RegisterAsRequiredBy(specDependency);
+        }
+
+        public override void RegisterDependency(ISpecDependency specDependency)
+        {
+            base.RegisterDependency(specDependency);
+        }
+
+        protected override TypeSpec[] CreateAttributSpecs()
+        {
+            return Array.Empty<TypeSpec>();
+        }
+
+        protected override CustomAttribute[] GetAttributes()
+        {
+            return base.GetAttributes();
+        }
+
+        protected override TypeSpec[] CreateInterfaceSpecs()
+        {
+            _specManager.AddFault(FaultSeverity.Debug, "Unfinished CreateInterfaceSpecs for GenericParameterSpec");
+            return Array.Empty<TypeSpec>();
+        }
+
+        protected override TypeSpec[] CreateNestedTypeSpecs()
+        {
+            return Array.Empty<TypeSpec>();
+        }
+
+        protected override MethodSpec[] CreateMethodSpecs()
+        {
+            _specManager.AddFault(FaultSeverity.Debug, "Unfinished CreateMethodSpecs for GenericParameterSpec");
+            return Array.Empty<MethodSpec>();
+        }
+
+        public override PropertySpec[] GetAllPropertySpecs()
+        {
+            return base.GetAllPropertySpecs();
+        }
+
+        protected override PropertySpec[] CreatePropertySpecs()
+        {
+            _specManager.AddFault(FaultSeverity.Debug, "Unfinished CreatePropertySpecs for GenericParameterSpec");
+            return Array.Empty<PropertySpec>();
+        }
+
+        protected override FieldSpec[] CreateFieldSpecs()
+        {
+            _specManager.AddFault(FaultSeverity.Debug, "Unfinished CreateFieldSpecs for GenericParameterSpec");
+            return Array.Empty<FieldSpec>();
+        }
+
+        protected override EventSpec[] CreateEventSpecs()
+        {
+            _specManager.AddFault(FaultSeverity.Debug, "Unfinished CreateEventSpecs for GenericParameterSpec");
+            return Array.Empty<EventSpec>();
+        }
+
+        protected override GenericParameterSpec[] CreateGenericTypeParameters()
+        {
+            return base.CreateGenericTypeParameters();
+        }
+
+        protected override void ProcessInterfaceImplementations()
+        {
+            _specManager.AddFault(FaultSeverity.Debug, "Unfinished ProcessInterfaceImplementations for GenericParameterSpec");            
+        }
+
+        public override string ToString()
+        {
+            return base.ToString();
+        }
+
+        public override void AddImplementation(TypeSpec typeSpec)
+        {
+            base.AddImplementation(typeSpec);
+        }
+
+        public override void RegisterAsResultType(IMemberSpec methodSpec)
+        {
+            base.RegisterAsResultType(methodSpec);
+        }
+
+        public override void RegisterAsDependentParameterSpec(ParameterSpec parameterSpec)
+        {
+            base.RegisterAsDependentParameterSpec(parameterSpec);
+        }
+
+        public override void RegisterDependentMethodSpec(MethodSpec methodSpec)
+        {
+            base.RegisterDependentMethodSpec(methodSpec);
+        }
+
+        public override void RegisterAsDecorator(AbstractSpec decoratedSpec)
+        {
+            base.RegisterAsDecorator(decoratedSpec);
+        }
+
+        public override void RegisterAsDelegateFor(EventSpec eventSpec)
+        {
+            base.RegisterAsDelegateFor(eventSpec);
+        }
+
+        public override MethodSpec[] GetAllMethodSpecs()
+        {
+            return base.GetAllMethodSpecs();
         }
     }
 }
