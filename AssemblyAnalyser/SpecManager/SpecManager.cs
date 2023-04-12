@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AssemblyAnalyser.Specs;
+using AssemblyAnalyser.Faults;
 
 namespace AssemblyAnalyser
 {
@@ -38,15 +39,28 @@ namespace AssemblyAnalyser
         List<IRule> _specRules = new List<IRule>();
         public IRule[] SpecRules => _specRules.ToArray();
         
-        List<string> _faults = new List<string>();
-        public string[] Faults => _faults.ToArray();
+        List<BuildFault> _faults = new List<BuildFault>();
+        public BuildFault[] Faults => _faults.ToArray();
 
         public void AddFault(string faultMessage)
         {
-            _faults.Add(faultMessage);
+            LogFault(null, faultMessage);
+            _faults.Add(new BuildFault(faultMessage));
         }
 
         public void AddFault(FaultSeverity faultSeverity, string faultMessage)
+        {
+            LogFault(faultSeverity, faultMessage);
+            _faults.Add(new BuildFault(faultSeverity, faultMessage));
+        }
+
+        public void AddFault(ISpec specContext, FaultSeverity faultSeverity, string faultMessage)
+        {
+            LogFault(faultSeverity, faultMessage);
+            _faults.Add(new BuildFault(specContext, faultSeverity, faultMessage));
+        }
+
+        private void LogFault(FaultSeverity? faultSeverity, string faultMessage)
         {
             switch (faultSeverity)
             {
@@ -63,7 +77,6 @@ namespace AssemblyAnalyser
                     _logger.Log(LogLevel.Debug, faultMessage);
                     break;
             }
-            AddFault($"[{faultSeverity}]\t{faultMessage}");
         }
 
         List<string> _messages = new List<string>();

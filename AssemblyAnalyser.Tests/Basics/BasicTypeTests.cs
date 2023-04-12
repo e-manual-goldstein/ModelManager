@@ -213,7 +213,7 @@ namespace AssemblyAnalyser.Tests
         [TestCleanup]
         public override void Cleanup()
         {
-            var specErrors = _specManager.Faults.Where(f => f.StartsWith("[Error]"));
+            var specErrors = _specManager.Faults.Where(f => f.Severity == FaultSeverity.Error);
             //Assert.IsTrue(!specErrors.Any());
         }
     }
