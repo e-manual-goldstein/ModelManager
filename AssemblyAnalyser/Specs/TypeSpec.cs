@@ -202,7 +202,7 @@ namespace AssemblyAnalyser
                 _specManager.AddFault(FaultSeverity.Error, $"Unable to determine PropertySpecs for {this}");
                 return Array.Empty<PropertySpec>();
             }
-            var specs = _specManager.TryLoadPropertySpecs(() => _typeDefinition.Properties.ToArray());
+            var specs = TryLoadPropertySpecs(() => _typeDefinition.Properties.ToArray());
             return specs;
         }
 
@@ -418,6 +418,47 @@ namespace AssemblyAnalyser
         public MethodSpec[] LoadSpecsForMethodReferences(MethodReference[] methodReferences)
         {
             return TryLoadMethodSpecs(() => methodReferences.Select(m => m.Resolve()).ToArray());
+        }
+
+        #endregion
+
+        #region Property Specs
+
+        public IReadOnlyDictionary<string, PropertySpec> PropertySpecs => _propertySpecs;
+
+        ConcurrentDictionary<string, PropertySpec> _propertySpecs = new ConcurrentDictionary<string, PropertySpec>();
+
+        public PropertySpec LoadPropertySpec(PropertyDefinition propertyDefinition)
+        {
+            return _propertySpecs.GetOrAdd(propertyDefinition.FullName, (def) => CreatePropertySpec(propertyDefinition));            
+        }
+
+        private PropertySpec CreatePropertySpec(PropertyDefinition propertyInfo)
+        {
+            return new PropertySpec(propertyInfo, _specManager);
+        }
+
+        public PropertySpec[] LoadPropertySpecs(PropertyDefinition[] propertyInfos)
+        {
+            return propertyInfos.Select(p => LoadPropertySpec(p)).ToArray();
+        }
+
+        public PropertySpec[] TryLoadPropertySpecs(Func<PropertyDefinition[]> getProperties)
+        {
+            PropertyDefinition[] properties = null;
+            try
+            {
+                properties = getProperties();
+            }
+            catch (TypeLoadException ex)
+            {
+                _specManager.AddFault(this, FaultSeverity.Error, ex.Message);
+            }            
+            finally
+            {
+                properties ??= Array.Empty<PropertyDefinition>();
+            }
+            return LoadPropertySpecs(properties);
         }
 
         #endregion

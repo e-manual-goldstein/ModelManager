@@ -6,11 +6,10 @@ namespace AssemblyAnalyser
 {
     public interface IPropertySpecManager
     {
-        IReadOnlyDictionary<PropertyDefinition, PropertySpec> Properties { get; }
+        PropertySpec[] PropertySpecs { get; }
 
-        PropertySpec[] TryLoadPropertySpecs(Func<PropertyDefinition[]> value);
-        void ProcessLoadedProperties(bool includeSystem = true);
-        
+        PropertySpec LoadPropertySpec(PropertyReference property);
+        IEnumerable<PropertySpec> LoadPropertySpecs(IEnumerable<PropertyReference> properties);        
 
     }
 }

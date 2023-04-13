@@ -20,7 +20,7 @@ namespace AssemblyAnalyser.Tests
         {
             base.Initialize();
             _specManager.ProcessSpecs(_moduleSpec.TypeSpecs, false);
-            _specManager.ProcessLoadedProperties();
+            _specManager.ProcessSpecs(_moduleSpec.TypeSpecs.SelectMany(t => t.Properties));
             _specManager.ProcessSpecs(_moduleSpec.TypeSpecs.SelectMany(t => t.Methods));
             _specManager.ProcessLoadedFields();
             _specManager.ProcessLoadedParameters();

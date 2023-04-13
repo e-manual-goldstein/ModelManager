@@ -75,7 +75,7 @@ namespace AssemblyAnalyser.Tests
         [TestMethod]
         public void InheritedPropertyRepresentedBySameSpec_Test()
         {
-            var publicPropertySpecs = _specManager.Properties.Values.Where(p => p.Name == "PropertyWithUniqueName");
+            var publicPropertySpecs = _specManager.PropertySpecs.Where(p => p.Name == "PropertyWithUniqueName");
             
             Assert.IsTrue(publicPropertySpecs.Any());
             Assert.AreEqual(1, publicPropertySpecs.Count());

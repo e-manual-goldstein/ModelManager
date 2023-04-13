@@ -97,7 +97,7 @@ namespace AssemblyAnalyser
             _moduleSpecs.Clear();
             //_methodSpecs.Clear();
             _parameterSpecs.Clear();
-            _propertySpecs.Clear();
+            //_propertySpecs.Clear();
             _fieldSpecs.Clear();
         }
 
@@ -124,7 +124,7 @@ namespace AssemblyAnalyser
         {
             //ProcessAllAssemblies(includeSystem, parallelProcessing);
             //ProcessLoadedMethods(includeSystem, parallelProcessing);
-            ProcessLoadedProperties(includeSystem);
+            //ProcessLoadedProperties(includeSystem);
             ProcessLoadedParameters(includeSystem);
             ProcessLoadedFields(includeSystem);
             ProcessLoadedEvents(includeSystem);
@@ -298,7 +298,7 @@ namespace AssemblyAnalyser
 
         #endregion
 
-        #region Types
+        #region Type Specs
 
         static NullTypeSpec _nullTypeSpec;
 
@@ -364,55 +364,24 @@ namespace AssemblyAnalyser
 
         #region Property Specs
 
-        public IReadOnlyDictionary<PropertyDefinition, PropertySpec> Properties => _propertySpecs;
+        public PropertySpec[] PropertySpecs => TypeSpecs.SelectMany(t => t.PropertySpecs.Values).ToArray();
 
-        ConcurrentDictionary<PropertyDefinition, PropertySpec> _propertySpecs = new ConcurrentDictionary<PropertyDefinition, PropertySpec>();
-
-        public void ProcessLoadedProperties(bool includeSystem = true)
+        public PropertySpec LoadPropertySpec(PropertyReference propertyReference)
         {
-            foreach (var (propertyName, prop) in Properties.Where(t => includeSystem || !t.Value.IsSystem))
+            if (propertyReference == null)
             {
-                prop.Process();
+                AddFault(FaultSeverity.Information, "No PropertySpec for null PropertyDefinition");
+                return null;
             }
+            return LoadTypeSpec(propertyReference.DeclaringType).LoadPropertySpec(propertyReference.Resolve());
         }
 
-        private PropertySpec LoadPropertySpec(PropertyDefinition propertyDefinition)
+        public IEnumerable<PropertySpec> LoadPropertySpecs(IEnumerable<PropertyReference> propertyReferences)
         {
-            PropertySpec propertySpec = _propertySpecs.GetOrAdd(propertyDefinition, (def) => CreatePropertySpec(def));
-            return propertySpec;
-        }
-
-        private PropertySpec CreatePropertySpec(PropertyDefinition propertyInfo)
-        {
-            return new PropertySpec(propertyInfo, this);
-        }
-
-        public PropertySpec[] LoadPropertySpecs(PropertyDefinition[] propertyInfos)
-        {
-            return propertyInfos.Select(p => LoadPropertySpec(p)).ToArray();
-        }
-
-        public PropertySpec[] TryLoadPropertySpecs(Func<PropertyDefinition[]> getProperties)
-        {
-            PropertyDefinition[] properties = null;
-            try
+            foreach (var propertyReference in propertyReferences)
             {
-                properties = getProperties();
+                yield return LoadPropertySpec(propertyReference);
             }
-            catch (TypeLoadException ex)
-            {
-                AddFault(FaultSeverity.Error, ex.Message);
-            }
-            catch (FileNotFoundException ex)
-            {
-                _exceptionManager.Handle(ex);
-                _logger.LogError(ex, "File Not Found");
-            }
-            finally
-            {
-                properties ??= Array.Empty<PropertyDefinition>();
-            }
-            return LoadPropertySpecs(properties);
         }
 
         #endregion
@@ -640,6 +609,7 @@ namespace AssemblyAnalyser
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
+        #endregion
 
         public ISpecDependency RegisterOperandDependency(object operand, MethodSpec methodSpec)
         {
@@ -664,10 +634,5 @@ namespace AssemblyAnalyser
             };
             
         }
-
-        
-
-        #endregion
-
     }
 }
