@@ -130,13 +130,11 @@ namespace AssemblyAnalyser
 
         protected virtual TypeSpec CreateBaseSpec()
         {
-            if (_specManager.TryLoadTypeSpec(() => _typeDefinition.BaseType, out TypeSpec typeSpec))
+            var typeSpec = _specManager.LoadTypeSpec(_typeDefinition.BaseType);
+            if (!typeSpec.IsNullSpec)
             {
-                if (!typeSpec.IsNullSpec)
-                {
-                    typeSpec.AddSubType(this);
-                }
-            }
+                typeSpec.AddSubType(this);
+            }            
             return typeSpec;
         }
 
@@ -145,21 +143,19 @@ namespace AssemblyAnalyser
 
         protected virtual TypeSpec[] CreateInterfaceSpecs()
         {
-            if (_specManager.TryLoadTypeSpecs(() => _typeDefinition.Interfaces.Select(i => i.InterfaceType).ToArray(), out TypeSpec[] specs))
+            var specs = _specManager.LoadTypeSpecs(_typeDefinition.Interfaces.Select(i => i.InterfaceType)).ToArray();
+            foreach (var interfaceSpec in specs.Where(s => !s.IsNullSpec))
             {
-                foreach (var interfaceSpec in specs.Where(s => !s.IsNullSpec))
+                if (interfaceSpec is GenericInstanceSpec genericInstanceSpec)
                 {
-                    if (interfaceSpec is GenericInstanceSpec genericInstanceSpec)
-                    {
-                        Module.AddGenericTypeImplementation(genericInstanceSpec);
-                    }
-                    else
-                    {
-
-                    }
-                    interfaceSpec.AddImplementation(this);
+                    Module.AddGenericTypeImplementation(genericInstanceSpec);
                 }
-            }
+                else
+                {
+
+                }
+                interfaceSpec.AddImplementation(this);
+            }            
             return specs;
         }
 
@@ -168,14 +164,11 @@ namespace AssemblyAnalyser
 
         protected virtual TypeSpec[] CreateNestedTypeSpecs()
         {
-            if (_specManager.TryLoadTypeSpecs(() => _typeDefinition.NestedTypes.Where(n => n.DeclaringType == _typeDefinition).ToArray()
-                , out TypeSpec[] specs))
+            var specs = _specManager.LoadTypeSpecs(_typeDefinition.NestedTypes.Where(n => n.DeclaringType == _typeDefinition)).ToArray();
+            foreach (var nestedType in specs.Where(s => !s.IsNullSpec))
             {
-                foreach (var nestedType in specs.Where(s => !s.IsNullSpec))
-                {
-                    nestedType.SetNestedIn(this);
-                    nestedType.Process();
-                }
+                nestedType.SetNestedIn(this);
+                //nestedType.Process();
             }
             return specs;
         }
@@ -265,8 +258,8 @@ namespace AssemblyAnalyser
 
         protected virtual GenericParameterSpec[] CreateGenericTypeParameters()
         {
-            _specManager.TryLoadTypeSpecs(() => _typeDefinition.GenericParameters.ToArray(), out GenericParameterSpec[] typeSpecs);
-            return typeSpecs;
+            return _specManager
+                .LoadTypeSpecs<GenericParameterSpec>(_typeDefinition.GenericParameters).ToArray();
         }
 
 
@@ -605,7 +598,8 @@ namespace AssemblyAnalyser
         public MethodSpec MatchMethodReference(MethodReference methodReference)
         {
             var parameterSpecs = _specManager.TryLoadParameterSpecs(() => methodReference.Parameters.ToArray(), null);
-            _specManager.TryLoadTypeSpecs(() => methodReference.GenericParameters.ToArray(), out GenericParameterSpec[] genericTypeArgumentSpecs);
+            var genericTypeArgumentSpecs = _specManager
+                .LoadTypeSpecs<GenericParameterSpec>(methodReference.GenericParameters).ToArray();
             return MatchMethodSpecByNameAndParameterType(methodReference.Name, parameterSpecs, genericTypeArgumentSpecs);
         }
 

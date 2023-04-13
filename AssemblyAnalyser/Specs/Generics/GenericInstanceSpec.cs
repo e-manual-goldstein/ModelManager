@@ -36,7 +36,8 @@ namespace AssemblyAnalyser
 
         private TypeSpec TryGetInstanceOfType()
         {
-            if (!_specManager.TryLoadTypeSpec(() => _genericInstance.ElementType, out TypeSpec typeSpec))
+            var typeSpec = _specManager.LoadTypeSpec(_genericInstance.ElementType);
+            if (typeSpec == null)
             {
                 _specManager.AddFault(FaultSeverity.Error, $"Could not load Instance");
             }
@@ -50,13 +51,11 @@ namespace AssemblyAnalyser
         //Is this really necessary?
         protected override TypeSpec CreateBaseSpec()
         {
-            if (_specManager.TryLoadTypeSpec(() => _genericInstance.ElementType, out TypeSpec typeSpec))
+            var typeSpec = _specManager.LoadTypeSpec(_genericInstance.ElementType);            
+            if (!typeSpec.IsNullSpec)
             {
-                if (!typeSpec.IsNullSpec)
-                {
-                    typeSpec.AddSubType(this);
-                }
-            }
+                typeSpec.AddSubType(this);
+            }            
             return typeSpec;
         }
 
@@ -100,8 +99,7 @@ namespace AssemblyAnalyser
 
         private TypeSpec[] TryGetGenericTypeArguments()
         {
-            _specManager.TryLoadTypeSpecs(() => _genericInstance.GenericArguments.ToArray(), out TypeSpec[] typeSpecs);
-            return typeSpecs;
+            return _specManager.LoadTypeSpecs(_genericInstance.GenericArguments).ToArray();            
         }
 
         protected override ModuleSpec TryGetModule()
@@ -111,8 +109,8 @@ namespace AssemblyAnalyser
 
         protected override GenericParameterSpec[] CreateGenericTypeParameters()
         {
-            _specManager.TryLoadTypeSpecs(() => _genericInstance.GenericParameters.ToArray(), out GenericParameterSpec[] typeSpecs);
-            return typeSpecs;
+            return _specManager.LoadTypeSpecs<GenericParameterSpec>(_genericInstance.GenericParameters)
+                .ToArray();            
         }
 
         protected override void ProcessInterfaceImplementations()

@@ -38,13 +38,11 @@ namespace AssemblyAnalyser
         {
             foreach (var constraint in _genericParameter.Constraints)
             {
-                if (_specManager.TryLoadTypeSpec(() => constraint.ConstraintType, out TypeSpec typeSpec))
+                var typeSpec = _specManager.LoadTypeSpec(constraint.ConstraintType);
+                if (typeSpec != null && typeSpec.IsClass)
                 {
-                    if (typeSpec.IsClass)
-                    {
-                        return typeSpec;
-                    }
-                }
+                    return typeSpec;
+                }                
             }
             return null;
         }

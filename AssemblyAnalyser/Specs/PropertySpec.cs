@@ -66,7 +66,8 @@ namespace AssemblyAnalyser
 
         private TypeSpec GetPropertyType()
         {
-            if (!_specManager.TryLoadTypeSpec(() => _propertyDefinition.PropertyType, out TypeSpec typeSpec))
+            var typeSpec = _specManager.LoadTypeSpec(_propertyDefinition.PropertyType);
+            if (typeSpec == null || typeSpec.IsNullSpec)
             {
                 _specManager.AddFault(FaultSeverity.Error, $"Could not determine PropertyType for PropertySpec {this}");
             }
@@ -91,7 +92,8 @@ namespace AssemblyAnalyser
 
         private TypeSpec GetDeclaringType()
         {
-            if (!_specManager.TryLoadTypeSpec(() => _propertyDefinition.DeclaringType, out TypeSpec typeSpec))
+            var typeSpec = _specManager.LoadTypeSpec(_propertyDefinition.DeclaringType);
+            if (typeSpec == null)
             {
                 _specManager.AddFault(FaultSeverity.Error, $"Could not determine DeclaringType for PropertySpec {this}");
             }

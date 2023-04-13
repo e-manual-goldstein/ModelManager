@@ -47,11 +47,8 @@ namespace AssemblyAnalyser
         {
             Adder = _specManager.LoadMethodSpec(_adder);
             Remover = _specManager.LoadMethodSpec(_remover);
-            if (_specManager.TryLoadTypeSpec(() => _eventDefinition.EventType, out TypeSpec typeSpec))
-            {
-                EventType = typeSpec;
-                EventType.RegisterAsDelegateFor(this);
-            }
+            EventType = _specManager.LoadTypeSpec(_eventDefinition.EventType);
+            EventType.RegisterAsDelegateFor(this);            
             _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }
 

@@ -321,93 +321,33 @@ namespace AssemblyAnalyser
             return _nullTypeSpec ??= new NullTypeSpec(this);
         }
 
-        public TypeSpec[] ProcessedTypes => TypeSpecs.Where(t => t.IsProcessed).OrderBy(s => s.FullTypeName).ToArray();
-
         public TypeSpec[] TypeSpecs => Modules.Values.SelectMany(m => m.TypeSpecs).ToArray();
-
-        public bool TryLoadTypeSpec(Func<TypeReference> getType, out TypeSpec typeSpec)
-        {
-            bool success = false;
-            try
-            {
-                var type = getType();
-                if (type != null)
-                {
-                    ModuleSpec module = LoadModuleSpecForTypeReference(type);
-                    module.TryLoadTypeSpec(getType, out typeSpec);
-                }
-                else
-                {
-                    typeSpec = GetNullTypeSpec();
-                }
-                success = true;
-            }
-            catch (TypeLoadException ex)
-            {
-                if (!string.IsNullOrEmpty(ex.TypeName))
-                {
-                    throw new NotImplementedException();
-                }
-                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
-            }
-            catch (FileNotFoundException ex)
-            {
-                _exceptionManager.Handle(ex);
-                _logger.LogError(ex, "File Not Found");
-                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
-            }
-            return success;
-        }
 
         public TypeSpec LoadTypeSpec(TypeReference typeReference)
         {
-            ModuleSpec module = LoadModuleSpec(typeReference.Module);
+            if (typeReference == null)
+            {
+                return GetNullTypeSpec();
+            }
+            ModuleSpec module = LoadModuleSpecForTypeReference(typeReference);
             return module.LoadTypeSpec(typeReference);
         }
 
-        public bool TryLoadTypeSpecs(Func<TypeReference[]> getTypes, out TypeSpec[] typeSpecs)
+        public IEnumerable<TypeSpec> LoadTypeSpecs(IEnumerable<TypeReference> types)
         {
-            typeSpecs = Array.Empty<TypeSpec>();
-            bool success = false;
-            try
+            foreach (var typeReference in types)
             {
-                typeSpecs = LoadTypeSpecs(getTypes());
-                success = true;
+                yield return LoadTypeSpec(typeReference);
             }
-            catch (TypeLoadException ex)
-            {
-                AddFault(FaultSeverity.Error, ex.Message);
-            }
-            catch (FileNotFoundException ex)
-            {
-                _exceptionManager.Handle(ex);
-                AddFault(FaultSeverity.Error, ex.Message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                //TODO Ignore For Now
-            }
-            return success;
         }
 
-        public bool TryLoadTypeSpecs<TSpec>(Func<TypeReference[]> getTypes, out TSpec[] tSpecs)
+        public IEnumerable<TSpec> LoadTypeSpecs<TSpec>(IEnumerable<TypeReference> types) 
+            where TSpec : TypeSpec
         {
-            bool success = TryLoadTypeSpecs(getTypes, out TypeSpec[] typeSpecs);
-            tSpecs = success ? typeSpecs.Cast<TSpec>().ToArray() : Array.Empty<TSpec>();
-            return success;
-        }
-
-        public TypeSpec[] LoadTypeSpecs(TypeReference[] types)
-        {
-            if (types.Any(t => t == null))
+            foreach (var typeReference in types)
             {
-
+                yield return LoadTypeSpec(typeReference) as TSpec;
             }
-            return types.Select(t => LoadTypeSpec(t)).ToArray();
         }
 
         #endregion
@@ -582,7 +522,7 @@ namespace AssemblyAnalyser
 
         private ParameterSpec CreateParameterSpec(ParameterDefinition parameterDefinition, IMemberSpec member)
         {
-            TryLoadTypeSpecs(() => parameterDefinition.CustomAttributes.Select(t => t.AttributeType).ToArray(), out TypeSpec[] typeSpecs);
+            //var typeSpecs = LoadTypeSpecs(parameterDefinition.CustomAttributes.Select(t => t.AttributeType));
             return new ParameterSpec(parameterDefinition, member, this);
         }
 

@@ -32,11 +32,8 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            if (_specManager.TryLoadTypeSpec(() => _fieldDefinition.FieldType, out TypeSpec typeSpec))
-            {
-                FieldType = typeSpec;
-                FieldType.RegisterAsResultType(this);
-            }
+            FieldType = _specManager.LoadTypeSpec(_fieldDefinition.FieldType);
+            FieldType.RegisterAsResultType(this);            
             _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
         }
 

@@ -77,22 +77,20 @@ namespace AssemblyAnalyser
 
         private TypeSpec TryGetReturnType()
         {
-            if (_specManager.TryLoadTypeSpec(() => _methodDefinition.ReturnType, out TypeSpec returnTypeSpec))
-            {
-                returnTypeSpec.RegisterAsResultType(this);
-            }
+            var returnTypeSpec = _specManager.LoadTypeSpec(_methodDefinition.ReturnType);
+            returnTypeSpec?.RegisterAsResultType(this);            
             return returnTypeSpec;
         }
 
         private TypeSpec TryGetDeclaringType()
         {
-            _specManager.TryLoadTypeSpec(() => _methodDefinition.DeclaringType, out TypeSpec declaringTypeSpec);
-            return declaringTypeSpec;
+            return _specManager.LoadTypeSpec(_methodDefinition.DeclaringType);            
         }
 
         private GenericParameterSpec[] TryGetGenericTypeArguments()
         {
-            if (_specManager.TryLoadTypeSpecs(() => _methodDefinition.GenericParameters.ToArray(), out GenericParameterSpec[] genericArgumentSpecs))
+            var genericArgumentSpecs = _specManager
+                .LoadTypeSpecs<GenericParameterSpec>(_methodDefinition.GenericParameters).ToArray();
             {
                 foreach (var genericArgSpec in genericArgumentSpecs)
                 {
@@ -130,36 +128,30 @@ namespace AssemblyAnalyser
 
         private void ProcessExceptionClauseCatchTypes(MethodBody body)
         {
-            if (_specManager.TryLoadTypeSpecs(() => body.ExceptionHandlers.Select(d => d.CatchType).Where(d => d != null).ToArray(),
-                out TypeSpec[] exceptionCatchTypes))
+            var exceptionCatchTypes = _specManager.LoadTypeSpecs(body.ExceptionHandlers.Select(d => d.CatchType));
+            foreach (var catchType in exceptionCatchTypes.Where(t => !t.IsNullSpec))
             {
-                foreach (var catchType in exceptionCatchTypes)
+                if (!_exceptionCatchTypes.Contains(catchType))
                 {
-                    if (!_exceptionCatchTypes.Contains(catchType))
-                    {
-                        _exceptionCatchTypes.Add(catchType);
-                        catchType.RegisterDependentMethodSpec(this);
-                    }
+                    _exceptionCatchTypes.Add(catchType);
+                    catchType.RegisterDependentMethodSpec(this);
                 }
             }
-        }
+        }        
 
         private void ProcessLocalVariables(MethodBody body)
         {
-            if (_specManager.TryLoadTypeSpecs(() => 
+            var localVariableTypes =_specManager
+                .LoadTypeSpecs(body.Variables.Select(d => d.VariableType)).ToArray();
+            
+            foreach (var localVariableType in localVariableTypes)
             {
-                return body.Variables.Select(d => d.VariableType).ToArray();
-            }, out TypeSpec[] localVariableTypes))
-            {
-                foreach (var localVariableType in localVariableTypes)
+                if (!_localVariableTypes.Contains(localVariableType))
                 {
-                    if (!_localVariableTypes.Contains(localVariableType))
-                    {
-                        _localVariableTypes.Add(localVariableType);
-                        localVariableType.RegisterDependentMethodSpec(this);
-                    }
+                    _localVariableTypes.Add(localVariableType);
+                    localVariableType.RegisterDependentMethodSpec(this);
                 }
-            }
+            }            
         }
 
         public override string ToString()

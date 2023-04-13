@@ -43,10 +43,8 @@ namespace AssemblyAnalyser
 
         private TypeSpec TryGetParameterType()
         {
-            if (_specManager.TryLoadTypeSpec(() => _parameterDefinition.ParameterType, out TypeSpec parameterTypeSpec))
-            {
-                parameterTypeSpec.RegisterAsDependentParameterSpec(this);
-            }
+            var parameterTypeSpec = _specManager.LoadTypeSpec(_parameterDefinition.ParameterType);
+            parameterTypeSpec.RegisterAsDependentParameterSpec(this);            
             return parameterTypeSpec;
         }
 
