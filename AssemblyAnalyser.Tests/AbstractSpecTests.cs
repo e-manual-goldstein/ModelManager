@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
 
@@ -20,7 +22,7 @@ namespace AssemblyAnalyser.Tests
             _loggerProvider = NSubstitute.Substitute.For<ILoggerProvider>();
             _specManager = new SpecManager(_loggerProvider, _exceptionManager);
             var filePath = "..\\..\\..\\..\\AssemblyAnalyser.TestData\\bin\\Debug\\net6.0\\AssemblyAnalyser.TestData.dll";
-            _moduleSpec = _specManager.LoadModuleSpec(Path.GetFullPath(filePath));
+            _moduleSpec = _specManager.LoadModuleSpecFromPath(Path.GetFullPath(filePath));
             _moduleSpec.Process();
             _specManager.ProcessSpecs(_moduleSpec.TypeSpecs, false);
             _basicClassSpec = _moduleSpec.TypeSpecs
@@ -30,10 +32,18 @@ namespace AssemblyAnalyser.Tests
         [TestCleanup]
         public virtual void Cleanup()
         {
-            var specErrors = _specManager.Faults.Where(f => f.Severity == FaultSeverity.Error);
-            foreach (var specError in specErrors)
+            var specErrors = _specManager.Faults;
+            foreach (var fault in specErrors.Where(f => f.Severity == FaultSeverity.Error))
             {
-
+                fault.ToString();
+            }
+            foreach (var fault in specErrors.Where(f => f.Severity == FaultSeverity.Warning))
+            {
+                fault.ToString();
+            }
+            foreach (var type in _specManager.TypeSpecs)
+            {
+                Console.WriteLine($"{type}: {type.Module}");
             }
         }
 

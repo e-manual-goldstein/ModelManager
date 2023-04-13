@@ -36,7 +36,7 @@ namespace AssemblyAnalyser.Faults
 
         public override string ToString()
         {
-            return $"[{Severity}] {Message} - {Spec.ToString() ?? NoSpecFaultContext}";
+            return $"[{Severity}] {Message} - {Spec?.ToString() ?? NoSpecFaultContext}";
         }
     }
 }

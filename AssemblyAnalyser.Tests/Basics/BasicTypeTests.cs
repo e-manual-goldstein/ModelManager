@@ -210,11 +210,22 @@ namespace AssemblyAnalyser.Tests
 
         #endregion
 
-        [TestCleanup]
-        public override void Cleanup()
-        {
-            var specErrors = _specManager.Faults.Where(f => f.Severity == FaultSeverity.Error);
-            //Assert.IsTrue(!specErrors.Any());
-        }
+        //[TestCleanup]
+        //public override void Cleanup()
+        //{
+        //    var specErrors = _specManager.Faults;
+        //    foreach (var fault in specErrors.Where(f => f.Severity == FaultSeverity.Error))
+        //    {
+        //        fault.ToString();
+        //    }
+        //    foreach (var fault in specErrors.Where(f => f.Severity == FaultSeverity.Warning))
+        //    {
+        //        fault.ToString();
+        //    }
+        //    foreach (var module in _specManager.Modules)
+        //    {
+        //        Console.WriteLine($"{module.Key}: {module.Value.TypeSpecs.Length}");
+        //    }
+        //}
     }
 }

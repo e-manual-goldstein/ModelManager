@@ -104,7 +104,7 @@ namespace AssemblyAnalyser
 
         protected override ModuleSpec TryGetModule()
         {
-            return _specManager.LoadReferencedModuleByScopeName(_genericInstance.Module, _genericInstance.Scope);
+            return _specManager.LoadModuleSpec(_genericInstance.Module);
         }
 
         protected override GenericParameterSpec[] CreateGenericTypeParameters()

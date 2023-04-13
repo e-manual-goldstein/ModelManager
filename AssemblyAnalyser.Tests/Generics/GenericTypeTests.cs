@@ -36,7 +36,7 @@ namespace AssemblyAnalyser.Tests
             _loggerProvider = NSubstitute.Substitute.For<ILoggerProvider>();
             _specManager = new SpecManager(_loggerProvider, _exceptionManager);
             var filePath = "..\\..\\..\\..\\AssemblyAnalyser.TestData\\bin\\Debug\\net6.0\\AssemblyAnalyser.TestData.dll";
-            _moduleSpec = _specManager.LoadModuleSpec(Path.GetFullPath(filePath));
+            _moduleSpec = _specManager.LoadModuleSpecFromPath(Path.GetFullPath(filePath));
             _moduleSpec.Process();
             
             _basicClassSpec = _moduleSpec.TypeSpecs

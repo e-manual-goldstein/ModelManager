@@ -17,6 +17,7 @@
     <FileUpgradeFlags />
     <UpgradeBackupLocation />    
     <DocumentationFile />
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <DefineTrace>true</DefineTrace>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
