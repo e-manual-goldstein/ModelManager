@@ -9,11 +9,7 @@ namespace AssemblyAnalyser
         MethodSpec[] MethodSpecs { get; }
         MethodSpec LoadMethodSpec(MethodDefinition methodDefinition);
 
-        MethodSpec[] LoadSpecsForMethodReferences(MethodReference[] methodReferences);
-        //MethodSpec[] TryLoadMethodSpecs(Func<MethodDefinition[]> value);
-
-        //void ProcessLoadedMethods(bool includeSystem = true, bool parallelProcessing = true);
-        //void ProcessMethods(IEnumerable<MethodSpec> methods, bool includeSystem = true);
+        IEnumerable<MethodSpec> LoadSpecsForMethodReferences(IEnumerable<MethodReference> methodReferences);        
 
     }
 }

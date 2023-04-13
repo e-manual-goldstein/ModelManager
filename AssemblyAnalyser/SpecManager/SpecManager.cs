@@ -9,7 +9,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using AssemblyAnalyser.Specs;
 using AssemblyAnalyser.Faults;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace AssemblyAnalyser
 {
@@ -21,7 +20,6 @@ namespace AssemblyAnalyser
         readonly DefaultAssemblyResolver _assemblyResolver;
         object _lock = new object();
         private bool _disposed;
-
 
         public SpecManager(ILoggerProvider loggerProvider, IExceptionManager exceptionManager)
         {            
@@ -185,7 +183,6 @@ namespace AssemblyAnalyser
             return _moduleSpecs.GetOrAdd(typeReference.Scope.GetScopeNameWithoutExtension(), 
                 (key) => CreateFullModuleSpec(typeReference.Scope));
         }
-
 
         public ModuleSpec LoadModuleSpecFromPath(string moduleFilePath)
         {
@@ -355,46 +352,12 @@ namespace AssemblyAnalyser
             return LoadTypeSpec(method.DeclaringType).LoadMethodSpec(method);
         }
 
-        public MethodSpec[] LoadMethodSpecs(MethodDefinition[] methodDefinitions)
+        public IEnumerable<MethodSpec> LoadSpecsForMethodReferences(IEnumerable<MethodReference> methodReferences)
         {
-            if (methodDefinitions.Any(m => m == null))
+            foreach (var methodReference in methodReferences)
             {
-
-            }
-            return methodDefinitions.Select(m => LoadMethodSpec(m)).ToArray();
-        }
-
-        public MethodSpec[] TryLoadMethodSpecs(Func<MethodDefinition[]> getMethods)
-        {
-            MethodDefinition[] methods = null;
-            try
-            {
-                methods = getMethods();
-            }
-            catch (TypeLoadException ex)
-            {
-                AddFault(FaultSeverity.Error, ex.Message);
-            }
-            catch (FileNotFoundException ex)
-            {
-                _exceptionManager.Handle(ex);
-                AddFault(FaultSeverity.Error, ex.Message);
-            }
-            finally
-            {
-                methods ??= Array.Empty<MethodDefinition>();
-            }
-            return LoadMethodSpecs(methods);
-        }
-
-        public MethodSpec[] LoadSpecsForMethodReferences(MethodReference[] methodReferences)
-        {
-            var definitions = methodReferences.Select(m => m.Resolve()).ToArray();
-            if (definitions.Any(d => d == null))
-            {
-
-            }
-            return TryLoadMethodSpecs(() => methodReferences.Select(m => m.Resolve()).ToArray());
+                yield return LoadMethodSpec(methodReference.Resolve());
+            }            
         }
 
         #endregion

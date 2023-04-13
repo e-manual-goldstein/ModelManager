@@ -102,7 +102,7 @@ namespace AssemblyAnalyser
 
         private MethodSpec[] TryGetOverrides()
         {
-            return _specManager.LoadSpecsForMethodReferences(_methodDefinition.Overrides.ToArray());
+            return _specManager.LoadSpecsForMethodReferences(_methodDefinition.Overrides).ToArray();
         }
 
         protected override CustomAttribute[] GetAttributes()
