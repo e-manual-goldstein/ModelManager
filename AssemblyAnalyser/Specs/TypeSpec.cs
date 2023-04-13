@@ -6,6 +6,8 @@ using Mono.Cecil;
 using System;
 using System.Reflection;
 using AssemblyAnalyser.Specs;
+using System.Collections.Concurrent;
+using System.IO;
 
 namespace AssemblyAnalyser
 {
@@ -21,8 +23,6 @@ namespace AssemblyAnalyser
             spec.IsErrorSpec = true;
             return spec;
         }
-
-
         #endregion
 
         TypeDefinition _typeDefinition;
@@ -44,15 +44,20 @@ namespace AssemblyAnalyser
             FullTypeName = fullTypeName;
         }
 
+        #region Properties
+
         public TypeDefinition Definition => _typeDefinition;
+        public bool HasDefinition => _typeDefinition != null;
 
         public string UniqueTypeName { get; }
         public string FullTypeName { get; }
         public string Namespace { get; set; }
         public virtual bool IsInterface => _typeDefinition.IsInterface;
 
-        public bool IsClass { get; }        
+        public bool IsClass { get; }
         public bool IsArray { get; }
+
+        #endregion
 
         #region BuildSpec
 
@@ -185,7 +190,7 @@ namespace AssemblyAnalyser
                 _specManager.AddFault(FaultSeverity.Error, $"Unable to determine MethodSpecs for {this}");
                 return Array.Empty<MethodSpec>();
             }
-            var specs = _specManager.TryLoadMethodSpecs(() => _typeDefinition.Methods.Where(m => m.DeclaringType == _typeDefinition).ToArray());
+            var specs = TryLoadMethodSpecs(() => _typeDefinition.Methods.Where(m => m.DeclaringType == _typeDefinition).ToArray());
             return specs;
         }
 
@@ -208,9 +213,18 @@ namespace AssemblyAnalyser
             return specs;
         }
 
-        public PropertySpec GetPropertySpec(string name, bool includeInherited = false)
+        public virtual PropertySpec GetPropertySpec(string name, bool includeInherited = false)
         {
-            return (includeInherited ? GetAllPropertySpecs() : Properties).Where(p => !p.Parameters.Any() && p.Name == name).SingleOrDefault();
+            var declaredProperties = Properties.Where(p => !p.Parameters.Any() && p.Name == name);
+            if (!declaredProperties.Any() && includeInherited)
+            {
+                return BaseSpec.GetPropertySpec(name, includeInherited);
+            }
+            if (declaredProperties.Count() > 1)
+            {
+                return null;
+            }
+            return declaredProperties.SingleOrDefault();
         }
 
         public PropertySpec MatchPropertySpecByNameAndParameterType(string name, ParameterSpec[] parameterSpecs)
@@ -355,15 +369,76 @@ namespace AssemblyAnalyser
         public bool IsCompilerGenerated { get; private set; }
 
         #endregion
-        
-        public ModuleSpec[] GetDependentModules()
+
+        #region Method Specs
+
+        ConcurrentDictionary<string, MethodSpec> _methodSpecs = new ConcurrentDictionary<string, MethodSpec>();
+
+        public MethodSpec LoadMethodSpec(MethodReference method)
         {
-            return Implementations.Select(i => i.Module)
-                .Concat(ResultTypeSpecs.Select(r => r.DeclaringType.Module)).Distinct().ToArray();
+            var methodDefinition = method as MethodDefinition;
+            if (methodDefinition == null)
+            {
+                return new MissingMethodSpec(method, _specManager);
+            }
+            return _methodSpecs.GetOrAdd(methodDefinition.FullName, (key) => CreateMethodSpec(methodDefinition));
         }
 
-        public TypeSpec NestedIn { get; private set; }
+        public MethodSpec LoadMethodSpec(MethodDefinition method)
+        {
+            return _methodSpecs.GetOrAdd(method.FullName, (key) => CreateMethodSpec(method));
+        }
 
+        private MethodSpec CreateMethodSpec(MethodDefinition method)
+        {
+            var spec = new MethodSpec(method, _specManager);            
+            return spec;
+        }
+
+        public MethodSpec[] LoadMethodSpecs(MethodDefinition[] methodDefinitions)
+        {
+            return methodDefinitions.Select(m => LoadMethodSpec(m)).ToArray();
+        }
+
+        public MethodSpec[] TryLoadMethodSpecs(Func<MethodDefinition[]> getMethods)
+        {
+            MethodDefinition[] methods = null;
+            try
+            {
+                methods = getMethods();
+            }
+            catch (TypeLoadException ex)
+            {
+                _specManager.AddFault(this, FaultSeverity.Error, ex.Message);
+            }
+            catch (FileNotFoundException ex)
+            {
+                _specManager.AddFault(this, FaultSeverity.Error, ex.Message);
+            }
+            finally
+            {
+                methods ??= Array.Empty<MethodDefinition>();
+            }
+            return LoadMethodSpecs(methods);
+        }
+
+        public MethodSpec[] LoadSpecsForMethodReferences(MethodReference[] methodReferences)
+        {
+            return TryLoadMethodSpecs(() => methodReferences.Select(m => m.Resolve()).ToArray());
+        }
+
+        #endregion
+
+        public override string ToString()
+        {
+            return 
+                //$"{_typeDefinition.Namespace}_{_typeDefinition.FullName}" ?? 
+                UniqueTypeName;
+        }
+
+        #region Post Build
+
+        public TypeSpec NestedIn { get; private set; }
         private void SetNestedIn(TypeSpec typeSpec)
         {
             if (NestedIn != null)
@@ -381,13 +456,6 @@ namespace AssemblyAnalyser
             NestedIn = typeSpec;
         }
 
-        public override string ToString()
-        {
-            return 
-                //$"{_typeDefinition.Namespace}_{_typeDefinition.FullName}" ?? 
-                UniqueTypeName;
-        }
-        
         private List<TypeSpec> _implementations = new List<TypeSpec>();
 
         public TypeSpec[] Implementations => _implementations.ToArray();
@@ -454,7 +522,7 @@ namespace AssemblyAnalyser
 
         List<AbstractSpec> _decoratorForSpecs = new List<AbstractSpec>();
 
-        public AbstractSpec[] DecoratorForSpecs => _decoratorForSpecs.ToArray();        
+        public AbstractSpec[] DecoratorForSpecs => _decoratorForSpecs.ToArray();
 
         public virtual void RegisterAsDecorator(AbstractSpec decoratedSpec)
         {
@@ -466,21 +534,9 @@ namespace AssemblyAnalyser
             }
         }
 
-        public string DecribeFields()
-        {
-            if (!Fields.Any())
-            {
-                return string.Empty;
-            }
-            return Fields.Select(f => f.FieldName).Aggregate((a, b) => a + ";" + b);
-        }
-
         List<EventSpec> _delegateFor = new List<EventSpec>();
-
         public EventSpec[] DelegateForSpecs => _delegateFor.ToArray();
 
-        public bool HasDefinition => _typeDefinition != null;
-        
         public virtual void RegisterAsDelegateFor(EventSpec eventSpec)
         {
             if (!_delegateFor.Contains(eventSpec))
@@ -488,12 +544,20 @@ namespace AssemblyAnalyser
                 _delegateFor.Add(eventSpec);
                 RegisterDependentTypeForModule(eventSpec.DeclaringType);
             }
+        } 
+
+        private void RegisterDependentTypeForModule(TypeSpec typeSpec)
+        {
+            if (Module == null)
+            {
+                _specManager.AddFault(FaultSeverity.Warning, $"Module not found for Type: {_typeDefinition}");
+                return;
+            }
+
+            Module.RegisterDependentType(typeSpec);
         }
 
-        public void AddDefinition(TypeDefinition type)
-        {
-            _typeDefinition = type;
-        }
+        #endregion
 
         public virtual bool MatchesSpec(TypeSpec typeSpec)
         {
@@ -545,15 +609,13 @@ namespace AssemblyAnalyser
             return MatchMethodSpecByNameAndParameterType(methodReference.Name, parameterSpecs, genericTypeArgumentSpecs);
         }
 
-        private void RegisterDependentTypeForModule(TypeSpec typeSpec)
+        public string DecribeFields()
         {
-            if (Module == null)
+            if (!Fields.Any())
             {
-                _specManager.AddFault(FaultSeverity.Warning, $"Module not found for Type: {_typeDefinition}");
-                return;
+                return string.Empty;
             }
-
-            Module.RegisterDependentType(typeSpec);
+            return Fields.Select(f => f.FieldName).Aggregate((a, b) => a + ";" + b);
         }
     }
 }

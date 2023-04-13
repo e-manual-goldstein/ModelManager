@@ -36,6 +36,11 @@ namespace AssemblyAnalyser.Specs
             return Array.Empty<PropertySpec>();
         }
 
+        public override PropertySpec GetPropertySpec(string name, bool includeInherited = false)
+        {
+            return null;
+        }
+
         public override MethodSpec[] GetAllMethodSpecs()
         {
             return Array.Empty<MethodSpec>();

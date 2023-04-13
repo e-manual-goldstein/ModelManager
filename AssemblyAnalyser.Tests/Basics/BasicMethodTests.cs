@@ -62,7 +62,7 @@ namespace AssemblyAnalyser.Tests
         [TestMethod]
         public void InheritedMethodRepresentedBySameSpec_Test()
         {
-            var publicMethodSpecs = _specManager.Methods.Values.Where(p => p.Name == "MethodWithUniqueName");
+            var publicMethodSpecs = _specManager.MethodSpecs.Where(p => p.Name == "MethodWithUniqueName");
 
             Assert.IsTrue(publicMethodSpecs.Any());
             Assert.AreEqual(1, publicMethodSpecs.Count());

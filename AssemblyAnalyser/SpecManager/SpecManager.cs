@@ -96,7 +96,7 @@ namespace AssemblyAnalyser
         public void Reset()
         {
             _moduleSpecs.Clear();
-            _methodSpecs.Clear();
+            //_methodSpecs.Clear();
             _parameterSpecs.Clear();
             _propertySpecs.Clear();
             _fieldSpecs.Clear();
@@ -124,7 +124,7 @@ namespace AssemblyAnalyser
         public void ProcessAll(bool includeSystem = true, bool parallelProcessing = true)
         {
             //ProcessAllAssemblies(includeSystem, parallelProcessing);
-            ProcessLoadedMethods(includeSystem, parallelProcessing);
+            //ProcessLoadedMethods(includeSystem, parallelProcessing);
             ProcessLoadedProperties(includeSystem);
             ProcessLoadedParameters(includeSystem);
             ProcessLoadedFields(includeSystem);
@@ -167,8 +167,37 @@ namespace AssemblyAnalyser
                 throw new NotImplementedException();
             }
             return _moduleSpecs.GetOrAdd(module.Assembly.Name.Name, (key) => CreateFullModuleSpec(module));
-        } 
-        
+        }
+
+        public ModuleSpec LoadModuleSpec(IMetadataScope scope)
+        {
+            var definitionName = scope switch
+            {
+                AssemblyNameDefinition assemblyNameDefinition => assemblyNameDefinition.Name,
+                ModuleDefinition moduleDefinition => moduleDefinition.Name,
+                AssemblyNameReference assemblyNameReference => assemblyNameReference.Name,
+                ModuleReference moduleReference => moduleReference.Name,
+                _ => throw new NotImplementedException()
+            };
+            return _moduleSpecs.GetOrAdd(definitionName, (key) => CreateFullModuleSpec(scope));
+        }
+
+        public ModuleSpec LoadModuleSpecForTypeReference(TypeReference typeReference)
+        {
+            if (typeReference == null)
+            {
+                throw new NotImplementedException();
+            }
+            if (typeReference.IsGenericInstance)
+            {
+                return _moduleSpecs.GetOrAdd(typeReference.Module.Name,
+                (key) => CreateFullModuleSpec(typeReference.Module));
+            }
+            return _moduleSpecs.GetOrAdd(typeReference.Scope.GetScopeNameWithoutExtension(), 
+                (key) => CreateFullModuleSpec(typeReference.Scope));
+        }
+
+
         public ModuleSpec LoadModuleSpec(string moduleFilePath)
         {
             var readerParameters = new ReaderParameters()
@@ -257,6 +286,24 @@ namespace AssemblyAnalyser
             return spec;
         }
 
+        private ModuleSpec CreateFullModuleSpec(IMetadataScope scope)
+        {
+            try
+            {
+                return scope switch
+                {
+                    AssemblyNameDefinition assemblyNameDefinition => new MissingModuleSpec(assemblyNameDefinition, this),
+                    ModuleDefinition moduleDefinition => new ModuleSpec(moduleDefinition, moduleDefinition.FileName, this),
+                    _ => throw new NotImplementedException()
+                };                
+            }
+            catch
+            {
+
+            }
+            return new MissingModuleSpec(scope as AssemblyNameReference, this);
+        }
+
         private ModuleSpec CreateMissingModuleSpec(AssemblyNameReference assemblyNameReference)
         {
             var spec = new MissingModuleSpec(assemblyNameReference, this);
@@ -286,7 +333,7 @@ namespace AssemblyAnalyser
                 var type = getType();
                 if (type != null)
                 {
-                    ModuleSpec module = LoadModuleSpec(type.Module);
+                    ModuleSpec module = LoadModuleSpecForTypeReference(type);
                     module.TryLoadTypeSpec(getType, out typeSpec);
                 }
                 else
@@ -367,55 +414,60 @@ namespace AssemblyAnalyser
 
         #region Method Specs
 
-        public IReadOnlyDictionary<MethodDefinition, MethodSpec> Methods => _methodSpecs;
+        public MethodSpec[] MethodSpecs => TypeSpecs.SelectMany(t => t.Methods).ToArray();
 
-        ConcurrentDictionary<MethodDefinition, MethodSpec> _methodSpecs = new ConcurrentDictionary<MethodDefinition, MethodSpec>();
-        
-        public void ProcessLoadedMethods(bool includeSystem = true, bool parallelProcessing = true)
-        {
-            ProcessSpecs(Methods.Values.Where(t => includeSystem || !t.IsSystem), parallelProcessing);
-        }
+        //ConcurrentDictionary<MethodDefinition, MethodSpec> _methodSpecs = new ConcurrentDictionary<MethodDefinition, MethodSpec>();
 
-        public MethodSpec LoadMethodSpec(MethodReference method)
-        {
-            var methodDefinition = method as MethodDefinition;
-            if (methodDefinition == null)
-            {
-                return new MissingMethodSpec(method, this);
-                //try
-                //{
-                //    var module = LoadReferencedModuleByScopeName(method.Module, method.DeclaringType.Scope);
-                //    var type = module.GetTypeSpec(method.DeclaringType);
-                //    return type.MatchMethodReference(method);
-                //}
-                //catch
-                //{
-                //}                
-            }
-            return _methodSpecs.GetOrAdd(methodDefinition, (key) => CreateMethodSpec(methodDefinition));
-        }
+        //public void ProcessLoadedMethods(bool includeSystem = true, bool parallelProcessing = true)
+        //{
+        //    ProcessSpecs(Methods.Values.Where(t => includeSystem || !t.IsSystem), parallelProcessing);
+        //}
+
+        //public MethodSpec LoadMethodSpec(MethodReference method)
+        //{
+        //    var methodDefinition = method as MethodDefinition;
+        //    if (methodDefinition == null)
+        //    {
+        //        return new MissingMethodSpec(method, this);
+        //        //try
+        //        //{
+        //        //    var module = LoadReferencedModuleByScopeName(method.Module, method.DeclaringType.Scope);
+        //        //    var type = module.GetTypeSpec(method.DeclaringType);
+        //        //    return type.MatchMethodReference(method);
+        //        //}
+        //        //catch
+        //        //{
+        //        //}                
+        //    }
+        //    return _methodSpecs.GetOrAdd(methodDefinition, (key) => CreateMethodSpec(methodDefinition));
+        //}
 
         public MethodSpec LoadMethodSpec(MethodDefinition method)
         {
             if (method == null)
             {
+                AddFault(FaultSeverity.Information, "No MethodSpec for null MethodDefintion");
                 return null;
             }
-            return _methodSpecs.GetOrAdd(method, (key) => CreateMethodSpec(method));
+            return LoadTypeSpec(method.DeclaringType).LoadMethodSpec(method);
         }
 
-        private MethodSpec CreateMethodSpec(MethodDefinition method)
-        {
-            var spec = new MethodSpec(method, this);
-            var synonyms = Methods.Where(m => m.Key.FullName == method.FullName && m.Key != method).ToArray();
-            if (synonyms.Any())
-            {
-            }
-            return spec;
-        }
+        //private MethodSpec CreateMethodSpec(MethodDefinition method)
+        //{
+        //    var spec = new MethodSpec(method, this);
+        //    var synonyms = Methods.Where(m => m.Key.FullName == method.FullName && m.Key != method).ToArray();
+        //    if (synonyms.Any())
+        //    {
+        //    }
+        //    return spec;
+        //}
 
         public MethodSpec[] LoadMethodSpecs(MethodDefinition[] methodDefinitions)
         {
+            if (methodDefinitions.Any(m => m == null))
+            {
+
+            }
             return methodDefinitions.Select(m => LoadMethodSpec(m)).ToArray();
         }
 
@@ -444,7 +496,12 @@ namespace AssemblyAnalyser
 
         public MethodSpec[] LoadSpecsForMethodReferences(MethodReference[] methodReferences)
         {
-            return TryLoadMethodSpecs(() => methodReferences.Select(m => m.Resolve()).ToArray());            
+            var definitions = methodReferences.Select(m => m.Resolve()).ToArray();
+            if (definitions.Any(d => d == null))
+            {
+
+            }
+            return TryLoadMethodSpecs(() => methodReferences.Select(m => m.Resolve()).ToArray());
         }
 
         #endregion
@@ -741,7 +798,7 @@ namespace AssemblyAnalyser
             return operand switch
             {
                 TypeReference typeReference => new MethodToTypeDependency(methodSpec, LoadTypeSpec(typeReference)),
-                MethodReference methodReference => new MethodToMethodDependency(methodSpec, LoadMethodSpec(methodReference)),
+                //MethodReference methodReference => new MethodToMethodDependency(methodSpec, LoadMethodSpec(methodReference)),
                 //FieldReference fieldReference => fieldReference.Module,
                 //ParameterReference parameterReference => parameterReference.ParameterType.Module,
                 //VariableReference variableReference => variableReference.VariableType.Module,

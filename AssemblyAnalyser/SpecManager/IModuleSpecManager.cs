@@ -10,6 +10,7 @@ namespace AssemblyAnalyser
         IReadOnlyDictionary<string, ModuleSpec> Modules { get; }
         ModuleSpec[] LoadModuleSpecs(ModuleDefinition[] modules);
         ModuleSpec LoadModuleSpec(ModuleDefinition module);
+        ModuleSpec LoadModuleSpec(IMetadataScope scope);
         ModuleSpec LoadModuleSpec(string moduleFilePath);
         ModuleSpec[] LoadReferencedModules(ModuleDefinition module);
         ModuleSpec LoadReferencedModuleByFullName(ModuleDefinition module, string referencedModuleName);

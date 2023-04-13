@@ -30,7 +30,7 @@ namespace AssemblyAnalyser.Tests
         [TestCleanup]
         public virtual void Cleanup()
         {
-            var specErrors = _specManager.Faults.Where(f => f.StartsWith("[Error]"));
+            var specErrors = _specManager.Faults.Where(f => f.Severity == FaultSeverity.Error);
             foreach (var specError in specErrors)
             {
 
