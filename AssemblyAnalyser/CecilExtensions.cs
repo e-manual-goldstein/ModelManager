@@ -37,6 +37,39 @@ namespace AssemblyAnalyser.Extensions
                 }
             }
             return match.Success ? match.Groups["FileNameNoExtension"].Value : scope.Name;
-        }        
+        }
+
+        public static string CreateUniqueMethodName(this MethodDefinition methodDefinition)
+        {
+            return methodDefinition.HasGenericParameters
+                ? methodDefinition.CreateGenericMethodName()
+                : $"{methodDefinition.CreateExplicitMemberName()}({methodDefinition.AggregateParameterNames()})";
+        }
+
+        public static string CreateGenericMethodName(this MethodDefinition methodDefinition)
+        {
+            return $"{CreateExplicitMemberName(methodDefinition)}<{AggregateGenericTypeParameterNames(methodDefinition)}>";
+        }
+
+        private static string AggregateParameterNames(this MethodDefinition methodDefinition)
+        {
+            if (!methodDefinition.HasParameters)
+            {
+                return string.Empty;
+            }
+            return methodDefinition.Parameters.Select(p => $"{p.ParameterType} {p.Name}")
+                .Aggregate((a, b) => $"{a}, {b}");
+        }
+
+        private static string AggregateGenericTypeParameterNames(this MethodDefinition methodDefinition)
+        {
+            return methodDefinition.GenericParameters.Select(gp => gp.Name)
+                .Aggregate((a, b) => $"{a}, {b}");
+        }
+
+        public static string CreateExplicitMemberName(this MethodDefinition methodDefinition)
+        {
+            return $"{methodDefinition.DeclaringType.FullName}.{methodDefinition.Name}";
+        }
     }
 }

@@ -38,7 +38,23 @@ namespace AssemblyAnalyser
         {
             return typeSpec is GenericInstanceSpec genericInstanceSpec 
                 && InstanceOf.Equals(genericInstanceSpec.InstanceOf)
-                && genericInstanceSpec.HasExactGenericTypeParameters(GenericTypeParameters);
+                && genericInstanceSpec.HasExactGenericTypeArguments(GenericTypeArguments);
+        }
+
+        public bool HasExactGenericTypeArguments(TypeSpec[] genericTypeArguments)
+        {
+            if (genericTypeArguments.Length == GenericTypeArguments.Length)
+            {
+                for (int i = 0; i < GenericTypeArguments.Length; i++)
+                {
+                    if (!GenericTypeArguments[i].MatchesSpec(genericTypeArguments[i]))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            return false;
         }
 
         private TypeSpec TryGetInstanceOfType()

@@ -8,6 +8,7 @@ using System.Reflection;
 using AssemblyAnalyser.Specs;
 using System.Collections.Concurrent;
 using System.IO;
+using AssemblyAnalyser.Extensions;
 
 namespace AssemblyAnalyser
 {
@@ -321,7 +322,7 @@ namespace AssemblyAnalyser
                     var methodSpec = FindMatchingMethodSpec(interfaceMethod, interfaceMethod);
                     if (methodSpec == null)
                     {
-                        _specManager.AddFault(this, FaultSeverity.Error, $"{this} does not implement {interfaceMethod}");
+                        _specManager.AddFault(this, FaultSeverity.Error, $"Missing Implementation: {interfaceMethod}");
                     }
                     else
                     {
@@ -336,7 +337,7 @@ namespace AssemblyAnalyser
                     var propertySpec = GetPropertySpec(interfaceProperty.ExplicitName, true) ?? GetPropertySpec(interfaceProperty.Name, true); 
                     if (propertySpec == null)
                     {
-                        _specManager.AddFault(this, FaultSeverity.Error, $"{this} does not implement {interfaceProperty}");
+                        _specManager.AddFault(this, FaultSeverity.Error, $"Missing Implementation {interfaceProperty}");
                     }
                     else
                     {
@@ -358,25 +359,33 @@ namespace AssemblyAnalyser
         //    return false;
         //}
 
-        public virtual bool MatchMethodByOverride(MethodSpec interfaceMethod)
+        public virtual bool MatchMethodByOverride(MethodSpec method)
         {
-            //var overrides = GetAllMethodSpecs().Where(f => f.Overrides.Any()).ToDictionary(f => f, g => g.Overrides);
-            var methodOverride = Methods.SingleOrDefault(m => m.Overrides.Contains(interfaceMethod));                
-            if (methodOverride != null)
+            var methodOverrides = Methods.Where(m => m.Overrides.Contains(method));
+            if (methodOverrides.Any())
             {
-                methodOverride.RegisterAsImplementation(interfaceMethod);
+                if (methodOverrides.Count() > 1)
+                {
+                    _specManager.AddFault(this, FaultSeverity.Critical, $"Multiple Methods found to override spec {method}");
+                    return true;
+                }
+                methodOverrides.Single().RegisterAsImplementation(method);
                 return true;
             }
-            return BaseSpec.MatchMethodByOverride(interfaceMethod);
+            return BaseSpec.MatchMethodByOverride(method);
         }
 
         public virtual bool MatchPropertyByOverride(PropertySpec property)
         {
-            //var overrides = GetAllPropertySpecs().Where(f => f.Overrides.Any()).ToDictionary(f => f, g => g.Overrides);
-            var propertyOverride = Properties.SingleOrDefault(m => m.Overrides.Contains(property));
-            if (propertyOverride != null)
+            var propertyOverrides = Properties.Where(m => m.Overrides.Contains(property));
+            if (propertyOverrides.Any())
             {
-                propertyOverride.RegisterAsImplementation(property);
+                if (propertyOverrides.Count() > 1)
+                {
+                    _specManager.AddFault(this, FaultSeverity.Critical, $"Multiple Methods found to override spec {property}");
+                    return true;
+                }                
+                propertyOverrides.Single().RegisterAsImplementation(property);
                 return true;
             }
             return BaseSpec.MatchPropertyByOverride(property);
@@ -400,12 +409,12 @@ namespace AssemblyAnalyser
             {
                 return new MissingMethodSpec(method, _specManager);
             }
-            return _methodSpecs.GetOrAdd(methodDefinition.FullName, (key) => CreateMethodSpec(methodDefinition));
+            return _methodSpecs.GetOrAdd(methodDefinition.CreateUniqueMethodName(), (key) => CreateMethodSpec(methodDefinition));
         }
 
         public MethodSpec LoadMethodSpec(MethodDefinition method)
         {
-            return _methodSpecs.GetOrAdd(method.FullName, (key) => CreateMethodSpec(method));
+            return _methodSpecs.GetOrAdd(method.CreateUniqueMethodName(), (key) => CreateMethodSpec(method));
         }
 
         private MethodSpec CreateMethodSpec(MethodDefinition method)

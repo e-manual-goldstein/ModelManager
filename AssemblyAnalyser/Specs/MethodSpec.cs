@@ -1,4 +1,5 @@
-﻿using Mono.Cecil;
+﻿using AssemblyAnalyser.Extensions;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
 using System.Collections.Generic;
@@ -17,16 +18,11 @@ namespace AssemblyAnalyser
             Name = methodDefinition.Name;
             IsConstructor = methodDefinition.IsConstructor;
             IsSpecialName = methodDefinition.IsSpecialName;
-            ExplicitName = CreateExplicitMemberName(methodDefinition);
+            ExplicitName = methodDefinition.CreateExplicitMemberName();
             if (methodDefinition.IsGenericInstance)
             {
 
             }
-        }
-
-        protected string CreateExplicitMemberName(MethodDefinition methodDefinition)
-        {
-            return $"{methodDefinition.DeclaringType.FullName}.{methodDefinition.Name}";
         }
 
         protected MethodSpec(ISpecManager specManager) : base(specManager)
@@ -127,7 +123,8 @@ namespace AssemblyAnalyser
             var properties = DeclaringType.GetAllPropertySpecs().Where(p => p.InnerSpecs().Contains(this)).ToArray();
             if (properties.Count() > 1)
             {
-
+                _specManager.AddFault(this, FaultSeverity.Error, $"Multiple Property Specs found for Special Name");
+                return null;
             }
             return properties.SingleOrDefault();
         }

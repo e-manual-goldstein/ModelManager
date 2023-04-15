@@ -19,10 +19,13 @@ namespace AssemblyAnalyser
         {
             _parameterDefinition = parameterDefinition;
             Name = _parameterDefinition.Name;
+            FullName = $"{_parameterDefinition.ParameterType.FullName} {_parameterDefinition.Name}";
             IsSystemParameter = member.IsSystem;
             Member = member;
             IsOut = parameterDefinition.IsOut;
         }
+
+        public string FullName { get; }
 
         public ParameterDefinition Definition => _parameterDefinition;
 
@@ -50,7 +53,7 @@ namespace AssemblyAnalyser
 
         public override string ToString()
         {
-            return $"{ParameterType.Name} {Name}";
+            return FullName;
         }
 
         internal bool MatchesParameter(ParameterSpec parameterSpec)

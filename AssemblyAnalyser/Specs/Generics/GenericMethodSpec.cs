@@ -1,4 +1,5 @@
-﻿using Mono.Cecil;
+﻿using AssemblyAnalyser.Extensions;
+using Mono.Cecil;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +12,7 @@ namespace AssemblyAnalyser.Specs
     {
         public GenericMethodSpec(MethodDefinition methodDefinition, ISpecManager specManager) : base(methodDefinition, specManager)
         {
-            ExplicitName = CreateGenericMethodName(methodDefinition);
+            ExplicitName = methodDefinition.CreateGenericMethodName();
         }
 
         GenericParameterSpec[] _genericTypeParameters;
@@ -55,17 +56,6 @@ namespace AssemblyAnalyser.Specs
         public override string ToString()
         {
             return $"{ExplicitName}";
-        }
-
-        private string CreateGenericMethodName(MethodDefinition methodDefinition)
-        {
-            return $"{CreateExplicitMemberName(methodDefinition)}<{AggregateGenericTypeParameterNames(methodDefinition)}>";
-        }
-
-        private string AggregateGenericTypeParameterNames(MethodDefinition methodDefinition)
-        {
-            return methodDefinition.GenericParameters.Select(gp => gp.Name)
-                .Aggregate((a,b) => $"{a}, {b}");
         }
 
         public override bool MatchesSpec(MethodSpec methodSpec)
