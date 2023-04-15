@@ -17,6 +17,10 @@ namespace AssemblyAnalyser
             Name = methodDefinition.Name;
             IsConstructor = methodDefinition.IsConstructor;
             IsSpecialName = methodDefinition.IsSpecialName;
+            if (methodDefinition.DeclaringType.IsInterface)
+            {
+                ExplicitName = $"{methodDefinition.DeclaringType.FullName}.{Name}";
+            }
         }
 
         protected MethodSpec(ISpecManager specManager) : base(specManager)
@@ -24,6 +28,7 @@ namespace AssemblyAnalyser
 
         }
 
+        public string ExplicitName { get; }
         public MethodDefinition Definition => _methodDefinition;
 
         TypeSpec IMemberSpec.ResultType => ReturnType;

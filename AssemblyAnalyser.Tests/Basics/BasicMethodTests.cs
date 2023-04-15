@@ -51,6 +51,22 @@ namespace AssemblyAnalyser.Tests
         }
 
         [TestMethod]
+        public void ExplicitlyImplementedPropertyLinkedToInterface_Test()
+        {
+            _basicClassSpec.ForceRebuildSpec();
+            var interfaceMethod = _basicInterfaceSpec.GetMethodSpecs("MethodForExplicitImplementation").Single();
+            var interfaceImplementations = _basicClassSpec.GetMethodSpecs(interfaceMethod.ExplicitName);
+
+            Assert.AreEqual(1, interfaceImplementations.Count());
+
+            var methodImpl = interfaceImplementations.Single();
+
+            Assert.IsNotNull(methodImpl.Implements);
+            Assert.AreEqual(methodImpl.Implements, interfaceMethod);
+        }
+
+
+        [TestMethod]
         public void BasicMethodWithOutParameterHasCorrectParameters()
         {
             var methodWithOutParameter = _basicClassSpec.GetMethodSpecs("MethodWithOutParameter").SingleOrDefault();
