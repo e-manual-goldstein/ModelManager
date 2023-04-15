@@ -7,7 +7,7 @@ namespace AssemblyAnalyser
     public interface IMethodSpecManager
     {
         MethodSpec[] MethodSpecs { get; }
-        MethodSpec LoadMethodSpec(MethodDefinition methodDefinition);
+        MethodSpec LoadMethodSpec(MethodDefinition methodDefinition, bool allowNull);
 
         IEnumerable<MethodSpec> LoadSpecsForMethodReferences(IEnumerable<MethodReference> methodReferences);        
 

@@ -79,7 +79,7 @@ namespace AssemblyAnalyser
             var typeSpec = _specManager.LoadTypeSpec(_propertyDefinition.PropertyType);
             if (typeSpec == null || typeSpec.IsNullSpec)
             {
-                _specManager.AddFault(FaultSeverity.Error, $"Could not determine PropertyType for PropertySpec {this}");
+                _specManager.AddFault(this, FaultSeverity.Error, $"Could not determine PropertyType for PropertySpec {this}");
             }
             else
             {
@@ -90,14 +90,14 @@ namespace AssemblyAnalyser
 
         private MethodSpec TryGetGetter()
         {
-            var spec = _specManager.LoadMethodSpec(_propertyDefinition.GetMethod);
+            var spec = _specManager.LoadMethodSpec(_propertyDefinition.GetMethod, true);
             spec?.RegisterAsSpecialNameMethodFor(this);
             return spec;
         }
 
         private MethodSpec TryGetSetter()
         {
-            var spec = _specManager.LoadMethodSpec(_propertyDefinition.SetMethod);
+            var spec = _specManager.LoadMethodSpec(_propertyDefinition.SetMethod, true);
             spec?.RegisterAsSpecialNameMethodFor(this);
             return spec;
         }
@@ -130,7 +130,7 @@ namespace AssemblyAnalyser
             var typeSpec = _specManager.LoadTypeSpec(_propertyDefinition.DeclaringType);
             if (typeSpec == null)
             {
-                _specManager.AddFault(FaultSeverity.Error, $"Could not determine DeclaringType for PropertySpec {this}");
+                _specManager.AddFault(this, FaultSeverity.Error, $"Could not determine DeclaringType for PropertySpec {this}");
             }
             return typeSpec;
         }

@@ -20,7 +20,7 @@ namespace AssemblyAnalyser
         }
 
         public FieldDefinition Definition => _fieldDefinition;
-
+        public string ExplicitName { get; }
         public string FieldName => _fieldDefinition.Name;
         public TypeSpec FieldType { get; private set; }
         

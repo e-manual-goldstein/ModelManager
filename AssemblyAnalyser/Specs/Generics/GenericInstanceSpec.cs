@@ -46,7 +46,7 @@ namespace AssemblyAnalyser
             var typeSpec = _specManager.LoadTypeSpec(_genericInstance.ElementType);
             if (typeSpec == null || typeSpec.IsNullSpec)
             {
-                _specManager.AddFault(FaultSeverity.Error, $"Could not load Instance");
+                _specManager.AddFault(this, FaultSeverity.Error, $"Could not load Instance");
             }
             if (typeSpec is GenericTypeSpec genericType)
             {

@@ -2,7 +2,7 @@
 
 namespace AssemblyAnalyser
 {
-    public interface ISpec
+    public interface ISpec : IHasName
     {
         bool IsExcluded();
 

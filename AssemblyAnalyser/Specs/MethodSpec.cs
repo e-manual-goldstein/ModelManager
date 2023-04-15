@@ -76,11 +76,11 @@ namespace AssemblyAnalyser
             {
                 if (_specialNameMethodForMember == memberSpec)
                 {
-                    _specManager.AddFault(FaultSeverity.Debug, $"Re-registering identical memberSpec for {nameof(SpecialNameMethodForMember)}");
+                    _specManager.AddFault(this, FaultSeverity.Debug, $"Re-registering identical memberSpec for {nameof(SpecialNameMethodForMember)}");
                 }
                 else
                 {
-                    _specManager.AddFault(FaultSeverity.Error, $"Attempt to over-write {nameof(SpecialNameMethodForMember)}");
+                    _specManager.AddFault(this, FaultSeverity.Error, $"Attempt to over-write {nameof(SpecialNameMethodForMember)}");
                 }
             }
             _specialNameMethodForMember = memberSpec;

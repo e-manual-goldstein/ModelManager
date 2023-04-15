@@ -28,7 +28,7 @@ namespace AssemblyAnalyser.Specs
 
         public override void AddImplementation(TypeSpec typeSpec)
         {
-            _specManager.AddFault(FaultSeverity.Error, $"{typeSpec} cannot implement Null Type Spec");
+            _specManager.AddFault(this, FaultSeverity.Error, $"{typeSpec} cannot implement Null Type Spec");
         }
 
         public override PropertySpec[] GetAllPropertySpecs()
@@ -53,34 +53,34 @@ namespace AssemblyAnalyser.Specs
 
         public override void RegisterAsDecorator(AbstractSpec decoratedSpec)
         {
-            _specManager.AddFault(FaultSeverity.Error, $"Null Type Spec cannot decorate {decoratedSpec}");
+            _specManager.AddFault(this, FaultSeverity.Error, $"Null Type Spec cannot decorate {decoratedSpec}");
         }
 
         public override void RegisterAsDelegateFor(EventSpec eventSpec)
         {
-            _specManager.AddFault(FaultSeverity.Error, $"Null Type Spec cannot act as delegate for {eventSpec}");            
+            _specManager.AddFault(this, FaultSeverity.Error, $"Null Type Spec cannot act as delegate for {eventSpec}");            
         }
 
         public override void RegisterAsDependentParameterSpec(ParameterSpec parameterSpec)
         {
-            _specManager.AddFault(FaultSeverity.Error, $"{parameterSpec} cannot use Null Type Spec as Parameter Type");
+            _specManager.AddFault(this, FaultSeverity.Error, $"{parameterSpec} cannot use Null Type Spec as Parameter Type");
         }
 
         public override void RegisterAsRequiredBy(ISpecDependency specDependency)
         {
-            _specManager.AddFault(FaultSeverity.Warning, $"Can {specDependency} 'Require' the Null Type Spec?");
-            _specManager.AddFault(FaultSeverity.Error, $"See Warning");
+            _specManager.AddFault(this, FaultSeverity.Warning, $"Can {specDependency} 'Require' the Null Type Spec?");
+            _specManager.AddFault(this, FaultSeverity.Error, $"See Warning");
         }
 
         public override void RegisterAsResultType(IMemberSpec memberSpec)
         {
-            _specManager.AddFault(FaultSeverity.Error, $"Null Type Spec cannot be a Result Type for {memberSpec}");
+            _specManager.AddFault(this, FaultSeverity.Error, $"Null Type Spec cannot be a Result Type for {memberSpec}");
         }
 
         public override void RegisterDependency(ISpecDependency specDependency)
         {
-            _specManager.AddFault(FaultSeverity.Warning, $"Can Null Type Spec 'Require' {specDependency}?");
-            _specManager.AddFault(FaultSeverity.Error, $"See Warning");
+            _specManager.AddFault(this, FaultSeverity.Warning, $"Can Null Type Spec 'Require' {specDependency}?");
+            _specManager.AddFault(this, FaultSeverity.Error, $"See Warning");
         }
 
         public override void RegisterDependentMethodSpec(MethodSpec methodSpec)
@@ -156,7 +156,7 @@ namespace AssemblyAnalyser.Specs
 
         protected override ModuleSpec TryGetModule()
         {
-            _specManager.AddFault(FaultSeverity.Error, $"Null Type Spec does not have a Module");
+            _specManager.AddFault(this, FaultSeverity.Error, $"Null Type Spec does not have a Module");
             return null;
         }
 
@@ -164,6 +164,22 @@ namespace AssemblyAnalyser.Specs
             GenericParameterSpec[] genericTypeArgumentSpecs)
         {
             return null;
+        }
+
+        public override MethodSpec MatchMethodSpecByNameAndParameterType(IHasExplicitName namedMember, ParameterSpec[] parameterSpecs,
+            GenericParameterSpec[] genericTypeArgumentSpecs)
+        {
+            return null;
+        }
+
+        public override bool MatchMethodByOverride(MethodSpec method)
+        {
+            return false;
+        }
+
+        public override bool MatchPropertyByOverride(PropertySpec property)
+        {
+            return false;
         }
     }
 }

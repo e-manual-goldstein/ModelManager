@@ -59,6 +59,11 @@ namespace AssemblyAnalyser
             _faults.Add(new BuildFault(specContext, faultSeverity, faultMessage));
         }
 
+        public void ClearFaults()
+        {
+            _faults.Clear();
+        }
+
         private void LogFault(FaultSeverity? faultSeverity, string faultMessage)
         {
             switch (faultSeverity)
@@ -345,11 +350,11 @@ namespace AssemblyAnalyser
 
         public MethodSpec[] MethodSpecs => TypeSpecs.SelectMany(t => t.Methods).ToArray();
 
-        public MethodSpec LoadMethodSpec(MethodDefinition method)
+        public MethodSpec LoadMethodSpec(MethodDefinition method, bool allowNull)
         {
             if (method == null)
             {
-                AddFault(FaultSeverity.Information, "No MethodSpec for null MethodDefintion");
+                AddFault(allowNull ? FaultSeverity.Debug : FaultSeverity.Warning, "No MethodSpec for null MethodDefintion");
                 return null;
             }
             return LoadTypeSpec(method.DeclaringType).LoadMethodSpec(method);
@@ -359,7 +364,7 @@ namespace AssemblyAnalyser
         {
             foreach (var methodReference in methodReferences)
             {
-                yield return LoadMethodSpec(methodReference.Resolve());
+                yield return LoadMethodSpec(methodReference.Resolve(), true);
             }            
         }
 
@@ -369,11 +374,11 @@ namespace AssemblyAnalyser
 
         public PropertySpec[] PropertySpecs => TypeSpecs.SelectMany(t => t.PropertySpecs.Values).ToArray();
 
-        public PropertySpec LoadPropertySpec(PropertyReference propertyReference)
+        public PropertySpec LoadPropertySpec(PropertyReference propertyReference, bool allowNull)
         {
             if (propertyReference == null)
             {
-                AddFault(FaultSeverity.Information, "No PropertySpec for null PropertyDefinition");
+                AddFault(allowNull ? FaultSeverity.Debug : FaultSeverity.Warning, "No PropertySpec for null PropertyDefinition");
                 return null;
             }
             return LoadTypeSpec(propertyReference.DeclaringType).LoadPropertySpec(propertyReference.Resolve());
@@ -383,7 +388,7 @@ namespace AssemblyAnalyser
         {
             foreach (var propertyReference in propertyReferences)
             {
-                yield return LoadPropertySpec(propertyReference);
+                yield return LoadPropertySpec(propertyReference, true);
             }
         }
 

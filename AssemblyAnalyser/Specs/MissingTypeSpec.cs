@@ -12,7 +12,7 @@ namespace AssemblyAnalyser.Specs
         public MissingTypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager) 
             : base(fullTypeName, uniqueTypeName, specManager)
         {
-            specManager.AddFault(FaultSeverity.Error, $"Missing Type Spec for '{fullTypeName}'");
+            specManager.AddFault(this, FaultSeverity.Error, $"Missing Type Spec for '{fullTypeName}'");
         }
 
         public override void AddImplementation(TypeSpec typeSpec)

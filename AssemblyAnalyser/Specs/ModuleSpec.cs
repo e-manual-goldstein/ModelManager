@@ -287,7 +287,7 @@ namespace AssemblyAnalyser
             }
             catch (TypeLoadException ex)
             {
-                _specManager.AddFault(FaultSeverity.Error, ex.Message);
+                _specManager.AddFault(this, FaultSeverity.Error, ex.Message);
             }
             catch (InvalidOperationException ex)
             {

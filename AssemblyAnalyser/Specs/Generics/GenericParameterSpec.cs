@@ -57,12 +57,12 @@ namespace AssemblyAnalyser
         public void RegisterAsGenericTypeParameterFor(MethodSpec methodSpec)
         {
             _genericParameterFor = methodSpec;
-            _specManager.AddFault(FaultSeverity.Information, "Implementation not finished for 'RegisterAsGenericTypeParameterFor'");
+            _specManager.AddFault(FaultSeverity.Debug, "Implementation not finished for 'RegisterAsGenericTypeParameterFor'");
         }
 
         internal bool IsValidGenericTypeMatchFor(GenericParameterSpec genericTypeArgumentSpec)
         {
-            _specManager.AddFault(FaultSeverity.Information, "Implementation not finished for 'IsValidGenericTypeMatchFor'");
+            _specManager.AddFault(FaultSeverity.Debug, "Implementation not finished for 'IsValidGenericTypeMatchFor'");
             return BaseSpec == genericTypeArgumentSpec.BaseSpec
                 && HasDefaultConstructorConstraint == genericTypeArgumentSpec.HasDefaultConstructorConstraint;
         }

@@ -69,7 +69,7 @@ namespace AssemblyAnalyser
             }
             else
             {
-                _specManager.AddFault(FaultSeverity.Error, "Cannot build Spec with null FullTypeName");
+                _specManager.AddFault(this, FaultSeverity.Error, "Cannot build Spec with null FullTypeName");
             }
         }
 
@@ -180,7 +180,7 @@ namespace AssemblyAnalyser
         {
             if (_typeDefinition == null)
             {
-                _specManager.AddFault(FaultSeverity.Error, $"Unable to determine MethodSpecs for {this}");
+                _specManager.AddFault(this, FaultSeverity.Error, $"Unable to determine MethodSpecs for {this}");
                 return Array.Empty<MethodSpec>();
             }
             var specs = TryLoadMethodSpecs(() => _typeDefinition.Methods.Where(m => m.DeclaringType == _typeDefinition).ToArray());
@@ -199,7 +199,7 @@ namespace AssemblyAnalyser
         {
             if (_typeDefinition == null)
             {
-                _specManager.AddFault(FaultSeverity.Error, $"Unable to determine PropertySpecs for {this}");
+                _specManager.AddFault(this, FaultSeverity.Error, $"Unable to determine PropertySpecs for {this}");
                 return Array.Empty<PropertySpec>();
             }
             var specs = TryLoadPropertySpecs(() => _typeDefinition.Properties.ToArray());
@@ -229,7 +229,7 @@ namespace AssemblyAnalyser
             if (matchingProperties.Count() > 1)
             {
                 var methodArray = matchingProperties.ToArray();
-                _specManager.AddFault(FaultSeverity.Error, $"Multiple Properties found for signature. PropertyName:{name}");
+                _specManager.AddFault(this, FaultSeverity.Error, $"Multiple Properties found for signature. PropertyName:{name}");
                 return null;
             }
             return matchingProperties.SingleOrDefault();            
@@ -318,11 +318,11 @@ namespace AssemblyAnalyser
             {
                 if (!MatchMethodByOverride(interfaceMethod))
                 {
-                    var methodSpec = MatchMethodSpecByNameAndParameterType(interfaceMethod.Name, interfaceMethod.Parameters,
+                    var methodSpec = MatchMethodSpecByNameAndParameterType(interfaceMethod, interfaceMethod.Parameters,
                         interfaceMethod.GenericTypeParameters);
                     if (methodSpec == null)
                     {
-                        _specManager.AddFault(FaultSeverity.Error, $"{this} does not implement {interfaceMethod}");
+                        _specManager.AddFault(this, FaultSeverity.Error, $"{this} does not implement {interfaceMethod}");
                     }
                     else
                     {
@@ -337,7 +337,7 @@ namespace AssemblyAnalyser
                     var propertySpec = GetPropertySpec(interfaceProperty.ExplicitName, true) ?? GetPropertySpec(interfaceProperty.Name, true); 
                     if (propertySpec == null)
                     {
-                        _specManager.AddFault(FaultSeverity.Error, $"{this} does not implement {interfaceProperty}");
+                        _specManager.AddFault(this, FaultSeverity.Error, $"{this} does not implement {interfaceProperty}");
                     }
                     else
                     {
@@ -359,28 +359,28 @@ namespace AssemblyAnalyser
         //    return false;
         //}
 
-        private bool MatchMethodByOverride(MethodSpec interfaceMethod)
+        public virtual bool MatchMethodByOverride(MethodSpec interfaceMethod)
         {
-            var overrides = GetAllMethodSpecs().Where(f => f.Overrides.Any()).ToDictionary(f => f, g => g.Overrides);
-            var methodOverride = GetAllMethodSpecs().SingleOrDefault(m => m.Overrides.Contains(interfaceMethod));
+            //var overrides = GetAllMethodSpecs().Where(f => f.Overrides.Any()).ToDictionary(f => f, g => g.Overrides);
+            var methodOverride = Methods.SingleOrDefault(m => m.Overrides.Contains(interfaceMethod));                
             if (methodOverride != null)
             {
                 methodOverride.RegisterAsImplementation(interfaceMethod);
                 return true;
             }
-            return false;
+            return BaseSpec.MatchMethodByOverride(interfaceMethod);
         }
 
-        private bool MatchPropertyByOverride(PropertySpec property)
+        public virtual bool MatchPropertyByOverride(PropertySpec property)
         {
             //var overrides = GetAllPropertySpecs().Where(f => f.Overrides.Any()).ToDictionary(f => f, g => g.Overrides);
-            var methodOverride = GetAllPropertySpecs().SingleOrDefault(m => m.Overrides.Contains(property));
-            if (methodOverride != null)
+            var propertyOverride = Properties.SingleOrDefault(m => m.Overrides.Contains(property));
+            if (propertyOverride != null)
             {
-                methodOverride.RegisterAsImplementation(property);
+                propertyOverride.RegisterAsImplementation(property);
                 return true;
             }
-            return false;
+            return BaseSpec.MatchPropertyByOverride(property);
         }
 
         public virtual bool IsNullSpec => false;
@@ -507,7 +507,7 @@ namespace AssemblyAnalyser
             {
                 if (NestedIn != typeSpec)
                 {
-                    _specManager.AddFault(FaultSeverity.Error, $"NestedIn already set for Type {this}");
+                    _specManager.AddFault(this, FaultSeverity.Error, $"NestedIn already set for Type {this}");
                 }
                 else
                 {
@@ -641,17 +641,27 @@ namespace AssemblyAnalyser
             return (includeInherited ? GetAllMethodSpecs() : Methods).Where(m => m.Name == methodName).ToArray();
         }
 
+        public MethodSpec[] GetMethodSpecs(IHasExplicitName namedMethod, bool includeInherited = false)
+        {
+            var methods = includeInherited ? GetAllMethodSpecs() : Methods;
+            var explicitMethods = methods.Where(m => m.Name == namedMethod.ExplicitName).ToArray();
+            if (!explicitMethods.Any())
+            {
+                return methods.Where(m => m.Name == namedMethod.Name).ToArray();
+            }
+            return explicitMethods;
+        }
+
         public virtual MethodSpec[] GetAllMethodSpecs()
         {
             return Methods.Union(BaseSpec.GetAllMethodSpecs()).ToArray();
         }
 
-        public virtual MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs
-            , GenericParameterSpec[] genericTypeArgumentSpecs)
+        public virtual MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs,
+            GenericParameterSpec[] genericTypeArgumentSpecs)
         {
-            var nameAndParameterCountMatches = Methods.Where(m
-                    => m.Name == methodName
-                    && m.Parameters.Length == parameterSpecs.Length).ToArray();
+            var nameAndParameterCountMatches = GetMethodSpecs(methodName)
+                .Where(m => m.Parameters.Length == parameterSpecs.Length).ToArray();
             var matchingMethods = nameAndParameterCountMatches.Where(m
                     => m.HasExactGenericTypeParameters(genericTypeArgumentSpecs)
                     && m.HasExactParameters(parameterSpecs)).ToArray();
@@ -661,7 +671,27 @@ namespace AssemblyAnalyser
             }
             else if (matchingMethods.Count() > 1)
             {
-                _specManager.AddFault(FaultSeverity.Error, $"Multiple Methods found for signature. MethodName:{methodName}");
+                _specManager.AddFault(this, FaultSeverity.Error, $"Multiple Methods found for signature. MethodName:{methodName}");
+                return null;
+            }
+            return matchingMethods.SingleOrDefault();
+        }
+
+        public virtual MethodSpec MatchMethodSpecByNameAndParameterType(IHasExplicitName namedMember, ParameterSpec[] parameterSpecs, 
+            GenericParameterSpec[] genericTypeArgumentSpecs)
+        {
+            var nameAndParameterCountMatches = GetMethodSpecs(namedMember)
+                .Where(m => m.Parameters.Length == parameterSpecs.Length).ToArray();
+            var matchingMethods = nameAndParameterCountMatches.Where(m
+                    => m.HasExactGenericTypeParameters(genericTypeArgumentSpecs)
+                    && m.HasExactParameters(parameterSpecs)).ToArray();
+            if (!matchingMethods.Any())
+            {
+                return BaseSpec.MatchMethodSpecByNameAndParameterType(namedMember, parameterSpecs, genericTypeArgumentSpecs);
+            }
+            else if (matchingMethods.Count() > 1)
+            {
+                _specManager.AddFault(this, FaultSeverity.Error, $"Multiple Methods found for signature. MethodName:{namedMember.ExplicitName}");
                 return null;
             }
             return matchingMethods.SingleOrDefault();

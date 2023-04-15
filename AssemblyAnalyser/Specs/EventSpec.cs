@@ -20,6 +20,7 @@ namespace AssemblyAnalyser
             IsSystem = declaringType.IsSystem;
         }
 
+        public string ExplicitName { get; }
         public EventDefinition Definition => _eventDefinition;
 
         public MethodSpec Adder { get; private set; }
@@ -45,8 +46,8 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            Adder = _specManager.LoadMethodSpec(_adder);
-            Remover = _specManager.LoadMethodSpec(_remover);
+            Adder = _specManager.LoadMethodSpec(_adder, true);
+            Remover = _specManager.LoadMethodSpec(_remover, true);
             EventType = _specManager.LoadTypeSpec(_eventDefinition.EventType);
             EventType.RegisterAsDelegateFor(this);            
             _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
