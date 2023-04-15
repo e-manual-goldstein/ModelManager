@@ -185,7 +185,7 @@ namespace AssemblyAnalyser
             }
             if (typeReference.Resolve() is TypeDefinition typeDefinition)
             {
-                _moduleSpecs.GetOrAdd(typeDefinition.Scope.GetScopeNameWithoutExtension(),
+                return _moduleSpecs.GetOrAdd(typeDefinition.Scope.GetScopeNameWithoutExtension(),
                     (key) => CreateFullModuleSpec(typeDefinition.Scope));
             }
             return _moduleSpecs.GetOrAdd(typeReference.Scope.GetScopeNameWithoutExtension(), 

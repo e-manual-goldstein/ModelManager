@@ -17,10 +17,7 @@ namespace AssemblyAnalyser
             Name = methodDefinition.Name;
             IsConstructor = methodDefinition.IsConstructor;
             IsSpecialName = methodDefinition.IsSpecialName;
-            if (methodDefinition.DeclaringType.IsInterface)
-            {
-                ExplicitName = $"{methodDefinition.DeclaringType.FullName}.{Name}";
-            }
+            ExplicitName = $"{methodDefinition.DeclaringType.FullName}.{Name}";            
         }
 
         protected MethodSpec(ISpecManager specManager) : base(specManager)
@@ -74,14 +71,12 @@ namespace AssemblyAnalyser
         {
             if (_specialNameMethodForMember != null)
             {
-                if (_specialNameMethodForMember == memberSpec)
-                {
-                    _specManager.AddFault(this, FaultSeverity.Debug, $"Re-registering identical memberSpec for {nameof(SpecialNameMethodForMember)}");
-                }
-                else
+                if (_specialNameMethodForMember != memberSpec)
                 {
                     _specManager.AddFault(this, FaultSeverity.Error, $"Attempt to over-write {nameof(SpecialNameMethodForMember)}");
+                    return;
                 }
+                _specManager.AddFault(this, FaultSeverity.Debug, $"Re-registering identical memberSpec for {nameof(SpecialNameMethodForMember)}");               
             }
             _specialNameMethodForMember = memberSpec;
         }
@@ -108,7 +103,12 @@ namespace AssemblyAnalyser
 
         private TypeSpec TryGetDeclaringType()
         {
-            return _specManager.LoadTypeSpec(_methodDefinition.DeclaringType);            
+            var typeSpec = _specManager.LoadTypeSpec(_methodDefinition.DeclaringType);
+            if (typeSpec.IsNullSpec)
+            {
+                _specManager.AddFault(this, FaultSeverity.Critical, "Failed to find Declaring Type for spec");
+            }
+            return typeSpec;
         }
 
         private GenericParameterSpec[] TryGetGenericTypeParameters()
@@ -190,7 +190,7 @@ namespace AssemblyAnalyser
 
         public override string ToString()
         {
-            return _methodDefinition.Name;
+            return ExplicitName;
         }
 
         public bool IsSpecFor(MethodReference method)

@@ -14,10 +14,7 @@ namespace AssemblyAnalyser
         {
             _propertyDefinition = propertyDefinition;
             Name = propertyDefinition.Name;
-            if (propertyDefinition.DeclaringType.IsInterface)
-            {
-                ExplicitName = $"{propertyDefinition.DeclaringType.FullName}.{Name}";
-            }
+            ExplicitName = $"{propertyDefinition.DeclaringType.FullName}.{Name}";            
         }
 
         public string ExplicitName { get; }
@@ -128,9 +125,9 @@ namespace AssemblyAnalyser
         private TypeSpec GetDeclaringType()
         {
             var typeSpec = _specManager.LoadTypeSpec(_propertyDefinition.DeclaringType);
-            if (typeSpec == null)
+            if (typeSpec == null || typeSpec.IsNullSpec)
             {
-                _specManager.AddFault(this, FaultSeverity.Error, $"Could not determine DeclaringType for PropertySpec {this}");
+                _specManager.AddFault(this, FaultSeverity.Critical, $"Could not determine DeclaringType for PropertySpec {this}");
             }
             return typeSpec;
         }
@@ -142,7 +139,7 @@ namespace AssemblyAnalyser
 
         public override string ToString()
         {
-            return $"{DeclaringType}.{_propertyDefinition.Name}";
+            return $"{ExplicitName}";
         }
     }
 }
