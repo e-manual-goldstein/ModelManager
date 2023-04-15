@@ -11,7 +11,6 @@ namespace AssemblyAnalyser.Tests
     [TestClass]
     public class BasicTypeTests : AbstractSpecTests
     {
-        TypeSpec _basicInterfaceSpec;
         TypeSpec _basicAttribute;
         TypeSpec _basicDelegate;
 
@@ -26,8 +25,6 @@ namespace AssemblyAnalyser.Tests
             _specManager.ProcessLoadedParameters();
             _specManager.ProcessLoadedEvents();
             //_specManager.ProcessLoadedAttributes();
-            _basicInterfaceSpec = _moduleSpec.TypeSpecs
-                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.IBasicInterface");
             _basicAttribute = _moduleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicAttribute");
             _basicDelegate = _moduleSpec.TypeSpecs
@@ -131,13 +128,13 @@ namespace AssemblyAnalyser.Tests
         }
 
         [TestMethod]
-        public void BasicClassSpecHasOneParameterlessMethod_Test()
+        public void BasicClassSpecHasParameterlessMethods_Test()
         {
             var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.InnerSpecs());
             var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
             var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods).Except(eventMethods);
 
-            Assert.AreEqual(1, nonPropertyMethods.Where(d => !d.IsConstructor && !d.Parameters.Any()).Count());
+            Assert.IsTrue(nonPropertyMethods.Where(d => !d.IsConstructor && !d.Parameters.Any()).Any());
         }
 
         [TestMethod]

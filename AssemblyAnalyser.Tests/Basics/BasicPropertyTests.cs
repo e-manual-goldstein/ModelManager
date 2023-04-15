@@ -45,6 +45,17 @@ namespace AssemblyAnalyser.Tests
         }
 
         [TestMethod]
+        public void ExplicitlyImplementedMemberLinkedToInterface_Test()
+        {
+            _basicClassSpec.ForceRebuildSpec();
+            var interfaceProperty = _basicInterfaceSpec.GetPropertySpec("PropertyForExplicitImplementation");
+            var interfaceImplementation = _basicClassSpec.GetPropertySpec(interfaceProperty.ExplicitName);
+            
+            Assert.IsNotNull(interfaceImplementation.Implements);
+            Assert.AreEqual(interfaceImplementation.Implements, interfaceProperty);
+        }
+
+        [TestMethod]
         public void BasicPropertyWithArrayTypeHasOwnSpec_Test()
         {
             var stringProperty = _basicClassSpec.GetPropertySpec("PublicProperty");

@@ -10,5 +10,9 @@ namespace AssemblyAnalyser.TestData.Basics
         DateTime PublicMethod();
 
         void PublicMethodWithParameters(string stringParam, Guid guidParam);
+
+        DateTime PropertyForExplicitImplementation { get; }
+
+        DateTime MethodForExplicitImplementation();
     }
 }

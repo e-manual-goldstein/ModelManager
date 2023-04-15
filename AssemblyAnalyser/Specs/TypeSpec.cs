@@ -334,7 +334,7 @@ namespace AssemblyAnalyser
             {
                 if (!MatchPropertyByOverride(interfaceProperty))
                 {
-                    var propertySpec = GetPropertySpec(interfaceProperty.Name, true);
+                    var propertySpec = GetPropertySpec(interfaceProperty.ExplicitName, true) ?? GetPropertySpec(interfaceProperty.Name, true); 
                     if (propertySpec == null)
                     {
                         _specManager.AddFault(FaultSeverity.Error, $"{this} does not implement {interfaceProperty}");
@@ -373,7 +373,7 @@ namespace AssemblyAnalyser
 
         private bool MatchPropertyByOverride(PropertySpec property)
         {
-            var overrides = GetAllPropertySpecs().Where(f => f.Overrides.Any()).ToDictionary(f => f, g => g.Overrides);
+            //var overrides = GetAllPropertySpecs().Where(f => f.Overrides.Any()).ToDictionary(f => f, g => g.Overrides);
             var methodOverride = GetAllPropertySpecs().SingleOrDefault(m => m.Overrides.Contains(property));
             if (methodOverride != null)
             {
@@ -462,6 +462,7 @@ namespace AssemblyAnalyser
 
         private PropertySpec CreatePropertySpec(PropertyDefinition propertyInfo)
         {
+            _specManager.AddFault(FaultSeverity.Debug, "TODO: Is it faster to flag the explicit implementations here?");
             return new PropertySpec(propertyInfo, _specManager);
         }
 
@@ -517,7 +518,7 @@ namespace AssemblyAnalyser
             NestedIn = typeSpec;
         }
 
-        private List<TypeSpec> _implementations = new List<TypeSpec>();
+        protected List<TypeSpec> _implementations = new List<TypeSpec>();
 
         public TypeSpec[] Implementations => _implementations.ToArray();
 
@@ -534,9 +535,9 @@ namespace AssemblyAnalyser
             }
         }
 
-        private List<TypeSpec> _subTypes = new List<TypeSpec>();
+        protected List<TypeSpec> _subTypes = new List<TypeSpec>();
         public TypeSpec[] GetSubTypes => _subTypes.ToArray();
-        public void AddSubType(TypeSpec typeSpec)
+        public virtual void AddSubType(TypeSpec typeSpec)
         {
             if (!_subTypes.Contains(typeSpec))
             {
@@ -545,7 +546,7 @@ namespace AssemblyAnalyser
             }
         }
 
-        List<IMemberSpec> _resultTypeSpecs = new List<IMemberSpec>();
+        protected List<IMemberSpec> _resultTypeSpecs = new List<IMemberSpec>();
         public IMemberSpec[] ResultTypeSpecs => _resultTypeSpecs.ToArray();
 
         public virtual void RegisterAsResultType(IMemberSpec methodSpec)
@@ -557,7 +558,7 @@ namespace AssemblyAnalyser
             }
         }
 
-        List<ParameterSpec> _dependentParameterSpecs = new List<ParameterSpec>();
+        protected List<ParameterSpec> _dependentParameterSpecs = new List<ParameterSpec>();
         public ParameterSpec[] DependentParameterSpecs => _dependentParameterSpecs.ToArray();
 
         public virtual void RegisterAsDependentParameterSpec(ParameterSpec parameterSpec)
@@ -569,7 +570,7 @@ namespace AssemblyAnalyser
             }
         }
 
-        List<MethodSpec> _dependentMethodBodies = new List<MethodSpec>();
+        protected List<MethodSpec> _dependentMethodBodies = new List<MethodSpec>();
         public MethodSpec[] DependentMethodBodies => _dependentMethodBodies.ToArray();
 
         public virtual void RegisterDependentMethodSpec(MethodSpec methodSpec)
@@ -645,17 +646,20 @@ namespace AssemblyAnalyser
             return Methods.Union(BaseSpec.GetAllMethodSpecs()).ToArray();
         }
 
-        public MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs
+        public virtual MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs
             , GenericParameterSpec[] genericTypeArgumentSpecs)
         {
-            var nameAndParameterCountMatches = GetAllMethodSpecs().Where(m
+            var nameAndParameterCountMatches = Methods.Where(m
                     => m.Name == methodName
                     && m.Parameters.Length == parameterSpecs.Length).ToArray();
             var matchingMethods = nameAndParameterCountMatches.Where(m
                     => m.HasExactGenericTypeParameters(genericTypeArgumentSpecs)
-                    && m.HasExactParameters(parameterSpecs)
-                    ).ToArray();
-            if (matchingMethods.Count() > 1)
+                    && m.HasExactParameters(parameterSpecs)).ToArray();
+            if (!matchingMethods.Any())
+            {
+                return BaseSpec.MatchMethodSpecByNameAndParameterType(methodName, parameterSpecs, genericTypeArgumentSpecs);
+            }
+            else if (matchingMethods.Count() > 1)
             {
                 _specManager.AddFault(FaultSeverity.Error, $"Multiple Methods found for signature. MethodName:{methodName}");
                 return null;

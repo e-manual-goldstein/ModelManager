@@ -80,6 +80,13 @@ namespace AssemblyAnalyser.TestData.Basics
 
         public string ReadWriteInterfaceImpl { get; set; }
 
+        DateTime IBasicInterface.PropertyForExplicitImplementation { get; }
+
+        DateTime IBasicInterface.MethodForExplicitImplementation()
+        {
+            return default;
+        }
+
         public int PublicField;
 
         public event BasicDelegate BasicEvent;

@@ -159,5 +159,11 @@ namespace AssemblyAnalyser.Specs
             _specManager.AddFault(FaultSeverity.Error, $"Null Type Spec does not have a Module");
             return null;
         }
+
+        public override MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs, 
+            GenericParameterSpec[] genericTypeArgumentSpecs)
+        {
+            return null;
+        }
     }
 }

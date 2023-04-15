@@ -9,12 +9,18 @@ namespace AssemblyAnalyser
     {
         private PropertyDefinition _propertyDefinition;
 
-        public PropertySpec(PropertyDefinition propertyDefinition, ISpecManager specManager) 
+        public PropertySpec(PropertyDefinition propertyDefinition, ISpecManager specManager)
             : base(specManager)
         {
             _propertyDefinition = propertyDefinition;
             Name = propertyDefinition.Name;
+            if (propertyDefinition.DeclaringType.IsInterface)
+            {
+                ExplicitName = $"{propertyDefinition.DeclaringType.FullName}.{Name}";
+            }
         }
+
+        public string ExplicitName { get; }
 
         public PropertyDefinition Definition => _propertyDefinition;
 
