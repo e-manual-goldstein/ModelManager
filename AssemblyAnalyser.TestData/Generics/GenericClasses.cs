@@ -1,4 +1,5 @@
 ﻿using AssemblyAnalyser.TestData.Basics;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace AssemblyAnalyser.TestData.Generics
@@ -55,6 +56,25 @@ namespace AssemblyAnalyser.TestData.Generics
         public IQueryable<TNestedGeneric> MethodWithNestedGenericType<TNestedGeneric>()
         {
             return default(IQueryable<TNestedGeneric>);
+        }
+    }
+
+    [NotTested]
+    public class ClassWithSynonymousMethods : IInterfaceWithSynonymousMethods
+    {
+        public List<IBasicInterface> SynonymousMethod<TLink, THolder>(THolder holder, 
+           params int[] excludedNoteTypes)
+           where TLink : class, IGenericInterface<THolder>
+           where THolder : class, IReadOnlyInterface
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public List<IBasicInterface> SynonymousMethod<TLink, THolder>(THolder holder)
+            where TLink : class, IGenericInterface<THolder>
+            where THolder : class, IReadOnlyInterface
+        {
+            throw new System.NotImplementedException();
         }
     }
 }

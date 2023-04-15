@@ -19,7 +19,8 @@ namespace AssemblyAnalyser.Tests
         const string GENERIC_CLASS_WITH_CLASS_TYPE_CONSTRAINTS = "GenericClassWithClassTypeConstraints`1";
         const string GENERIC_CLASS_WITH_DEFAULT_CONSTRUCTOR_TYPE_CONSTRAINTS = "GenericClassWithDefaultConstructorTypeConstraints`1";
         const string CLASS_WITH_GENERIC_METHODS = "ClassWithGenericMethods";
-        
+        const string CLASS_WITH_SYNONYMOUS_GENERIC_METHODS = "ClassWithSynonymousMethods";
+
         const string GENERIC_INTERFACE = "IGenericInterface`1";
         const string GENERIC_INTERFACE_WITH_TYPE_CONSTRAINTS = "IGenericInterfaceWithTypeConstraints`1";
         const string INTERFACE_WTIH_GENERIC_METHODS = "IInterfaceWithGenericMethods";
@@ -253,7 +254,22 @@ namespace AssemblyAnalyser.Tests
 
         }
 
+        [TestMethod]
+        public void SynonymousGenericMethodsHaveDistinctSpecs_Test()
+        {
+            var classWithSynonymousMethods = _moduleSpec
+                .GetTypeSpec($"{NAMESPACE}.{CLASS_WITH_SYNONYMOUS_GENERIC_METHODS}");
 
+            var interfaceWithSynonymousMethods = classWithSynonymousMethods.Interfaces.Single();
+
+            Assert.IsNotNull(interfaceWithSynonymousMethods);
+
+            foreach (var method in interfaceWithSynonymousMethods.Methods)
+            {
+                Assert.IsNotNull(classWithSynonymousMethods.FindMatchingMethodSpec(method, method));
+            }
+
+        }
         #endregion
 
     }
