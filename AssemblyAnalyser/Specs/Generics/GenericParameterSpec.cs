@@ -54,9 +54,9 @@ namespace AssemblyAnalyser
 
         public override bool IsSystem => GenericParameterFor.IsSystem;
 
-        public void RegisterAsGenericTypeParameterFor(MethodSpec methodSpec)
+        public void RegisterAsGenericTypeParameterFor(GenericMethodSpec genericMethodSpec)
         {
-            _genericParameterFor = methodSpec;
+            _genericParameterFor = genericMethodSpec;
             _specManager.AddFault(FaultSeverity.Debug, "Implementation not finished for 'RegisterAsGenericTypeParameterFor'");
         }
 

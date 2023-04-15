@@ -160,14 +160,13 @@ namespace AssemblyAnalyser.Specs
             return null;
         }
 
-        public override MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs, 
-            GenericParameterSpec[] genericTypeArgumentSpecs)
-        {
-            return null;
-        }
+        //public override MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs, 
+        //    GenericParameterSpec[] genericTypeArgumentSpecs)
+        //{
+        //    return null;
+        //}
 
-        public override MethodSpec MatchMethodSpecByNameAndParameterType(IHasExplicitName namedMember, ParameterSpec[] parameterSpecs,
-            GenericParameterSpec[] genericTypeArgumentSpecs)
+        public override MethodSpec FindMatchingMethodSpec(IHasExplicitName namedMember, MethodSpec methodSpec)
         {
             return null;
         }

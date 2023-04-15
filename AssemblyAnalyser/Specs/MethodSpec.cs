@@ -6,9 +6,9 @@ using System.Linq;
 
 namespace AssemblyAnalyser
 {
-    public class MethodSpec : AbstractSpec, IMemberSpec, IHasParameters, IHasGenericParameters, IImplementsSpec<MethodSpec>
+    public class MethodSpec : AbstractSpec, IMemberSpec, IHasParameters, IImplementsSpec<MethodSpec>
     {
-        MethodDefinition _methodDefinition;
+        protected MethodDefinition _methodDefinition;
 
         public MethodSpec(MethodDefinition methodDefinition, ISpecManager specManager)
             : base(specManager)
@@ -17,7 +17,16 @@ namespace AssemblyAnalyser
             Name = methodDefinition.Name;
             IsConstructor = methodDefinition.IsConstructor;
             IsSpecialName = methodDefinition.IsSpecialName;
-            ExplicitName = $"{methodDefinition.DeclaringType.FullName}.{Name}";            
+            ExplicitName = CreateExplicitMemberName(methodDefinition);
+            if (methodDefinition.IsGenericInstance)
+            {
+
+            }
+        }
+
+        protected string CreateExplicitMemberName(MethodDefinition methodDefinition)
+        {
+            return $"{methodDefinition.DeclaringType.FullName}.{methodDefinition.Name}";
         }
 
         protected MethodSpec(ISpecManager specManager) : base(specManager)
@@ -25,7 +34,7 @@ namespace AssemblyAnalyser
 
         }
 
-        public string ExplicitName { get; }
+        public string ExplicitName { get; protected set; }
         public MethodDefinition Definition => _methodDefinition;
 
         TypeSpec IMemberSpec.ResultType => ReturnType;
@@ -41,9 +50,6 @@ namespace AssemblyAnalyser
 
         ParameterSpec[] _parameters;
         public ParameterSpec[] Parameters => _parameters ??= _specManager.TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray(), this);
-
-        GenericParameterSpec[] _genericTypeParameters;
-        public GenericParameterSpec[] GenericTypeParameters => _genericTypeParameters ??= TryGetGenericTypeParameters();
 
         List<TypeSpec> _localVariableTypes = new List<TypeSpec>();
         public TypeSpec[] LocalVariableTypes => _localVariableTypes.ToArray();
@@ -109,19 +115,6 @@ namespace AssemblyAnalyser
                 _specManager.AddFault(this, FaultSeverity.Critical, "Failed to find Declaring Type for spec");
             }
             return typeSpec;
-        }
-
-        private GenericParameterSpec[] TryGetGenericTypeParameters()
-        {
-            var genericArgumentSpecs = _specManager
-                .LoadTypeSpecs<GenericParameterSpec>(_methodDefinition.GenericParameters).ToArray();
-            {
-                foreach (var genericArgSpec in genericArgumentSpecs)
-                {
-                    genericArgSpec.RegisterAsGenericTypeParameterFor(this);
-                }
-            }
-            return genericArgumentSpecs;
         }
 
         private MethodSpec[] TryGetOverrides()
@@ -223,6 +216,11 @@ namespace AssemblyAnalyser
             return true;
         }
 
+        public virtual bool MatchesSpec(MethodSpec methodSpec)
+        {
+            return this.HasExactParameters(methodSpec.Parameters);
+        }
+
         //public bool HasExactParameters(ParameterSpec[] parameterSpecs)
         //{
         //    if (parameterSpecs.Length == Parameters.Length)
@@ -241,20 +239,6 @@ namespace AssemblyAnalyser
         //    return false;
         //}
 
-        public bool HasExactGenericTypeParameters(GenericParameterSpec[] genericTypeParameterSpecs)
-        {
-            if (genericTypeParameterSpecs.Length == GenericTypeParameters.Length)
-            {
-                for (int i = 0; i < GenericTypeParameters.Length; i++)
-                {
-                    if (!GenericTypeParameters[i].IsValidGenericTypeMatchFor(genericTypeParameterSpecs[i]))
-                    {
-                        return false;
-                    }
-                }
-                return true;
-            }
-            return false;
-        }
+
     }
 }

@@ -318,8 +318,7 @@ namespace AssemblyAnalyser
             {
                 if (!MatchMethodByOverride(interfaceMethod))
                 {
-                    var methodSpec = MatchMethodSpecByNameAndParameterType(interfaceMethod, interfaceMethod.Parameters,
-                        interfaceMethod.GenericTypeParameters);
+                    var methodSpec = FindMatchingMethodSpec(interfaceMethod, interfaceMethod);
                     if (methodSpec == null)
                     {
                         _specManager.AddFault(this, FaultSeverity.Error, $"{this} does not implement {interfaceMethod}");
@@ -411,7 +410,9 @@ namespace AssemblyAnalyser
 
         private MethodSpec CreateMethodSpec(MethodDefinition method)
         {
-            var spec = new MethodSpec(method, _specManager);            
+            var spec = method.HasGenericParameters 
+                ? new GenericMethodSpec(method, _specManager) 
+                : new MethodSpec(method, _specManager);            
             return spec;
         }
 
@@ -657,37 +658,34 @@ namespace AssemblyAnalyser
             return Methods.Union(BaseSpec.GetAllMethodSpecs()).ToArray();
         }
 
-        public virtual MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs,
-            GenericParameterSpec[] genericTypeArgumentSpecs)
-        {
-            var nameAndParameterCountMatches = GetMethodSpecs(methodName)
-                .Where(m => m.Parameters.Length == parameterSpecs.Length).ToArray();
-            var matchingMethods = nameAndParameterCountMatches.Where(m
-                    => m.HasExactGenericTypeParameters(genericTypeArgumentSpecs)
-                    && m.HasExactParameters(parameterSpecs)).ToArray();
-            if (!matchingMethods.Any())
-            {
-                return BaseSpec.MatchMethodSpecByNameAndParameterType(methodName, parameterSpecs, genericTypeArgumentSpecs);
-            }
-            else if (matchingMethods.Count() > 1)
-            {
-                _specManager.AddFault(this, FaultSeverity.Error, $"Multiple Methods found for signature. MethodName:{methodName}");
-                return null;
-            }
-            return matchingMethods.SingleOrDefault();
-        }
+        //public virtual MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs,
+        //    GenericParameterSpec[] genericTypeArgumentSpecs)
+        //{
+        //    var nameAndParameterCountMatches = GetMethodSpecs(methodName)
+        //        .Where(m => m.Parameters.Length == parameterSpecs.Length).ToArray();
+        //    var matchingMethods = nameAndParameterCountMatches.Where(m
+        //            => m.HasExactGenericTypeParameters(genericTypeArgumentSpecs)
+        //            && m.HasExactParameters(parameterSpecs)).ToArray();
+        //    if (!matchingMethods.Any())
+        //    {
+        //        return BaseSpec.MatchMethodSpecByNameAndParameterType(methodName, parameterSpecs, genericTypeArgumentSpecs);
+        //    }
+        //    else if (matchingMethods.Count() > 1)
+        //    {
+        //        _specManager.AddFault(this, FaultSeverity.Error, $"Multiple Methods found for signature. MethodName:{methodName}");
+        //        return null;
+        //    }
+        //    return matchingMethods.SingleOrDefault();
+        //}
 
-        public virtual MethodSpec MatchMethodSpecByNameAndParameterType(IHasExplicitName namedMember, ParameterSpec[] parameterSpecs, 
-            GenericParameterSpec[] genericTypeArgumentSpecs)
+        public virtual MethodSpec FindMatchingMethodSpec(IHasExplicitName namedMember, MethodSpec methodSpec)
         {
             var nameAndParameterCountMatches = GetMethodSpecs(namedMember)
-                .Where(m => m.Parameters.Length == parameterSpecs.Length).ToArray();
-            var matchingMethods = nameAndParameterCountMatches.Where(m
-                    => m.HasExactGenericTypeParameters(genericTypeArgumentSpecs)
-                    && m.HasExactParameters(parameterSpecs)).ToArray();
+                .Where(m => m.Parameters.Length == methodSpec.Parameters.Length).ToArray();
+            var matchingMethods = nameAndParameterCountMatches.Where(m => m.MatchesSpec(methodSpec)).ToArray();
             if (!matchingMethods.Any())
             {
-                return BaseSpec.MatchMethodSpecByNameAndParameterType(namedMember, parameterSpecs, genericTypeArgumentSpecs);
+                return BaseSpec.FindMatchingMethodSpec(namedMember, methodSpec);
             }
             else if (matchingMethods.Count() > 1)
             {
@@ -697,13 +695,13 @@ namespace AssemblyAnalyser
             return matchingMethods.SingleOrDefault();
         }
 
-        public MethodSpec MatchMethodReference(MethodReference methodReference)
-        {
-            var parameterSpecs = _specManager.TryLoadParameterSpecs(() => methodReference.Parameters.ToArray(), null);
-            var genericTypeArgumentSpecs = _specManager
-                .LoadTypeSpecs<GenericParameterSpec>(methodReference.GenericParameters).ToArray();
-            return MatchMethodSpecByNameAndParameterType(methodReference.Name, parameterSpecs, genericTypeArgumentSpecs);
-        }
+        //public MethodSpec MatchMethodReference(MethodReference methodReference)
+        //{
+        //    var parameterSpecs = _specManager.TryLoadParameterSpecs(() => methodReference.Parameters.ToArray(), null);
+        //    var genericTypeArgumentSpecs = _specManager
+        //        .LoadTypeSpecs<GenericParameterSpec>(methodReference.GenericParameters).ToArray();
+        //    return MatchMethodSpecByNameAndParameterType(methodReference.Name, parameterSpecs, genericTypeArgumentSpecs);
+        //}
 
         public string DecribeFields()
         {
