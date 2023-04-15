@@ -126,17 +126,17 @@ namespace AssemblyAnalyser.Tests
             Assert.IsTrue(genericInterface.GenericInstances.Contains(genericInstance));
         }
 
-        //[TestMethod] //Review Test - Is this a valid test?
-        //public void GenericClassSpecImplementsGenericInterface_Test()
-        //{
-        //    var genericClassSpec = _moduleSpec.GetTypeSpec($"{NAMESPACE}.{GENERIC_CLASS}");
-        //    var genericInterfaceSpec = _moduleSpec.GetTypeSpec($"{NAMESPACE}.{GENERIC_INTERFACE}");
+        [TestMethod]
+        public void GenericInstanceShouldAlwaysHaveSameSpec_Test()
+        {
+            //e.g.
+            //IEnumerable<int> as a ReturnType should be the EXACT SAME SPEC as IEnumerable<int> used as a PropertyType or ParameterType
+            //
+            //var genericTypeSpec = _moduleSpec.GetTypeSpec($"{NAMESPACE}.{GENERIC_CLASS_WITH_CLASS_TYPE_CONSTRAINTS}");
+            //var genericTypeParameterSpec = genericTypeSpec.GenericTypeParameters.SingleOrDefault();
 
-        //    genericClassSpec.ForceRebuildSpec();
-
-        //    Assert.IsTrue(genericInterfaceSpec.Implementations.Contains(genericClassSpec));
-
-        //}
+            //Assert.AreEqual(_basicClassSpec, genericTypeParameterSpec.BaseSpec);
+        }
 
         [TestMethod]
         public void GenericClassSpecHasGenericTypeConstraints_Test()
@@ -177,8 +177,8 @@ namespace AssemblyAnalyser.Tests
             var genericMethod = classWithGenericMethods.Methods.SingleOrDefault(n => n.Name == "MethodWithGenericReturnType");
             
             Assert.IsNotNull(genericMethod);
-            Assert.IsTrue(genericMethod.GenericTypeArguments.Any());
-            Assert.IsNotNull(genericMethod.GenericTypeArguments.SingleOrDefault());
+            Assert.IsTrue(genericMethod.GenericTypeParameters.Any());
+            Assert.IsNotNull(genericMethod.GenericTypeParameters.SingleOrDefault());
         }
 
         [TestMethod]
@@ -197,7 +197,7 @@ namespace AssemblyAnalyser.Tests
         {
             var classWithGenericMethods = _moduleSpec.GetTypeSpec($"{NAMESPACE}.{CLASS_WITH_GENERIC_METHODS}");
             var genericMethod = classWithGenericMethods.Methods.SingleOrDefault(n => n.Name == "MethodWithGenericReturnType");
-            var genericTypeArgument = genericMethod.GenericTypeArguments.SingleOrDefault();
+            var genericTypeArgument = genericMethod.GenericTypeParameters.SingleOrDefault();
 
 
             Assert.IsNotNull(genericMethod.ReturnType);
@@ -212,8 +212,8 @@ namespace AssemblyAnalyser.Tests
             var genericMethod = classWithGenericMethods.Methods.SingleOrDefault(n => n.Name == "MethodWithGenericTypeConstraints");
 
             Assert.IsNotNull(genericMethod);
-            Assert.IsTrue(genericMethod.GenericTypeArguments.Any());
-            Assert.IsNotNull(genericMethod.GenericTypeArguments.SingleOrDefault());
+            Assert.IsTrue(genericMethod.GenericTypeParameters.Any());
+            Assert.IsNotNull(genericMethod.GenericTypeParameters.SingleOrDefault());
         }
 
         [TestMethod]
@@ -221,7 +221,7 @@ namespace AssemblyAnalyser.Tests
         {
             var classWithGenericMethods = _moduleSpec.GetTypeSpec($"{NAMESPACE}.{CLASS_WITH_GENERIC_METHODS}");
             var genericMethod = classWithGenericMethods.Methods.SingleOrDefault(n => n.Name == "MethodWithGenericParameter");
-            var genericTypeArgument = genericMethod.GenericTypeArguments.SingleOrDefault();
+            var genericTypeArgument = genericMethod.GenericTypeParameters.SingleOrDefault();
 
             Assert.IsNotNull(genericMethod);
             Assert.AreEqual(genericMethod.Parameters.Single().ParameterType, genericTypeArgument);
@@ -232,7 +232,7 @@ namespace AssemblyAnalyser.Tests
         {
             var classWithGenericMethods = _moduleSpec.GetTypeSpec($"{NAMESPACE}.{CLASS_WITH_GENERIC_METHODS}");
             var genericMethod = classWithGenericMethods.Methods.SingleOrDefault(n => n.Name == "MethodWithMultipleGenericTypeArguments");
-            var genericTypeArguments = genericMethod.GenericTypeArguments;
+            var genericTypeArguments = genericMethod.GenericTypeParameters;
 
             Assert.IsTrue(genericTypeArguments.Count() > 1);
             
@@ -243,7 +243,7 @@ namespace AssemblyAnalyser.Tests
         {
             var classWithGenericMethods = _moduleSpec.GetTypeSpec($"{NAMESPACE}.{CLASS_WITH_GENERIC_METHODS}");
             var genericMethod = classWithGenericMethods.Methods.SingleOrDefault(n => n.Name == "MethodWithNestedGenericType");
-            var genericTypeArgument = genericMethod.GenericTypeArguments.SingleOrDefault();
+            var genericTypeArgument = genericMethod.GenericTypeParameters.SingleOrDefault();
 
             var returnType = genericMethod.ReturnType as GenericInstanceSpec;
             returnType.ForceRebuildSpec();

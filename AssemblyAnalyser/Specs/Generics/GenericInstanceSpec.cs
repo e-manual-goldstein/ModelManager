@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
-    public class GenericInstanceSpec : TypeSpec
+    public class GenericInstanceSpec : TypeSpec, IHasGenericParameters
     {
         GenericInstanceType _genericInstance;
 
@@ -33,6 +33,13 @@ namespace AssemblyAnalyser
         public TypeSpec InstanceOf => _instanceOf ??= TryGetInstanceOfType();
 
         public override bool IsInterface => InstanceOf.IsInterface;
+
+        public override bool MatchesSpec(TypeSpec typeSpec)
+        {
+            return typeSpec is GenericInstanceSpec genericInstanceSpec 
+                && InstanceOf.Equals(genericInstanceSpec.InstanceOf)
+                && genericInstanceSpec.HasExactGenericTypeParameters(GenericTypeParameters);
+        }
 
         private TypeSpec TryGetInstanceOfType()
         {

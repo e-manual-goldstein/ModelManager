@@ -105,6 +105,28 @@ namespace AssemblyAnalyser.Tests
             }            
         }
         #endregion
+        
+        [TestMethod]
+        //This is a test specifically for Types defined with Property members whose names do not match those of the implemented interfaces
+        //This feature appears to only be possible in VisualBasic and not C#
+        public void BasicPropertyWithAlternateNameHasOverride_Test()
+        {
+            var alternateNamedFunction = _basicVBClassSpec.Properties.Where(p => p.Name == "AlternateNamedProperty").Single();
 
+            Assert.IsNotNull(alternateNamedFunction.Overrides);
+            Assert.IsTrue(alternateNamedFunction.Overrides.Any());
+        }
+
+        [TestMethod]
+        //This is a test specifically for Types defined with Property members whose names do not match those of the implemented interfaces
+        //This feature appears to only be possible in VisualBasic and not C#
+        public void BasicPropertyWithAlternateNameMatchesInterfaceImplementation_Test()
+        {
+            var alternateNamedProperty = _basicVBClassSpec.Properties.Where(p => p.Name == "AlternateNamedProperty").Single();
+            alternateNamedProperty.DeclaringType.ForceRebuildSpec();
+
+            Assert.IsNotNull(alternateNamedProperty.Implements);
+
+        }
     }
 }

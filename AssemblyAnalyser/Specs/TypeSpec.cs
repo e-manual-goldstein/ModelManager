@@ -11,7 +11,7 @@ using System.IO;
 
 namespace AssemblyAnalyser
 {
-    public class TypeSpec : AbstractSpec, IHasGenericParameters
+    public class TypeSpec : AbstractSpec//, IHasGenericParameters
     {
         #region Error Spec
         static int error_count = 1;
@@ -314,24 +314,12 @@ namespace AssemblyAnalyser
 
         private void RegisterMemberImplementations(TypeSpec interfaceSpec)
         {
-            foreach (var interfaceProperty in interfaceSpec.Properties)
-            {
-                var propertySpec = GetPropertySpec(interfaceProperty.Name, true);
-                if (propertySpec == null)
-                {
-                    _specManager.AddFault(FaultSeverity.Error, $"{this} does not implement {interfaceProperty}");
-                }
-                else
-                {
-                    propertySpec.RegisterAsImplementation(interfaceProperty);
-                }
-            }
-            foreach (var interfaceMethod in interfaceSpec.Methods.Where(m => !m.IsSpecialName))
+            foreach (var interfaceMethod in interfaceSpec.Methods)
             {
                 if (!MatchMethodByOverride(interfaceMethod))
                 {
                     var methodSpec = MatchMethodSpecByNameAndParameterType(interfaceMethod.Name, interfaceMethod.Parameters,
-                        interfaceMethod.GenericTypeArguments);
+                        interfaceMethod.GenericTypeParameters);
                     if (methodSpec == null)
                     {
                         _specManager.AddFault(FaultSeverity.Error, $"{this} does not implement {interfaceMethod}");
@@ -342,15 +330,54 @@ namespace AssemblyAnalyser
                     }
                 }
             }
+            foreach (var interfaceProperty in interfaceSpec.Properties)
+            {
+                if (!MatchPropertyByOverride(interfaceProperty))
+                {
+                    var propertySpec = GetPropertySpec(interfaceProperty.Name, true);
+                    if (propertySpec == null)
+                    {
+                        _specManager.AddFault(FaultSeverity.Error, $"{this} does not implement {interfaceProperty}");
+                    }
+                    else
+                    {
+                        propertySpec.RegisterAsImplementation(interfaceProperty);
+                    }
+                }
+            }
         }
+
+        //private bool MatchPropertyByOverride(PropertySpec property)
+        //{
+        //    var overrides = GetAllPropertySpecs().Where(f => f.Overrides.Any()).ToDictionary(f => f, g => g.Overrides);
+        //    var methodOverride = GetAllMethodSpecs().SingleOrDefault(m => m.Overrides.Contains(interfaceMethod));
+        //    if (methodOverride != null)
+        //    {
+        //        methodOverride.RegisterAsImplementation(interfaceMethod);
+        //        return true;
+        //    }
+        //    return false;
+        //}
 
         private bool MatchMethodByOverride(MethodSpec interfaceMethod)
         {
-            var overrides = GetAllMethodSpecs().Where(f => !f.IsSpecialName && f.Overrides.Any()).ToDictionary(f => f, g => g.Overrides);
+            var overrides = GetAllMethodSpecs().Where(f => f.Overrides.Any()).ToDictionary(f => f, g => g.Overrides);
             var methodOverride = GetAllMethodSpecs().SingleOrDefault(m => m.Overrides.Contains(interfaceMethod));
             if (methodOverride != null)
             {
                 methodOverride.RegisterAsImplementation(interfaceMethod);
+                return true;
+            }
+            return false;
+        }
+
+        private bool MatchPropertyByOverride(PropertySpec property)
+        {
+            var overrides = GetAllPropertySpecs().Where(f => f.Overrides.Any()).ToDictionary(f => f, g => g.Overrides);
+            var methodOverride = GetAllPropertySpecs().SingleOrDefault(m => m.Overrides.Contains(property));
+            if (methodOverride != null)
+            {
+                methodOverride.RegisterAsImplementation(property);
                 return true;
             }
             return false;
@@ -625,7 +652,7 @@ namespace AssemblyAnalyser
                     => m.Name == methodName
                     && m.Parameters.Length == parameterSpecs.Length).ToArray();
             var matchingMethods = nameAndParameterCountMatches.Where(m
-                    => m.HasExactGenericTypeArguments(genericTypeArgumentSpecs)
+                    => m.HasExactGenericTypeParameters(genericTypeArgumentSpecs)
                     && m.HasExactParameters(parameterSpecs)
                     ).ToArray();
             if (matchingMethods.Count() > 1)

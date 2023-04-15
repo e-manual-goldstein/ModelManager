@@ -1,4 +1,5 @@
 ﻿using Mono.Cecil;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -29,6 +30,9 @@ namespace AssemblyAnalyser
 
         TypeSpec _declaringType;
         public TypeSpec DeclaringType => _declaringType ??= GetDeclaringType();
+
+        PropertySpec[] _overrides;
+        public PropertySpec[] Overrides => _overrides ??= TryGetOverrides();
 
         public override bool IsSystem => DeclaringType.IsSystem;
 
@@ -81,13 +85,38 @@ namespace AssemblyAnalyser
         private MethodSpec TryGetGetter()
         {
             var spec = _specManager.LoadMethodSpec(_propertyDefinition.GetMethod);
+            spec?.RegisterAsSpecialNameMethodFor(this);
             return spec;
         }
 
         private MethodSpec TryGetSetter()
         {
             var spec = _specManager.LoadMethodSpec(_propertyDefinition.SetMethod);
+            spec?.RegisterAsSpecialNameMethodFor(this);
             return spec;
+        }
+
+        private PropertySpec[] TryGetOverrides()
+        {
+            var getterOverrides = TryGetGetterOverrides();
+            var setterOverrides = TryGetSetterOverrides();
+            if ((getterOverrides.Except(setterOverrides).Any() && Setter != null) 
+                || (setterOverrides.Except(getterOverrides).Any() && Getter != null))
+            {
+                _specManager.AddFault(FaultSeverity.Critical, "Unexpected mismatch of Overrides");
+                return Array.Empty<PropertySpec>();
+            }
+            return getterOverrides.Intersect(setterOverrides).Cast<PropertySpec>().ToArray();
+        }
+
+        private PropertySpec[] TryGetGetterOverrides()
+        {
+            return Getter?.Overrides.Select(o => o.SpecialNameMethodForMember).Cast<PropertySpec>().ToArray() ?? Array.Empty<PropertySpec>();            
+        }
+
+        private PropertySpec[] TryGetSetterOverrides()
+        {
+            return Setter?.Overrides.Select(o => o.SpecialNameMethodForMember).Cast<PropertySpec>().ToArray() ?? Array.Empty<PropertySpec>();
         }
 
         private TypeSpec GetDeclaringType()
@@ -107,7 +136,7 @@ namespace AssemblyAnalyser
 
         public override string ToString()
         {
-            return _propertyDefinition.Name;
+            return $"{DeclaringType}.{_propertyDefinition.Name}";
         }
     }
 }

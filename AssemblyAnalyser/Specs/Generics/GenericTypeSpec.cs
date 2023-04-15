@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
-    public class GenericTypeSpec : TypeSpec
+    public class GenericTypeSpec : TypeSpec, IHasGenericParameters
     {
 
 

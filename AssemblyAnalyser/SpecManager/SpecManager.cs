@@ -63,6 +63,9 @@ namespace AssemblyAnalyser
         {
             switch (faultSeverity)
             {
+                case FaultSeverity.Critical:
+                    _logger.Log(LogLevel.Critical, faultMessage);
+                    break;
                 case FaultSeverity.Error:
                     _logger.Log(LogLevel.Error, faultMessage);
                     break;

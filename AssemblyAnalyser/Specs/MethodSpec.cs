@@ -40,8 +40,8 @@ namespace AssemblyAnalyser
         ParameterSpec[] _parameters;
         public ParameterSpec[] Parameters => _parameters ??= _specManager.TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray(), this);
 
-        GenericParameterSpec[] _genericTypeArguments;
-        public GenericParameterSpec[] GenericTypeArguments => _genericTypeArguments ??= TryGetGenericTypeArguments();
+        GenericParameterSpec[] _genericTypeParameters;
+        public GenericParameterSpec[] GenericTypeParameters => _genericTypeParameters ??= TryGetGenericTypeParameters();
 
         List<TypeSpec> _localVariableTypes = new List<TypeSpec>();
         public TypeSpec[] LocalVariableTypes => _localVariableTypes.ToArray();
@@ -60,6 +60,25 @@ namespace AssemblyAnalyser
         public void RegisterAsImplementation(MethodSpec interfaceProperty)
         {
             _implements = interfaceProperty;
+        }
+
+        IMemberSpec _specialNameMethodForMember;
+        public IMemberSpec SpecialNameMethodForMember => _specialNameMethodForMember ??= TryGetMemberForSpecialName();
+
+        public void RegisterAsSpecialNameMethodFor(IMemberSpec memberSpec)
+        {
+            if (_specialNameMethodForMember != null)
+            {
+                if (_specialNameMethodForMember == memberSpec)
+                {
+                    _specManager.AddFault(FaultSeverity.Debug, $"Re-registering identical memberSpec for {nameof(SpecialNameMethodForMember)}");
+                }
+                else
+                {
+                    _specManager.AddFault(FaultSeverity.Error, $"Attempt to over-write {nameof(SpecialNameMethodForMember)}");
+                }
+            }
+            _specialNameMethodForMember = memberSpec;
         }
 
         protected override void BuildSpec()
@@ -87,14 +106,14 @@ namespace AssemblyAnalyser
             return _specManager.LoadTypeSpec(_methodDefinition.DeclaringType);            
         }
 
-        private GenericParameterSpec[] TryGetGenericTypeArguments()
+        private GenericParameterSpec[] TryGetGenericTypeParameters()
         {
             var genericArgumentSpecs = _specManager
                 .LoadTypeSpecs<GenericParameterSpec>(_methodDefinition.GenericParameters).ToArray();
             {
                 foreach (var genericArgSpec in genericArgumentSpecs)
                 {
-                    genericArgSpec.RegisterAsGenericTypeArgumentFor(this);
+                    genericArgSpec.RegisterAsGenericTypeParameterFor(this);
                 }
             }
             return genericArgumentSpecs;
@@ -103,6 +122,16 @@ namespace AssemblyAnalyser
         private MethodSpec[] TryGetOverrides()
         {
             return _specManager.LoadSpecsForMethodReferences(_methodDefinition.Overrides).ToArray();
+        }
+
+        private IMemberSpec TryGetMemberForSpecialName()
+        {
+            var properties = DeclaringType.GetAllPropertySpecs().Where(p => p.InnerSpecs().Contains(this)).ToArray();
+            if (properties.Count() > 1)
+            {
+
+            }
+            return properties.SingleOrDefault();
         }
 
         protected override CustomAttribute[] GetAttributes()
@@ -207,13 +236,13 @@ namespace AssemblyAnalyser
         //    return false;
         //}
 
-        public bool HasExactGenericTypeArguments(GenericParameterSpec[] genericTypeArgumentSpecs)
+        public bool HasExactGenericTypeParameters(GenericParameterSpec[] genericTypeParameterSpecs)
         {
-            if (genericTypeArgumentSpecs.Length == GenericTypeArguments.Length)
+            if (genericTypeParameterSpecs.Length == GenericTypeParameters.Length)
             {
-                for (int i = 0; i < GenericTypeArguments.Length; i++)
+                for (int i = 0; i < GenericTypeParameters.Length; i++)
                 {
-                    if (!GenericTypeArguments[i].IsValidGenericTypeMatchFor(genericTypeArgumentSpecs[i]))
+                    if (!GenericTypeParameters[i].IsValidGenericTypeMatchFor(genericTypeParameterSpecs[i]))
                     {
                         return false;
                     }

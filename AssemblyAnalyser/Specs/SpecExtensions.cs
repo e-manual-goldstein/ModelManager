@@ -18,5 +18,22 @@ namespace AssemblyAnalyser
             }
             return false;
         }
+
+        public static bool HasExactGenericTypeParameters(this IHasGenericParameters hasGenericParameters
+            , GenericParameterSpec[] genericTypeParameterSpecs)
+        {
+            if (genericTypeParameterSpecs.Length == hasGenericParameters.GenericTypeParameters.Length)
+            {
+                for (int i = 0; i < hasGenericParameters.GenericTypeParameters.Length; i++)
+                {
+                    if (!hasGenericParameters.GenericTypeParameters[i].IsValidGenericTypeMatchFor(genericTypeParameterSpecs[i]))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
     }
 }

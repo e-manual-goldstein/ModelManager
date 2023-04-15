@@ -116,7 +116,7 @@ namespace AssemblyAnalyser.Tests
             var overloadedMethods = _basicClassSpec.GetMethodSpecs("OverloadedMethod");
             foreach (var overload in overloadedMethods)
             {
-                var methodSpec = _basicClassSpec.MatchMethodSpecByNameAndParameterType(overload.Name, overload.Parameters, overload.GenericTypeArguments);
+                var methodSpec = _basicClassSpec.MatchMethodSpecByNameAndParameterType(overload.Name, overload.Parameters, overload.GenericTypeParameters);
                 Assert.IsNotNull(methodSpec);
             }
         }

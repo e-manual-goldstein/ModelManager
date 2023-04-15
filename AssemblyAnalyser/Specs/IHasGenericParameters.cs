@@ -8,5 +8,6 @@ namespace AssemblyAnalyser
 {
     public interface IHasGenericParameters : ISpec
     {
+        GenericParameterSpec[] GenericTypeParameters { get; }
     }
 }

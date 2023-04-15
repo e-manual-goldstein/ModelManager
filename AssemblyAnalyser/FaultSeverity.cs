@@ -8,6 +8,7 @@ namespace AssemblyAnalyser
 {
     public enum FaultSeverity
     {
+        Critical,
         Error,
         Warning,
         Information,

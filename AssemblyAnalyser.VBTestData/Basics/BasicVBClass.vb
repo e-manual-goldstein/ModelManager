@@ -19,6 +19,15 @@ Namespace AssemblyAnalyser.VBTestData.Basics
             End Get
         End Property
 
+        Public Property AlternateNamedProperty As String Implements IBasicVBInterface.BasicProperty
+            Get
+                Return ""
+            End Get
+            Set(value As String)
+                
+            End Set
+        End Property
+
         Public Function BasicFunction(str As String) As String
             Return 0
         End Function
