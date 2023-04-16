@@ -52,7 +52,7 @@ namespace AssemblyAnalyser.Tests
             var interfaceImplementation = _basicClassSpec.GetPropertySpec(interfaceProperty.ExplicitName);
             
             Assert.IsNotNull(interfaceImplementation.ImplementationFor);
-            Assert.AreEqual(interfaceImplementation.ImplementationFor, interfaceProperty);
+            Assert.IsTrue(interfaceImplementation.ImplementationFor.Contains(interfaceProperty));
         }
 
         [TestMethod]

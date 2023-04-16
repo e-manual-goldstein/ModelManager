@@ -330,7 +330,7 @@ namespace AssemblyAnalyser
                     }
                 }
             }
-            foreach (var interfaceProperty in interfaceSpec.Properties.Where(p => p.ImplementationFor == null))
+            foreach (var interfaceProperty in interfaceSpec.Properties)
             {
                 if (!MatchBySpecialNameMethods(interfaceProperty))
                 {

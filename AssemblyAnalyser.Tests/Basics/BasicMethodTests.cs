@@ -62,7 +62,7 @@ namespace AssemblyAnalyser.Tests
             var methodImpl = interfaceImplementations.Single();
 
             Assert.IsNotNull(methodImpl.ImplementationFor);
-            Assert.AreEqual(methodImpl.ImplementationFor, interfaceMethod);
+            Assert.IsTrue(methodImpl.ImplementationFor.Contains(interfaceMethod));
         }
 
 
