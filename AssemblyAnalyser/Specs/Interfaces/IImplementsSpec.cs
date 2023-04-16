@@ -2,7 +2,7 @@
 {
     internal interface IImplementsSpec<TSpec> where TSpec : AbstractSpec
     {
-        TSpec Implements { get; }
+        TSpec[] ImplementationFor { get; }
 
         void RegisterAsImplementation(TSpec implementedSpec);
     }

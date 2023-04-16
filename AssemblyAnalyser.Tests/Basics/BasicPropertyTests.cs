@@ -41,7 +41,7 @@ namespace AssemblyAnalyser.Tests
         {
             _basicClassSpec.ForceRebuildSpec();
             var interfaceImplementation = _basicClassSpec.GetPropertySpec("ReadOnlyInterfaceImpl");
-            Assert.IsNotNull(interfaceImplementation.Implements);
+            Assert.IsNotNull(interfaceImplementation.ImplementationFor);
         }
 
         [TestMethod]
@@ -51,8 +51,8 @@ namespace AssemblyAnalyser.Tests
             var interfaceProperty = _basicInterfaceSpec.GetPropertySpec("PropertyForExplicitImplementation");
             var interfaceImplementation = _basicClassSpec.GetPropertySpec(interfaceProperty.ExplicitName);
             
-            Assert.IsNotNull(interfaceImplementation.Implements);
-            Assert.AreEqual(interfaceImplementation.Implements, interfaceProperty);
+            Assert.IsNotNull(interfaceImplementation.ImplementationFor);
+            Assert.AreEqual(interfaceImplementation.ImplementationFor, interfaceProperty);
         }
 
         [TestMethod]
@@ -136,7 +136,7 @@ namespace AssemblyAnalyser.Tests
             var alternateNamedProperty = _basicVBClassSpec.Properties.Where(p => p.Name == "AlternateNamedProperty").Single();
             alternateNamedProperty.DeclaringType.ForceRebuildSpec();
 
-            Assert.IsNotNull(alternateNamedProperty.Implements);
+            Assert.IsNotNull(alternateNamedProperty.ImplementationFor);
 
         }
     }

@@ -58,12 +58,15 @@ namespace AssemblyAnalyser
         public bool IsConstructor { get; }
         public bool IsSpecialName { get; }
 
-        MethodSpec _implements;
-        public MethodSpec Implements => _implements;
+        List<MethodSpec> _implementationFor = new();
+        public MethodSpec[] ImplementationFor => _implementationFor.ToArray();
 
-        public void RegisterAsImplementation(MethodSpec interfaceProperty)
+        public void RegisterAsImplementation(MethodSpec implementedSpec)
         {
-            _implements = interfaceProperty;
+            if (!_implementationFor.Contains(implementedSpec))
+            {
+                _implementationFor.Add(implementedSpec);
+            }
         }
 
         IMemberSpec _specialNameMethodForMember;

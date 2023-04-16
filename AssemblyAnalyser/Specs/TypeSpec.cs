@@ -330,7 +330,7 @@ namespace AssemblyAnalyser
                     }
                 }
             }
-            foreach (var interfaceProperty in interfaceSpec.Properties.Where(p => p.Implements == null))
+            foreach (var interfaceProperty in interfaceSpec.Properties.Where(p => p.ImplementationFor == null))
             {
                 if (!MatchBySpecialNameMethods(interfaceProperty))
                 {
@@ -352,10 +352,10 @@ namespace AssemblyAnalyser
 
         protected virtual bool MatchBySpecialNameMethods(PropertySpec interfaceProperty)
         {
-            var specialNameMethods = Methods.Where(m => m.IsSpecialName && m.Implements != null).ToArray();
+            var specialNameMethods = Methods.Where(m => m.IsSpecialName && m.ImplementationFor != null).ToArray();
             var implementers = specialNameMethods.Where(m 
-                => m.Implements == interfaceProperty.Getter
-                || m.Implements == interfaceProperty.Setter)
+                => m.ImplementationFor.Contains(interfaceProperty.Getter)
+                || m.ImplementationFor.Contains(interfaceProperty.Setter))
                 .ToArray();
             var backedProperties = implementers.Select(m => m.SpecialNameMethodForMember).Distinct().ToArray();
             if (!backedProperties.Any())

@@ -39,15 +39,15 @@ namespace AssemblyAnalyser
 
         public override bool IsSystem => DeclaringType.IsSystem;
 
-        PropertySpec _implements;
-        public PropertySpec Implements => _implements;
+        List<PropertySpec> _implementationFor = new();
+        public PropertySpec[] ImplementationFor => _implementationFor.ToArray();
 
         public void RegisterAsImplementation(PropertySpec implementedSpec)
         {
-            _implements = implementedSpec;
-            _specManager.AddFault(FaultSeverity.Debug, "Is there a scenario where an implemented Property does not match both the underlying Getter and Setter?");
-            //Getter?.RegisterAsImplementation(implementedSpec.Getter);
-            //Setter?.RegisterAsImplementation(implementedSpec.Setter);
+            if (!_implementationFor.Contains(implementedSpec))
+            {
+                _implementationFor.Add(implementedSpec);
+            }
         }
 
         ParameterSpec[] _parameters;
