@@ -2,12 +2,13 @@
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace AssemblyAnalyser
 {
-    public class MethodSpec : AbstractSpec, IMemberSpec, IHasParameters, IImplementsSpec<MethodSpec>
+    public class MethodSpec : AbstractMemberSpec<MethodSpec>, IHasParameters
     {
         protected MethodDefinition _methodDefinition;
 
@@ -30,22 +31,26 @@ namespace AssemblyAnalyser
 
         }
 
-        public string ExplicitName { get; protected set; }
+        //public string ExplicitName { get; protected set; }
+
         public MethodDefinition Definition => _methodDefinition;
 
-        TypeSpec IMemberSpec.ResultType => ReturnType;
+        public override bool IsSystem => DeclaringType.IsSystem;
+
+        public bool IsConstructor { get; }
+
+        public bool IsSpecialName { get; }
+
+        public override TypeSpec ResultType => ReturnType;
 
         TypeSpec _returnType;
         public TypeSpec ReturnType => _returnType ??= TryGetReturnType();
-
-        TypeSpec _declaringType;
-        public TypeSpec DeclaringType => _declaringType ??= TryGetDeclaringType();
 
         MethodSpec[] _overrides;
         public MethodSpec[] Overrides => _overrides ??= TryGetOverrides();
 
         ParameterSpec[] _parameters;
-        public ParameterSpec[] Parameters => _parameters ??= _specManager.TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray(), this);
+        public ParameterSpec[] Parameters => _parameters ??= TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray());
 
         List<TypeSpec> _localVariableTypes = new List<TypeSpec>();
         public TypeSpec[] LocalVariableTypes => _localVariableTypes.ToArray();
@@ -53,21 +58,16 @@ namespace AssemblyAnalyser
         List<TypeSpec> _exceptionCatchTypes = new List<TypeSpec>();
         public TypeSpec[] ExceptionCatchTypes => _exceptionCatchTypes.ToArray();
 
-        public override bool IsSystem => DeclaringType.IsSystem;
+        //List<MethodSpec> _implementationFor = new();
+        //public MethodSpec[] ImplementationFor => _implementationFor.ToArray();
 
-        public bool IsConstructor { get; }
-        public bool IsSpecialName { get; }
-
-        List<MethodSpec> _implementationFor = new();
-        public MethodSpec[] ImplementationFor => _implementationFor.ToArray();
-
-        public void RegisterAsImplementation(MethodSpec implementedSpec)
-        {
-            if (!_implementationFor.Contains(implementedSpec))
-            {
-                _implementationFor.Add(implementedSpec);
-            }
-        }
+        //public void RegisterAsImplementation(MethodSpec implementedSpec)
+        //{
+        //    if (!_implementationFor.Contains(implementedSpec))
+        //    {
+        //        _implementationFor.Add(implementedSpec);
+        //    }
+        //}
 
         IMemberSpec _specialNameMethodForMember;
         public IMemberSpec SpecialNameMethodForMember => _specialNameMethodForMember ??= TryGetMemberForSpecialName();
@@ -89,7 +89,7 @@ namespace AssemblyAnalyser
         protected override void BuildSpec()
         {
             _returnType = TryGetReturnType();
-            _parameters = _specManager.TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray(), this);
+            _parameters = TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray());
             if (_methodDefinition.Body is MethodBody body)
             {
                 //ProcessMethodBodyOperands(body);
@@ -106,7 +106,7 @@ namespace AssemblyAnalyser
             return returnTypeSpec;
         }
 
-        private TypeSpec TryGetDeclaringType()
+        protected override TypeSpec TryGetDeclaringType()
         {
             var typeSpec = _specManager.LoadTypeSpec(_methodDefinition.DeclaringType);
             if (typeSpec.IsNullSpec)

@@ -18,11 +18,15 @@ namespace AssemblyAnalyser.Tests
         public override void Initialize() 
         {
             base.Initialize();
-            _specManager.ProcessSpecs(_moduleSpec.TypeSpecs, false);
-            _specManager.ProcessSpecs(_moduleSpec.TypeSpecs.SelectMany(t => t.Properties));
-            _specManager.ProcessSpecs(_moduleSpec.TypeSpecs.SelectMany(t => t.Methods));
+            var types = _moduleSpec.TypeSpecs;
+            _specManager.ProcessSpecs(types, false);
+            var methods = types.SelectMany(t => t.Methods);
+            var properties = types.SelectMany(t => t.Properties);
+            _specManager.ProcessSpecs(methods);
+            _specManager.ProcessSpecs(properties);
             _specManager.ProcessLoadedFields();
-            _specManager.ProcessLoadedParameters();
+            var parameters = methods.SelectMany(m => m.Parameters).Union(properties.SelectMany(p => p.Parameters));
+            _specManager.ProcessSpecs(parameters, false);
             _specManager.ProcessLoadedEvents();
             //_specManager.ProcessLoadedAttributes();
             _basicAttribute = _moduleSpec.TypeSpecs

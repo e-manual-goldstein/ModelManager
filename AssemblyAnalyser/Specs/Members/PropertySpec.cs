@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace AssemblyAnalyser
 {
-    public class PropertySpec : AbstractSpec, IMemberSpec, IHasParameters, IImplementsSpec<PropertySpec>
+    public class PropertySpec : AbstractMemberSpec<PropertySpec>, IHasParameters
     {
         private PropertyDefinition _propertyDefinition;
 
@@ -17,8 +17,6 @@ namespace AssemblyAnalyser
             ExplicitName = $"{propertyDefinition.DeclaringType.FullName}.{Name}";            
         }
 
-        public string ExplicitName { get; }
-
         public PropertyDefinition Definition => _propertyDefinition;
 
         private MethodSpec _getter;
@@ -27,31 +25,18 @@ namespace AssemblyAnalyser
         private MethodSpec _setter;
         public MethodSpec Setter => _setter ??= TryGetSetter();
 
-        TypeSpec IMemberSpec.ResultType => PropertyType;
+        public override TypeSpec ResultType => PropertyType;
+
         TypeSpec _propertyType;
         public TypeSpec PropertyType => _propertyType ??= GetPropertyType();
-
-        TypeSpec _declaringType;
-        public TypeSpec DeclaringType => _declaringType ??= GetDeclaringType();
 
         PropertySpec[] _overrides;
         public PropertySpec[] Overrides => _overrides ??= TryGetOverrides();
 
         public override bool IsSystem => DeclaringType.IsSystem;
 
-        List<PropertySpec> _implementationFor = new();
-        public PropertySpec[] ImplementationFor => _implementationFor.ToArray();
-
-        public void RegisterAsImplementation(PropertySpec implementedSpec)
-        {
-            if (!_implementationFor.Contains(implementedSpec))
-            {
-                _implementationFor.Add(implementedSpec);
-            }
-        }
-
         ParameterSpec[] _parameters;
-        public ParameterSpec[] Parameters => _parameters ??= _specManager.TryLoadParameterSpecs(() => _propertyDefinition.Parameters.ToArray(), this);
+        public ParameterSpec[] Parameters => _parameters ??= TryLoadParameterSpecs(() => _propertyDefinition.Parameters.ToArray());
 
         public IEnumerable<MethodDefinition> InnerMethods()
         {
@@ -122,7 +107,7 @@ namespace AssemblyAnalyser
             return Setter?.Overrides.Select(o => o.SpecialNameMethodForMember).Cast<PropertySpec>().ToArray() ?? Array.Empty<PropertySpec>();
         }
 
-        private TypeSpec GetDeclaringType()
+        protected override TypeSpec TryGetDeclaringType()
         {
             var typeSpec = _specManager.LoadTypeSpec(_propertyDefinition.DeclaringType);
             if (typeSpec == null || typeSpec.IsNullSpec)

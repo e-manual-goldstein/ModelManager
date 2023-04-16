@@ -45,5 +45,11 @@ namespace AssemblyAnalyser.Specs
         {
             return $"[M]{ModuleFullName}";
         }
+
+        public override TypeSpec LoadTypeSpec(TypeReference type)
+        {
+            return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, type.IsArray), 
+                (key) => new MissingTypeSpec($"{type.Namespace}.{type.Name}", type.FullName, _specManager));
+        }
     }
 }

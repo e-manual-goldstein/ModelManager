@@ -487,8 +487,6 @@ namespace AssemblyAnalyser
 
         #region Property Specs
 
-        public IReadOnlyDictionary<string, PropertySpec> PropertySpecs => _propertySpecs;
-
         ConcurrentDictionary<string, PropertySpec> _propertySpecs = new ConcurrentDictionary<string, PropertySpec>();
 
         public PropertySpec LoadPropertySpec(PropertyDefinition propertyDefinition)
@@ -582,16 +580,19 @@ namespace AssemblyAnalyser
             }
         }
 
+        protected ConcurrentDictionary<IMemberSpec, TypeSpec> _resultTypeLookup = new();
         protected List<IMemberSpec> _resultTypeSpecs = new List<IMemberSpec>();
         public IMemberSpec[] ResultTypeSpecs => _resultTypeSpecs.ToArray();
+        
 
         public virtual void RegisterAsResultType(IMemberSpec methodSpec)
         {
-            if (!_resultTypeSpecs.Contains(methodSpec))
-            {
-                _resultTypeSpecs.Add(methodSpec);
-                RegisterDependentTypeForModule(methodSpec.DeclaringType);
-            }
+            _resultTypeLookup.GetOrAdd(methodSpec, (spec) => spec.DeclaringType);
+            //if (!_resultTypeSpecs.Contains(methodSpec))
+            //{
+            //    _resultTypeSpecs.Add(methodSpec);
+            //    RegisterDependentTypeForModule(methodSpec.DeclaringType);
+            //}
         }
 
         protected List<ParameterSpec> _dependentParameterSpecs = new List<ParameterSpec>();
@@ -624,12 +625,12 @@ namespace AssemblyAnalyser
 
         public virtual void RegisterAsDecorator(AbstractSpec decoratedSpec)
         {
-            if (!_decoratorForSpecs.Contains(decoratedSpec))
-            {
-                _decoratorForSpecs.Add(decoratedSpec);
-                //TODO Finish this part
-                //Assembly.RegisterDependentType(decoratedSpec);
-            }
+            //if (!_decoratorForSpecs.Contains(decoratedSpec))
+            //{
+            //    _decoratorForSpecs.Add(decoratedSpec);
+            //    //TODO Finish this part
+            //    //Assembly.RegisterDependentType(decoratedSpec);
+            //}
         }
 
         List<EventSpec> _delegateFor = new List<EventSpec>();

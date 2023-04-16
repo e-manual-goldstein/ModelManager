@@ -156,7 +156,7 @@ namespace AssemblyAnalyser
 
             internal void Add(string assemblyName, string assemblyPath)
             {
-                if (FilePaths.TryAdd(assemblyName, assemblyPath));
+                if (FilePaths.TryAdd(assemblyName, assemblyPath))
                 lock (_lock)
                 {
                     SaveCache();

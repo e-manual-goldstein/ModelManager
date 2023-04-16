@@ -104,7 +104,7 @@ namespace AssemblyAnalyser
         {
             _moduleSpecs.Clear();
             //_methodSpecs.Clear();
-            _parameterSpecs.Clear();
+            //_parameterSpecs.Clear();
             //_propertySpecs.Clear();
             _fieldSpecs.Clear();
         }
@@ -133,7 +133,7 @@ namespace AssemblyAnalyser
             //ProcessAllAssemblies(includeSystem, parallelProcessing);
             //ProcessLoadedMethods(includeSystem, parallelProcessing);
             //ProcessLoadedProperties(includeSystem);
-            ProcessLoadedParameters(includeSystem);
+            //ProcessLoadedParameters(includeSystem);
             ProcessLoadedFields(includeSystem);
             ProcessLoadedEvents(includeSystem);
             ProcessLoadedAttributes(includeSystem);
@@ -182,6 +182,10 @@ namespace AssemblyAnalyser
             {
                 return _moduleSpecs.GetOrAdd(typeReference.Module.Name,
                     (key) => CreateFullModuleSpec(typeReference.Module));
+            }
+            if (_moduleSpecs.TryGetValue(typeReference.Scope.GetScopeNameWithoutExtension(), out ModuleSpec scopeModuleSpec))
+            {
+                return scopeModuleSpec;
             }
             if (typeReference.Resolve() is TypeDefinition typeDefinition)
             {
@@ -372,7 +376,7 @@ namespace AssemblyAnalyser
 
         #region Property Specs
 
-        public PropertySpec[] PropertySpecs => TypeSpecs.SelectMany(t => t.PropertySpecs.Values).ToArray();
+        public PropertySpec[] PropertySpecs => TypeSpecs.SelectMany(t => t.Properties).ToArray();
 
         public PropertySpec LoadPropertySpec(PropertyReference propertyReference, bool allowNull)
         {
@@ -396,51 +400,51 @@ namespace AssemblyAnalyser
 
         #region Parameter Specs
 
-        public IReadOnlyDictionary<ParameterDefinition, ParameterSpec> Parameters => _parameterSpecs;
+        //public IReadOnlyDictionary<ParameterDefinition, ParameterSpec> Parameters => _parameterSpecs;
 
-        ConcurrentDictionary<ParameterDefinition, ParameterSpec> _parameterSpecs = new ConcurrentDictionary<ParameterDefinition, ParameterSpec>();
+        //ConcurrentDictionary<ParameterDefinition, ParameterSpec> _parameterSpecs = new ConcurrentDictionary<ParameterDefinition, ParameterSpec>();
 
-        public void ProcessLoadedParameters(bool includeSystem = true)
-        {
-            foreach (var (parameterName, param) in Parameters.Where(t => includeSystem || t.Value.IsSystemParameter.Equals(false)))
-            {
-                param.Process();
-            }
-        }
+        //public void ProcessLoadedParameters(bool includeSystem = true)
+        //{
+        //    foreach (var (parameterName, param) in Parameters.Where(t => includeSystem || t.Value.IsSystemParameter.Equals(false)))
+        //    {
+        //        param.Process();
+        //    }
+        //}
 
-        private ParameterSpec LoadParameterSpec(ParameterDefinition parameterDefinition, IMemberSpec member)
-        {
-            return _parameterSpecs.GetOrAdd(parameterDefinition, CreateParameterSpec(parameterDefinition, member));
-        }
+        //private ParameterSpec LoadParameterSpec(ParameterDefinition parameterDefinition, IMemberSpec member)
+        //{
+        //    return _parameterSpecs.GetOrAdd(parameterDefinition, CreateParameterSpec(parameterDefinition, member));
+        //}
 
-        private ParameterSpec CreateParameterSpec(ParameterDefinition parameterDefinition, IMemberSpec member)
-        {
-            //var typeSpecs = LoadTypeSpecs(parameterDefinition.CustomAttributes.Select(t => t.AttributeType));
-            return new ParameterSpec(parameterDefinition, member, this);
-        }
+        //private ParameterSpec CreateParameterSpec(ParameterDefinition parameterDefinition, IMemberSpec member)
+        //{
+        //    //var typeSpecs = LoadTypeSpecs(parameterDefinition.CustomAttributes.Select(t => t.AttributeType));
+        //    return new ParameterSpec(parameterDefinition, member, this);
+        //}
 
-        public ParameterSpec[] LoadParameterSpecs(ParameterDefinition[] parameterDefinitions, IMemberSpec member)
-        {
-            return parameterDefinitions?.Select(p => LoadParameterSpec(p, member)).ToArray();
-        }
+        //public ParameterSpec[] LoadParameterSpecs(ParameterDefinition[] parameterDefinitions, IMemberSpec member)
+        //{
+        //    return parameterDefinitions?.Select(p => LoadParameterSpec(p, member)).ToArray();
+        //}
 
-        public ParameterSpec[] TryLoadParameterSpecs(Func<ParameterDefinition[]> parameterDefinitions, IMemberSpec member)
-        {
-            ParameterDefinition[] parameterInfos = null;
-            try
-            {
-                parameterInfos = parameterDefinitions();
-            }
-            catch (TypeLoadException typeLoadException)
-            {
+        //public ParameterSpec[] TryLoadParameterSpecs(Func<ParameterDefinition[]> parameterDefinitions, IMemberSpec member)
+        //{
+        //    ParameterDefinition[] parameterInfos = null;
+        //    try
+        //    {
+        //        parameterInfos = parameterDefinitions();
+        //    }
+        //    catch (TypeLoadException typeLoadException)
+        //    {
 
-            }
-            catch (Exception)
-            {
+        //    }
+        //    catch (Exception)
+        //    {
 
-            }
-            return LoadParameterSpecs(parameterInfos, member);
-        }
+        //    }
+        //    return LoadParameterSpecs(parameterInfos, member);
+        //}
 
         #endregion
 

@@ -64,7 +64,7 @@ namespace AssemblyAnalyser
 
         public TypeSpec[] TypeSpecs => _typeSpecs.Values.ToArray();
 
-        ConcurrentDictionary<string, TypeSpec> _typeSpecs = new ConcurrentDictionary<string, TypeSpec>();
+        protected ConcurrentDictionary<string, TypeSpec> _typeSpecs = new ConcurrentDictionary<string, TypeSpec>();
 
         public TypeSpec[] TryLoadTypesForModule(ModuleDefinition module)
         {
@@ -75,7 +75,7 @@ namespace AssemblyAnalyser
             return typeSpecs;
         }
 
-        public TypeSpec LoadTypeSpec(TypeReference type)
+        public virtual TypeSpec LoadTypeSpec(TypeReference type)
         {
             if (type == null)
             {
@@ -84,7 +84,7 @@ namespace AssemblyAnalyser
             return LoadFullTypeSpec(type);
         }
 
-        private string CreateUniqueTypeSpecName(TypeReference type, bool isArray)
+        protected string CreateUniqueTypeSpecName(TypeReference type, bool isArray)
         {
             var suffix = isArray ? "[]" : null;
             if (type is GenericParameter genericParameter)
