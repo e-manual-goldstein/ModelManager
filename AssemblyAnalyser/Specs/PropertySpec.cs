@@ -46,8 +46,8 @@ namespace AssemblyAnalyser
         {
             _implements = implementedSpec;
             _specManager.AddFault(FaultSeverity.Debug, "Is there a scenario where an implemented Property does not match both the underlying Getter and Setter?");
-            Getter?.RegisterAsImplementation(implementedSpec.Getter);
-            Setter?.RegisterAsImplementation(implementedSpec.Setter);
+            //Getter?.RegisterAsImplementation(implementedSpec.Getter);
+            //Setter?.RegisterAsImplementation(implementedSpec.Setter);
         }
 
         ParameterSpec[] _parameters;

@@ -42,7 +42,7 @@ namespace AssemblyAnalyser.Extensions
         public static string CreateUniqueMethodName(this MethodDefinition methodDefinition)
         {
             return methodDefinition.HasGenericParameters
-                ? methodDefinition.CreateGenericMethodName()
+                ? $"{methodDefinition.CreateGenericMethodName()}({methodDefinition.AggregateParameterNames()})"
                 : $"{methodDefinition.CreateExplicitMemberName()}({methodDefinition.AggregateParameterNames()})";
         }
 

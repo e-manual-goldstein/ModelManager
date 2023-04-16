@@ -9,7 +9,7 @@ namespace AssemblyAnalyser.Specs
 {
     public class NullTypeSpec : TypeSpec
     {
-        public NullTypeSpec(ISpecManager specManager) 
+        public NullTypeSpec(ISpecManager specManager)
             : base("null", "nullspec", specManager)
         {
             Exclude("Null Spec");
@@ -58,7 +58,7 @@ namespace AssemblyAnalyser.Specs
 
         public override void RegisterAsDelegateFor(EventSpec eventSpec)
         {
-            _specManager.AddFault(this, FaultSeverity.Error, $"Null Type Spec cannot act as delegate for {eventSpec}");            
+            _specManager.AddFault(this, FaultSeverity.Error, $"Null Type Spec cannot act as delegate for {eventSpec}");
         }
 
         public override void RegisterAsDependentParameterSpec(ParameterSpec parameterSpec)
@@ -126,7 +126,7 @@ namespace AssemblyAnalyser.Specs
 
         protected override TypeSpec[] CreateInterfaceSpecs()
         {
-            return Array.Empty<TypeSpec>();            
+            return Array.Empty<TypeSpec>();
         }
 
         protected override MethodSpec[] CreateMethodSpecs()
@@ -151,7 +151,7 @@ namespace AssemblyAnalyser.Specs
 
         protected override void ProcessInterfaceImplementations()
         {
-            
+
         }
 
         protected override ModuleSpec TryGetModule()
@@ -178,6 +178,12 @@ namespace AssemblyAnalyser.Specs
 
         public override bool MatchPropertyByOverride(PropertySpec property)
         {
+            return false;
+        }
+
+        protected override bool MatchBySpecialNameMethods(PropertySpec interfaceProperty)
+        {
+            _specManager.AddFault(interfaceProperty, FaultSeverity.Warning, "Backed Property not found");
             return false;
         }
     }

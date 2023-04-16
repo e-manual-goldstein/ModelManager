@@ -4,5 +4,6 @@
     {
         TypeSpec DeclaringType { get; }
         TypeSpec ResultType { get; }
+
     }
 }

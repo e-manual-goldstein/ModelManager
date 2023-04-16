@@ -330,34 +330,60 @@ namespace AssemblyAnalyser
                     }
                 }
             }
-            foreach (var interfaceProperty in interfaceSpec.Properties)
+            foreach (var interfaceProperty in interfaceSpec.Properties.Where(p => p.Implements == null))
             {
-                if (!MatchPropertyByOverride(interfaceProperty))
+                if (!MatchBySpecialNameMethods(interfaceProperty))
                 {
-                    var propertySpec = GetPropertySpec(interfaceProperty.ExplicitName, true) ?? GetPropertySpec(interfaceProperty.Name, true); 
-                    if (propertySpec == null)
+                    if (!MatchPropertyByOverride(interfaceProperty))
                     {
-                        _specManager.AddFault(this, FaultSeverity.Error, $"Missing Implementation {interfaceProperty}");
-                    }
-                    else
-                    {
-                        propertySpec.RegisterAsImplementation(interfaceProperty);
+                        var propertySpec = GetPropertySpec(interfaceProperty.ExplicitName, true) ?? GetPropertySpec(interfaceProperty.Name, true);
+                        if (propertySpec == null)
+                        {
+                            _specManager.AddFault(this, FaultSeverity.Error, $"Missing Implementation {interfaceProperty}");
+                        }
+                        else
+                        {
+                            propertySpec.RegisterAsImplementation(interfaceProperty);
+                        }
                     }
                 }
             }
         }
 
-        //private bool MatchPropertyByOverride(PropertySpec property)
-        //{
-        //    var overrides = GetAllPropertySpecs().Where(f => f.Overrides.Any()).ToDictionary(f => f, g => g.Overrides);
-        //    var methodOverride = GetAllMethodSpecs().SingleOrDefault(m => m.Overrides.Contains(interfaceMethod));
-        //    if (methodOverride != null)
-        //    {
-        //        methodOverride.RegisterAsImplementation(interfaceMethod);
-        //        return true;
-        //    }
-        //    return false;
-        //}
+        protected virtual bool MatchBySpecialNameMethods(PropertySpec interfaceProperty)
+        {
+            var specialNameMethods = Methods.Where(m => m.IsSpecialName && m.Implements != null).ToArray();
+            var implementers = specialNameMethods.Where(m 
+                => m.Implements == interfaceProperty.Getter
+                || m.Implements == interfaceProperty.Setter)
+                .ToArray();
+            var backedProperties = implementers.Select(m => m.SpecialNameMethodForMember).Distinct().ToArray();
+            if (!backedProperties.Any())
+            {
+                return BaseSpec.MatchBySpecialNameMethods(interfaceProperty);
+            }
+            if (backedProperties.Count() > 1)
+            {
+                _specManager.AddFault(this, FaultSeverity.Error, "Multiple backed Properties found");
+                return false;
+            }
+            var backedProperty = backedProperties.Single();
+            //var matchingGetter = specialNameMethods
+            //    .Where(m => m.Implements == interfaceProperty.Getter)
+            //    .SingleOrDefault();
+            //var matchingSetter = specialNameMethods
+            //    .Where(m => m.Implements == interfaceProperty.Getter)
+            //    .SingleOrDefault();
+            //if (matchingGetter.SpecialNameMethodForMember != matchingSetter.SpecialNameMethodForMember)
+            //{
+            //    _specManager.AddFault(this, FaultSeverity.Error, "Unexpected mismatch of special name methods");
+            //}
+            //else
+            //{
+                (backedProperty as PropertySpec).RegisterAsImplementation(interfaceProperty);
+            //}
+            return true;
+        }
 
         public virtual bool MatchMethodByOverride(MethodSpec method)
         {
