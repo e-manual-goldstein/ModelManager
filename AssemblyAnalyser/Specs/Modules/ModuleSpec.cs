@@ -84,63 +84,31 @@ namespace AssemblyAnalyser
             return LoadFullTypeSpec(type);
         }
 
-        protected string CreateUniqueTypeSpecName(TypeReference type, bool isArray)
-        {
-            var suffix = isArray ? "[]" : null;
-            if (type is GenericParameter genericParameter)
-            {
-                if (genericParameter.DeclaringMethod == null)
-                {
-                    return $"{genericParameter.DeclaringType.FullName}[{type.FullName}]{suffix}";
-                }
-                else
-                {
-                    if (genericParameter.DeclaringType != null)
-                    {
-
-                    }
-                    else
-                    {
-                        var declaringMethod = genericParameter.DeclaringMethod;
-                        return $"{declaringMethod.DeclaringType.FullName}.{declaringMethod.Name}<{type.FullName}>{suffix}";
-                    }
-                }
-            }
-            if (type is GenericInstanceType genericInstanceType)
-            {
-                return CreateGenericArgumentsAggregateName(genericInstanceType);
-            }
-            return $"{type.FullName}{suffix}";
-        }
-
-        private string CreateGenericArgumentsAggregateName(GenericInstanceType genericType)
-        {
-            var prefix = $"{genericType.Namespace}.{genericType.Name}<";
-            var argumentNames = genericType.GenericArguments.Select(g => CreateUniqueTypeSpecName(g, false)).ToArray();
-            var argumentString = argumentNames.Aggregate((a, b) => $"{a}, {b}");
-            return $"{prefix}{argumentString}>";
-        }
-
         private TypeSpec LoadFullTypeSpec(TypeReference type)
         {
             bool typeReferenceIsArray = type.IsArray; //Resolving TypeReference to TypeDefinition causes loss of IsArray definition
+            var uniqueTypeName = type.CreateUniqueTypeSpecName(typeReferenceIsArray);
             if (type.IsGenericParameter && type is GenericParameter genericParameter)
             {
-                return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateGenericParameterSpec(genericParameter));
+                return _typeSpecs.GetOrAdd(uniqueTypeName, (key) => CreateGenericParameterSpec(genericParameter));
             }
             if (type.HasGenericParameters && type is TypeDefinition genericTypeDefinition)
             {
-                return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateGenericTypeSpec(genericTypeDefinition));
+                return _typeSpecs.GetOrAdd(uniqueTypeName, (key) => CreateGenericTypeSpec(genericTypeDefinition));
             }
             if (type.IsGenericInstance && type is GenericInstanceType genericInstanceType)
             {
-                return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateGenericInstanceSpec(genericInstanceType, key));
+                return _typeSpecs.GetOrAdd(uniqueTypeName, (key) => CreateGenericInstanceSpec(genericInstanceType, key));
+            }
+            if (type.IsArray && type is ArrayType arrayType)
+            {
+                return _typeSpecs.GetOrAdd(uniqueTypeName, (key) => CreateArrayTypeSpec(arrayType, key));
             }
             if (!type.IsDefinition)
             {
                 TryGetTypeDefinition(ref type);
             }
-            return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, typeReferenceIsArray), (key) => CreateFullTypeSpec(type));
+            return _typeSpecs.GetOrAdd(uniqueTypeName, (key) => CreateFullTypeSpec(type));
         }
 
         private TypeSpec CreateFullTypeSpec(TypeReference type)
@@ -171,6 +139,13 @@ namespace AssemblyAnalyser
             return spec;
         }
 
+        private TypeSpec CreateArrayTypeSpec(ArrayType type, string fullTypeName)
+        {
+            var elementSpec = LoadTypeSpec(type.ElementType);
+            var spec = new ArrayTypeSpec(type, elementSpec, _specManager);
+            return spec;
+        }
+
         private void TryGetTypeDefinition(ref TypeReference type)
         {
             TypeDefinition typeDefinition = null;
@@ -178,13 +153,12 @@ namespace AssemblyAnalyser
             {
                 throw new ArgumentException("Cannot have TypeDefinition for Generic Instance");
             }
-            typeDefinition = TryResolveTypeDefinition(type);
             if (typeDefinition == null)
             {
                 
                 var scopeName = type.Scope.GetScopeNameWithoutExtension();
                 
-                if (scopeName == ModuleFullName)
+                if (scopeName == _baseVersion.GetScopeNameWithoutExtension())
                 {
                     if (type.IsGenericParameter)
                     {
@@ -201,6 +175,7 @@ namespace AssemblyAnalyser
                     }
                 }
             }
+            typeDefinition ??= TryResolveTypeDefinition(type);
             if (typeDefinition != null)
             {
                 type = typeDefinition;
@@ -218,7 +193,7 @@ namespace AssemblyAnalyser
                 {
                     if (moduleDefinition.AssemblyResolver != null)
                     {
-                        //moduleDefinition.AssemblyResolver.Resolve(type.Mo);
+                        
                     }
                     return type.Resolve();
                 }

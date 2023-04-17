@@ -29,7 +29,7 @@ namespace AssemblyAnalyser
         TypeDefinition _typeDefinition;
         
         public TypeSpec(TypeDefinition typeDefinition, ISpecManager specManager)
-            : this($"{typeDefinition.Namespace}.{ typeDefinition.Name}", typeDefinition.FullName, specManager)
+            : this($"{typeDefinition.Namespace}.{typeDefinition.Name}", typeDefinition.FullName, specManager)
         {
             _typeDefinition = typeDefinition;
             Name = typeDefinition.Name;
@@ -41,6 +41,10 @@ namespace AssemblyAnalyser
         protected TypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager) 
             : base(specManager)
         {
+            if (uniqueTypeName == "System.Action")
+            {
+
+            }
             UniqueTypeName = uniqueTypeName;
             FullTypeName = fullTypeName;
         }
@@ -496,7 +500,7 @@ namespace AssemblyAnalyser
 
         private PropertySpec CreatePropertySpec(PropertyDefinition propertyInfo)
         {
-            _specManager.AddFault(FaultSeverity.Debug, "TODO: Is it faster to flag the explicit implementations here?");
+            //TODO: Is it faster to flag the explicit implementations here?");
             return new PropertySpec(propertyInfo, _specManager);
         }
 

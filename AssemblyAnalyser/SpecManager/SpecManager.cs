@@ -169,6 +169,10 @@ namespace AssemblyAnalyser
 
         public ModuleSpec LoadModuleSpec(IMetadataScope scope)
         {
+            if (SystemModuleSpec.IsSystemModule(scope))
+            {
+                return _moduleSpecs.GetOrAdd(SystemModuleSpec.GetSystemModuleName(scope), (key) => CreateFullModuleSpec(scope));
+            }
             return _moduleSpecs.GetOrAdd(scope.GetScopeNameWithoutExtension(), (key) => CreateFullModuleSpec(scope));
         }
 
@@ -178,12 +182,21 @@ namespace AssemblyAnalyser
             {
                 throw new NotImplementedException();
             }
+            if (SystemModuleSpec.IsSystemModule(typeReference.Scope))
+            {
+                return _moduleSpecs.GetOrAdd(SystemModuleSpec.GetSystemModuleName(typeReference.Scope),
+                    (key) => CreateFullModuleSpec(typeReference.Scope));
+            }
             if (typeReference.IsGenericInstance)
             {
                 return _moduleSpecs.GetOrAdd(typeReference.Module.Name,
                     (key) => CreateFullModuleSpec(typeReference.Module));
             }
             if (_moduleSpecs.TryGetValue(typeReference.Scope.GetScopeNameWithoutExtension(), out ModuleSpec scopeModuleSpec))
+            {
+                return scopeModuleSpec;
+            }
+            if (_moduleSpecs.TryGetValue(typeReference.Module.GetScopeNameWithoutExtension(), out scopeModuleSpec))
             {
                 return scopeModuleSpec;
             }
@@ -285,7 +298,9 @@ namespace AssemblyAnalyser
                 return scope switch
                 {
                     AssemblyNameDefinition assemblyNameDefinition => new MissingModuleSpec(assemblyNameDefinition, this),
-                    ModuleDefinition moduleDefinition => new ModuleSpec(moduleDefinition, moduleDefinition.FileName, this),
+                    ModuleDefinition moduleDefinition => SystemModuleSpec.IsSystemModule(scope) 
+                        ? new SystemModuleSpec(moduleDefinition, moduleDefinition.FileName, this)
+                        : new ModuleSpec(moduleDefinition, moduleDefinition.FileName, this),
                     AssemblyNameReference assemblyNameReference => LoadModuleByAssemblyNameReference(assemblyNameReference),
                     _ => throw new NotImplementedException()
                 };                

@@ -39,6 +39,45 @@ namespace AssemblyAnalyser.Extensions
             return match.Success ? match.Groups["FileNameNoExtension"].Value : scope.Name;
         }
 
+        public static string CreateUniqueTypeSpecName(this TypeReference type, bool isArray)
+        {
+            var suffix = isArray ? "[]" : null;
+            if (type is GenericParameter genericParameter)
+            {
+                if (genericParameter.DeclaringMethod == null)
+                {
+                    return $"{genericParameter.DeclaringType.FullName}[{type.FullName}]{suffix}";
+                }
+                else
+                {
+                    if (genericParameter.DeclaringType != null)
+                    {
+
+                    }
+                    else
+                    {
+                        var declaringMethod = genericParameter.DeclaringMethod;
+                        return $"{declaringMethod.DeclaringType.FullName}.{declaringMethod.Name}<{type.FullName}>{suffix}";
+                    }
+                }
+            }
+            if (type is GenericInstanceType genericInstanceType)
+            {
+                return CreateGenericArgumentsAggregateName(genericInstanceType);
+            }
+            return $"{type.FullName}";
+        }
+
+        public static string CreateGenericArgumentsAggregateName(this GenericInstanceType genericType)
+        {
+            var prefix = $"{genericType.Namespace}.{genericType.Name}<";
+            var argumentNames = genericType.GenericArguments.Select(g => CreateUniqueTypeSpecName(g, false)).ToArray();
+            var argumentString = argumentNames.Aggregate((a, b) => $"{a}, {b}");
+            return $"{prefix}{argumentString}>";
+        }
+
+
+
         public static string CreateUniqueMethodName(this MethodDefinition methodDefinition)
         {
             return methodDefinition.HasGenericParameters

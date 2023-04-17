@@ -44,5 +44,13 @@ namespace AssemblyAnalyser.Specs
         {
             _specManager.AddFault(FaultSeverity.Information, $"Missing TypeSpec for {UniqueTypeName}");            
         }
+
+        public override void AddSubType(TypeSpec typeSpec)
+        {
+            if (!_subTypes.Contains(typeSpec))
+            {
+                _subTypes.Add(typeSpec);                
+            }
+        }
     }
 }

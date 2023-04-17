@@ -1,4 +1,5 @@
-﻿using Mono.Cecil;
+﻿using AssemblyAnalyser.Extensions;
+using Mono.Cecil;
 using System;
 
 namespace AssemblyAnalyser.Specs
@@ -33,7 +34,7 @@ namespace AssemblyAnalyser.Specs
 
         protected override void BuildSpec()
         {
-            _specManager.AddFault(FaultSeverity.Debug, $"Any reason to Build a missing Module Spec");
+            
         }
 
         protected override CustomAttribute[] GetAttributes()
@@ -48,7 +49,7 @@ namespace AssemblyAnalyser.Specs
 
         public override TypeSpec LoadTypeSpec(TypeReference type)
         {
-            return _typeSpecs.GetOrAdd(CreateUniqueTypeSpecName(type, type.IsArray), 
+            return _typeSpecs.GetOrAdd(type.CreateUniqueTypeSpecName(type.IsArray), 
                 (key) => new MissingTypeSpec($"{type.Namespace}.{type.Name}", type.FullName, _specManager));
         }
     }
