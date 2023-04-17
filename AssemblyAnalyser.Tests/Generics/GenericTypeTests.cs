@@ -37,7 +37,7 @@ namespace AssemblyAnalyser.Tests
             _loggerProvider = NSubstitute.Substitute.For<ILoggerProvider>();
             _specManager = new SpecManager(_loggerProvider, _exceptionManager);
             var filePath = "..\\..\\..\\..\\AssemblyAnalyser.TestData\\bin\\Debug\\net6.0\\AssemblyAnalyser.TestData.dll";
-            _moduleSpec = _specManager.LoadModuleSpecFromPath(Path.GetFullPath(filePath));
+            _moduleSpec = _specManager.LoadAssemblySpecFromPath(Path.GetFullPath(filePath)).LoadModuleSpecFromPath(Path.GetFullPath(filePath));
             _moduleSpec.Process();
             
             _basicClassSpec = _moduleSpec.TypeSpecs
@@ -53,6 +53,7 @@ namespace AssemblyAnalyser.Tests
             {
                 var classSpec = _moduleSpec.GetTypeSpec($"{NAMESPACE}.{className}");
                 Assert.IsNotNull(classSpec);
+                Assert.IsFalse(classSpec.IsMissingSpec);
             }
         }
 
@@ -93,6 +94,7 @@ namespace AssemblyAnalyser.Tests
             var genericClassSpec = _moduleSpec.GetTypeSpec($"{NAMESPACE}.{GENERIC_CLASS}");
                         
             Assert.IsTrue(genericClassSpec.Interfaces.Any());
+            Assert.IsTrue(genericClassSpec.Interfaces.All(i => !i.IsMissingSpec));
         }
 
         [TestMethod]
@@ -105,6 +107,7 @@ namespace AssemblyAnalyser.Tests
                 .Where(g => g.InstanceOf == genericInterfaceSpec);
 
             Assert.IsTrue(genericInterfaceImplementations.Any());
+            Assert.IsTrue(genericInterfaceImplementations.All(g => !g.IsMissingSpec));
         }
 
         [TestMethod]
@@ -114,6 +117,7 @@ namespace AssemblyAnalyser.Tests
             var genericInstance = genericClassSpec.Interfaces.OfType<GenericInstanceSpec>().SingleOrDefault();
 
             Assert.IsNotNull(genericInstance);
+            Assert.IsTrue(!genericInstance.IsMissingSpec);
         }
 
         [TestMethod]
@@ -125,6 +129,7 @@ namespace AssemblyAnalyser.Tests
             genericInstance.ForceRebuildSpec();
             Assert.IsNotNull(genericInterface);
             Assert.IsTrue(genericInterface.GenericInstances.Contains(genericInstance));
+            Assert.IsTrue(!genericInstance.IsMissingSpec);
         }
 
         [TestMethod]
@@ -145,14 +150,15 @@ namespace AssemblyAnalyser.Tests
             var genericTypeSpec = _moduleSpec.GetTypeSpec($"{NAMESPACE}.{GENERIC_CLASS_WITH_CLASS_TYPE_CONSTRAINTS}");
             var genericTypeParameterSpec = genericTypeSpec.GenericTypeParameters.SingleOrDefault();
 
-            Assert.AreEqual(_basicClassSpec, genericTypeParameterSpec.BaseSpec);            
+            Assert.AreEqual(_basicClassSpec, genericTypeParameterSpec.BaseSpec);
+            Assert.IsTrue(!_basicClassSpec.IsMissingSpec);
         }
 
         [TestMethod]
         public void GenericClassSpecHasDefaultConstructorTypeConstraints_Test()
         {
             var genericTypeSpec = _moduleSpec.GetTypeSpec($"{NAMESPACE}.{GENERIC_CLASS_WITH_DEFAULT_CONSTRUCTOR_TYPE_CONSTRAINTS}");
-            var genericTypeParameterSpec = genericTypeSpec.GenericTypeParameters.SingleOrDefault() as GenericParameterSpec;
+            var genericTypeParameterSpec = genericTypeSpec.GenericTypeParameters.SingleOrDefault();
 
             Assert.IsTrue(genericTypeParameterSpec.HasDefaultConstructorConstraint);
         }
@@ -180,6 +186,7 @@ namespace AssemblyAnalyser.Tests
             Assert.IsNotNull(genericMethod);
             Assert.IsTrue(genericMethod.GenericTypeParameters.Any());
             Assert.IsNotNull(genericMethod.GenericTypeParameters.SingleOrDefault());
+            Assert.IsNotNull(genericMethod.GenericTypeParameters.All(i => !i.IsMissingSpec));
         }
 
         [TestMethod]
@@ -203,7 +210,7 @@ namespace AssemblyAnalyser.Tests
 
             Assert.IsNotNull(genericMethod.ReturnType);
             Assert.AreEqual(genericMethod.ReturnType, genericTypeArgument);
-            
+            Assert.IsTrue(!genericMethod.ReturnType.IsMissingSpec);
         }
 
         [TestMethod]

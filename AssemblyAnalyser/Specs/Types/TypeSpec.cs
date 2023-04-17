@@ -14,18 +14,6 @@ namespace AssemblyAnalyser
 {
     public class TypeSpec : AbstractSpec//, IHasGenericParameters
     {
-        #region Error Spec
-        static int error_count = 1;
-        public static TypeSpec CreateErrorSpec(string reason)
-        {
-            var spec = new TypeSpec("ErrorSpec", $"{reason}{error_count++}", null);
-            spec.Exclude(reason);
-            spec.SkipProcessing(reason);
-            spec.IsErrorSpec = true;
-            return spec;
-        }
-        #endregion
-
         TypeDefinition _typeDefinition;
         
         public TypeSpec(TypeDefinition typeDefinition, ISpecManager specManager)
@@ -127,7 +115,7 @@ namespace AssemblyAnalyser
 
         protected virtual ModuleSpec TryGetModule()
         {
-            return _specManager.LoadReferencedModuleByScopeName(_typeDefinition.Module, _typeDefinition.Scope);
+            return _specManager.LoadReferencedModuleByFullName(_typeDefinition.Module, _typeDefinition.Scope.GetScopeNameWithoutExtension());
         }
 
         TypeSpec _baseSpec;
@@ -423,7 +411,8 @@ namespace AssemblyAnalyser
 
         public virtual bool IsNullSpec => false;
 
-        public bool IsErrorSpec { get; private set; }
+        public virtual bool IsMissingSpec { get; }
+
         public bool IsCompilerGenerated { get; private set; }
 
         #endregion

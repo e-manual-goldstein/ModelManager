@@ -13,7 +13,7 @@ namespace AssemblyAnalyser
         private bool _processed;
         private bool? _included;
         protected bool Included => _included ??= !IsExcluded() && IsIncluded();
-        protected ISpecManager _specManager;
+        protected readonly ISpecManager _specManager;
 
         public AbstractSpec(ISpecManager specManager)
         {

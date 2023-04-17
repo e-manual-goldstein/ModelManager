@@ -6,8 +6,6 @@
 
   <ItemGroup>
     <Compile Remove="Rules\CommonRules.cs" />
-    <Compile Remove="SpecManager\IAssemblySpecManager.cs" />
-    <Compile Remove="Specs\AssemblySpec.cs" />
   </ItemGroup>
 
   <ItemGroup>

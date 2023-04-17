@@ -1,20 +1,21 @@
-﻿using AssemblyAnalyser.Extensions;
-using Mono.Cecil;
+﻿using Mono.Cecil;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace AssemblyAnalyser.Specs
 {
-    public class MissingModuleSpec : ModuleSpec
+    internal class MissingAssemblySpec : AssemblySpec
     {
         AssemblyNameReference _missingAssembly;
 
-        public MissingModuleSpec(AssemblyNameReference missingAssembly, ISpecManager specManager) 
+        public MissingAssemblySpec(AssemblyNameReference missingAssembly, ISpecManager specManager)
             : base(missingAssembly.FullName, specManager)
         {
             _missingAssembly = missingAssembly;
-            Versions = new();
-            ModuleShortName = missingAssembly.Name;
-            Versions.Add(missingAssembly.FullName, missingAssembly);
+            AssemblyShortName = missingAssembly.Name;            
             specManager.AddFault(FaultSeverity.Warning, $"Asssembly not found {missingAssembly.FullName}");
         }
 
@@ -34,7 +35,7 @@ namespace AssemblyAnalyser.Specs
 
         protected override void BuildSpec()
         {
-            
+
         }
 
         protected override CustomAttribute[] GetAttributes()
@@ -44,13 +45,8 @@ namespace AssemblyAnalyser.Specs
 
         public override string ToString()
         {
-            return $"[M]{ModuleFullName}";
+            return $"[M]{AssemblyFullName}";
         }
 
-        public override TypeSpec LoadTypeSpec(TypeReference type)
-        {
-            return _typeSpecs.GetOrAdd(type.CreateUniqueTypeSpecName(type.IsArray), 
-                (key) => new MissingTypeSpec($"{type.Namespace}.{type.Name}", type.FullName, this, _specManager));
-        }
     }
 }

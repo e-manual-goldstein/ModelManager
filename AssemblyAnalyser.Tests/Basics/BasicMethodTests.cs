@@ -20,7 +20,8 @@ namespace AssemblyAnalyser.Tests
         {
             base.Initialize();
             var vbFilePath = "..\\..\\..\\..\\AssemblyAnalyser.VBTestData\\bin\\Debug\\net35\\AssemblyAnalyser.VBTestData.dll";
-            _vbModuleSpec = _specManager.LoadModuleSpecFromPath(Path.GetFullPath(vbFilePath));
+            
+            _vbModuleSpec = _specManager.LoadAssemblySpecFromPath(Path.GetFullPath(vbFilePath)).LoadModuleSpecFromPath(Path.GetFullPath(vbFilePath));
             _vbModuleSpec.Process();
             _basicVBClassSpec = _vbModuleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.VBTestData.Basics.BasicVBClass");

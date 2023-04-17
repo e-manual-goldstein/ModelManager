@@ -1,4 +1,5 @@
-﻿using AssemblyAnalyser.Specs;
+﻿using AssemblyAnalyser.Extensions;
+using AssemblyAnalyser.Specs;
 using Mono.Cecil;
 using System;
 using System.Collections.Generic;
@@ -26,7 +27,7 @@ namespace AssemblyAnalyser
 
         protected override ModuleSpec TryGetModule()
         {
-            return _specManager.LoadReferencedModuleByScopeName(_genericParameter.Module, _genericParameter.Scope);
+            return _specManager.LoadReferencedModuleByFullName(_genericParameter.Module, _genericParameter.Scope.GetScopeNameWithoutExtension());
         }
 
         protected override void BuildSpec()

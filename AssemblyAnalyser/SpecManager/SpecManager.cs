@@ -22,7 +22,7 @@ namespace AssemblyAnalyser
         private bool _disposed;
 
         public SpecManager(ILoggerProvider loggerProvider, IExceptionManager exceptionManager)
-        {            
+        {
             _logger = loggerProvider.CreateLogger("Spec Manager");
             _exceptionManager = exceptionManager;
             _assemblyResolver = CreateAssemblyResolver();
@@ -31,13 +31,17 @@ namespace AssemblyAnalyser
 
         private DefaultAssemblyResolver CreateAssemblyResolver()
         {
-            var resolver = new DefaultAssemblyResolver();            
+            var resolver = new DefaultAssemblyResolver();
             return resolver;
         }
-                
+
         List<IRule> _specRules = new List<IRule>();
         public IRule[] SpecRules => _specRules.ToArray();
-        
+
+        public IAssemblyResolver AssemblyResolver => _assemblyResolver;
+
+        #region Faults
+
         List<BuildFault> _faults = new List<BuildFault>();
         public BuildFault[] Faults => _faults.ToArray();
 
@@ -93,7 +97,8 @@ namespace AssemblyAnalyser
         {
             Console.WriteLine(msg);
             _messages.Add(msg);
-        }
+        } 
+        #endregion
 
         public void SetWorkingDirectory(string workingDirectory)
         {
@@ -102,7 +107,7 @@ namespace AssemblyAnalyser
 
         public void Reset()
         {
-            _moduleSpecs.Clear();
+            //_moduleSpecs.Clear();
             //_methodSpecs.Clear();
             //_parameterSpecs.Clear();
             //_propertySpecs.Clear();
@@ -139,144 +144,56 @@ namespace AssemblyAnalyser
             ProcessLoadedAttributes(includeSystem);
         }
 
-        #region Modules
+        #region Assembly Specs
 
-        public IReadOnlyDictionary<string, ModuleSpec> Modules => _moduleSpecs;
+        public IReadOnlyDictionary<string, AssemblySpec> Assemblies => _assemblies;
 
-        ConcurrentDictionary<string, ModuleSpec> _moduleSpecs = new ConcurrentDictionary<string, ModuleSpec>();
+        ConcurrentDictionary<string, AssemblySpec> _assemblies = new ConcurrentDictionary<string, AssemblySpec>();
 
-        public void ProcessAllModules(bool includeSystem = true, bool parallelProcessing = true)
-        {
-            var list = new List<ModuleSpec>();
-
-            var assemblySpecs = Modules.Values;
-
-            var nonSystemAssemblies = assemblySpecs.Where(a => includeSystem || !a.IsSystem).ToArray();
-            
-            list = nonSystemAssemblies.Where(a => includeSystem || !a.IsSystem).ToList();
-            if (parallelProcessing)
-            {
-                Parallel.ForEach(list, l => l.Process());
-            }
-            else
-            {
-                foreach (var item in list)
-                {
-                    item.Process();
-                }
-            }
-        }
-
-        public ModuleSpec LoadModuleSpec(IMetadataScope scope)
-        {
-            if (SystemModuleSpec.IsSystemModule(scope))
-            {
-                return _moduleSpecs.GetOrAdd(SystemModuleSpec.GetSystemModuleName(scope), (key) => CreateFullModuleSpec(scope));
-            }
-            return _moduleSpecs.GetOrAdd(scope.GetScopeNameWithoutExtension(), (key) => CreateFullModuleSpec(scope));
-        }
-
-        public ModuleSpec LoadModuleSpecForTypeReference(TypeReference typeReference)
-        {
-            if (typeReference == null)
-            {
-                throw new NotImplementedException();
-            }
-            if (SystemModuleSpec.IsSystemModule(typeReference.Scope))
-            {
-                return _moduleSpecs.GetOrAdd(SystemModuleSpec.GetSystemModuleName(typeReference.Scope),
-                    (key) => CreateFullModuleSpec(typeReference.Scope));
-            }
-            if (typeReference.IsGenericInstance)
-            {
-                return _moduleSpecs.GetOrAdd(typeReference.Module.Name,
-                    (key) => CreateFullModuleSpec(typeReference.Module));
-            }
-            if (_moduleSpecs.TryGetValue(typeReference.Scope.GetScopeNameWithoutExtension(), out ModuleSpec scopeModuleSpec))
-            {
-                return scopeModuleSpec;
-            }
-            if (_moduleSpecs.TryGetValue(typeReference.Module.GetScopeNameWithoutExtension(), out scopeModuleSpec))
-            {
-                return scopeModuleSpec;
-            }
-            if (typeReference.Resolve() is TypeDefinition typeDefinition)
-            {
-                return _moduleSpecs.GetOrAdd(typeDefinition.Scope.GetScopeNameWithoutExtension(),
-                    (key) => CreateFullModuleSpec(typeDefinition.Scope));
-            }
-            return _moduleSpecs.GetOrAdd(typeReference.Scope.GetScopeNameWithoutExtension(), 
-                (key) => CreateFullModuleSpec(typeReference.Scope));
-        }
-
-        public ModuleSpec LoadModuleSpecFromPath(string moduleFilePath)
+        public AssemblySpec LoadAssemblySpecFromPath(string assemblySpecPath)
         {
             var readerParameters = new ReaderParameters()
             {
                 AssemblyResolver = _assemblyResolver
             };
-            var moduleDefinition = ModuleDefinition.ReadModule(moduleFilePath, readerParameters);
-            return LoadModuleSpec(moduleDefinition);
+            var moduleDefinition = AssemblyDefinition.ReadAssembly(assemblySpecPath, readerParameters);
+            return LoadAssemblySpec(moduleDefinition, assemblySpecPath);
         }
 
-        public ModuleSpec[] LoadReferencedModules(ModuleDefinition baseModule)
+        public IEnumerable<AssemblySpec> TryLoadReferencedAssemblies(ModuleDefinition moduleDefinition)
         {
-            var specs = new List<ModuleSpec>();
-            foreach (var assemblyReference in baseModule.AssemblyReferences)
-            {                
-                var moduleSpec = LoadReferencedModuleByFullName(baseModule, assemblyReference.FullName);
-                if (moduleSpec != null)
-                {
-                    specs.Add(moduleSpec);
-                }
-            }
-            return specs.OrderBy(s => s.FilePath).ToArray();
-        }
-
-        public ModuleSpec LoadReferencedModuleByFullName(ModuleDefinition module, string referencedModuleName)
-        {
-            if (module.Name == referencedModuleName)
+            foreach (var assemblyNameReference in moduleDefinition.AssemblyReferences)
             {
-                return LoadModuleSpec(module);
+                yield return LoadReferencedAssemblyByFullName(moduleDefinition, assemblyNameReference.FullName);
             }
+        }
+
+        public AssemblySpec LoadReferencedAssemblyByFullName(ModuleDefinition module, string assemblyNameReference)
+        {
             var locator = AssemblyLocator.GetLocator(module);
-            var assemblyReference = module.AssemblyReferences.Single(a => a.FullName.Contains(referencedModuleName));
-            return LoadReferencedModule(locator, assemblyReference);
-        }
-
-        public ModuleSpec LoadReferencedModuleByScopeName(ModuleDefinition module, IMetadataScope scope)
-        {
-            if (module.GetScopeNameWithoutExtension() == scope.GetScopeNameWithoutExtension())
+            if (module.GetScopeNameWithoutExtension() == assemblyNameReference)
             {
-                return LoadModuleSpec(module);
+                return LoadAssemblySpec(module.Assembly, module.FileName);
             }
-            var locator = AssemblyLocator.GetLocator(module);
-            var version = scope switch
-            {
-                AssemblyNameReference assemblyNameReference => assemblyNameReference.Version,
-                ModuleDefinition moduleDefinition => moduleDefinition.Assembly.Name.Version,
-                _ => throw new NotImplementedException()
-            };
-            var assemblyReference = module.AssemblyReferences
-                .Single(a => a.FullName.ParseShortName() == scope.GetScopeNameWithoutExtension() && a.Version == version);
-            return LoadReferencedModule(locator, assemblyReference);            
+            var assemblyReference = module.AssemblyReferences.Single(a => a.FullName.Contains(assemblyNameReference));
+            return LoadReferencedAssembly(locator, assemblyReference);
         }
 
-        private ModuleSpec LoadReferencedModule(AssemblyLocator locator, AssemblyNameReference assemblyReference)
+        private AssemblySpec LoadReferencedAssembly(AssemblyLocator locator, AssemblyNameReference assemblyReference)
         {
             try
             {
                 var assemblyLocation = locator.LocateAssemblyByName(assemblyReference.FullName);
                 if (string.IsNullOrEmpty(assemblyLocation))
                 {
-                    var missingModuleSpec = _moduleSpecs.GetOrAdd(assemblyReference.Name, (key) => CreateMissingModuleSpec(assemblyReference));
-                    missingModuleSpec.AddModuleVersion(assemblyReference);
-                    return missingModuleSpec;
+                    //var missingModuleSpec = _moduleSpecs.GetOrAdd(assemblyReference.Name, (key) => CreateMissingModuleSpec(assemblyReference));
+                    //missingModuleSpec.AddModuleVersion(assemblyReference);
+                    //return missingModuleSpec;
+                    throw new NotImplementedException();
                 }
-                var moduleSpec = LoadModuleSpecFromPath(assemblyLocation);
-                moduleSpec.AddModuleVersion(assemblyReference);
-                return moduleSpec;
-
+                var assemblySpec = LoadAssemblySpecFromPath(assemblyLocation);
+                //assemblySpec.AddModuleVersion(assemblyReference);
+                return assemblySpec;
             }
             catch (FileNotFoundException ex)
             {
@@ -286,42 +203,130 @@ namespace AssemblyAnalyser
             return null;
         }
 
-        public ModuleSpec[] LoadModuleSpecs(ModuleDefinition[] types)
+        public AssemblySpec LoadAssemblySpec(AssemblyDefinition assemblyDefinition, string filePath)
         {
-            return types.Select(t => LoadModuleSpec(t)).ToArray();
-        }
-
-        private ModuleSpec CreateFullModuleSpec(IMetadataScope scope)
-        {
-            try
+            if (SystemModuleSpec.IsSystemModule(assemblyDefinition.Name))
             {
-                return scope switch
-                {
-                    AssemblyNameDefinition assemblyNameDefinition => new MissingModuleSpec(assemblyNameDefinition, this),
-                    ModuleDefinition moduleDefinition => SystemModuleSpec.IsSystemModule(scope) 
-                        ? new SystemModuleSpec(moduleDefinition, moduleDefinition.FileName, this)
-                        : new ModuleSpec(moduleDefinition, moduleDefinition.FileName, this),
-                    AssemblyNameReference assemblyNameReference => LoadModuleByAssemblyNameReference(assemblyNameReference),
-                    _ => throw new NotImplementedException()
-                };                
+                return _assemblies.GetOrAdd(SystemModuleSpec.GetSystemModuleName(assemblyDefinition.Name), (key) => CreateFullAssemblySpec(assemblyDefinition, filePath));
             }
-            catch
+            return _assemblies.GetOrAdd(assemblyDefinition.Name.GetScopeNameWithoutExtension(), (key) => CreateFullAssemblySpec(assemblyDefinition, filePath));
+        }
+
+        private AssemblySpec CreateFullAssemblySpec(AssemblyDefinition assemblyDefinition, string filePath)
+        {
+            return new AssemblySpec(assemblyDefinition, filePath, this);
+        }
+
+        #endregion
+
+        #region Module Specs
+
+        public ModuleSpec[] Modules => _assemblies.Values.SelectMany(a => a.Modules).ToArray();
+
+        //ConcurrentDictionary<string, ModuleSpec> _moduleSpecs = new ConcurrentDictionary<string, ModuleSpec>();
+
+        //public void ProcessAllModules(bool includeSystem = true, bool parallelProcessing = true)
+        //{
+        //    var list = new List<ModuleSpec>();
+
+        //    var moduleSpecs = Modules;
+
+        //    var nonSystemAssemblies = moduleSpecs.Where(a => includeSystem || !a.IsSystem).ToArray();
+
+        //    list = nonSystemAssemblies.Where(a => includeSystem || !a.IsSystem).ToList();
+        //    if (parallelProcessing)
+        //    {
+        //        Parallel.ForEach(list, l => l.Process());
+        //    }
+        //    else
+        //    {
+        //        foreach (var item in list)
+        //        {
+        //            item.Process();
+        //        }
+        //    }
+        //}
+
+        public ModuleSpec LoadModuleSpecForTypeReference(TypeReference typeReference)
+        {
+            if (typeReference == null)
             {
-
+                throw new NotImplementedException();
             }
-            return new MissingModuleSpec(scope as AssemblyNameReference, this);
+            var assemblySpec = LoadReferencedAssemblyByFullName(typeReference.Module, typeReference.Scope.GetScopeNameWithoutExtension());
+            return assemblySpec.LoadModuleSpecForTypeReference(typeReference);
         }
 
-        private ModuleSpec LoadModuleByAssemblyNameReference(AssemblyNameReference assemblyNameReference)
+        //public ModuleSpec LoadModuleSpecFromPath(string moduleFilePath)
+        //{
+        //    var readerParameters = new ReaderParameters()
+        //    {
+        //        AssemblyResolver = _assemblyResolver
+        //    };
+        //    var moduleDefinition = ModuleDefinition.ReadModule(moduleFilePath, readerParameters);
+        //    return LoadModuleSpec(moduleDefinition);
+        //}
+
+        public IEnumerable<ModuleSpec> LoadReferencedModules(ModuleDefinition baseModule)
         {
-            return new MissingModuleSpec(assemblyNameReference, this);
+            foreach (var assemblyReference in baseModule.AssemblyReferences)
+            {
+                yield return LoadReferencedModuleByFullName(baseModule, assemblyReference.FullName);                
+            }            
         }
 
-        private ModuleSpec CreateMissingModuleSpec(AssemblyNameReference assemblyNameReference)
+        public ModuleSpec LoadReferencedModuleByFullName(ModuleDefinition module, string referencedModuleName)
         {
-            var spec = new MissingModuleSpec(assemblyNameReference, this);
-            return spec;
+            if (module.GetScopeNameWithoutExtension() == referencedModuleName)
+            {
+                return LoadReferencedAssemblyByFullName(module, referencedModuleName).LoadModuleSpec(module);
+            }
+            var locator = AssemblyLocator.GetLocator(module);
+            var assemblyReference = module.AssemblyReferences.Single(a => a.FullName.Contains(referencedModuleName));
+            return LoadReferencedModule(locator, assemblyReference);
         }
+
+        private ModuleSpec LoadReferencedModule(AssemblyLocator locator, AssemblyNameReference assemblyReference)
+        {
+            return LoadReferencedAssembly(locator, assemblyReference).LoadModuleSpec(assemblyReference);
+        }
+
+        //public ModuleSpec[] LoadModuleSpecs(ModuleDefinition[] modules)
+        //{
+        //    return modules.Select(t => LoadModuleSpec(t)).ToArray();
+        //}
+
+        //private ModuleSpec CreateFullModuleSpec(IMetadataScope scope)
+        //{
+        //    try
+        //    {
+        //        return scope switch
+        //        {
+        //            AssemblyNameDefinition assemblyNameDefinition => new MissingModuleSpec(assemblyNameDefinition, this),
+        //            ModuleDefinition moduleDefinition => SystemModuleSpec.IsSystemModule(scope) 
+        //                ? new SystemModuleSpec(moduleDefinition, moduleDefinition.FileName, this)
+        //                : new ModuleSpec(moduleDefinition, moduleDefinition.FileName, this),
+        //            AssemblyNameReference assemblyNameReference => LoadModuleByAssemblyNameReference(assemblyNameReference),
+        //            _ => throw new NotImplementedException()
+        //        };                
+        //    }
+        //    catch
+        //    {
+
+        //    }
+        //    return new MissingModuleSpec(scope as AssemblyNameReference, this);
+        //}
+
+        //private ModuleSpec LoadModuleByAssemblyNameReference(AssemblyNameReference assemblyNameReference)
+        //{
+        //    return new MissingModuleSpec(assemblyNameReference, this);
+        //}
+
+        //private ModuleSpec CreateMissingModuleSpec(AssemblyNameReference assemblyNameReference)
+        //{
+        //    var spec = new MissingModuleSpec(assemblyNameReference, this);
+        //    return spec;
+        //}
 
         #endregion
 
@@ -334,7 +339,7 @@ namespace AssemblyAnalyser
             return _nullTypeSpec ??= new NullTypeSpec(this);
         }
 
-        public TypeSpec[] TypeSpecs => Modules.Values.SelectMany(m => m.TypeSpecs).ToArray();
+        public TypeSpec[] TypeSpecs => Modules.SelectMany(m => m.TypeSpecs).ToArray();
 
         public TypeSpec LoadTypeSpec(TypeReference typeReference)
         {
@@ -410,56 +415,6 @@ namespace AssemblyAnalyser
                 yield return LoadPropertySpec(propertyReference, true);
             }
         }
-
-        #endregion
-
-        #region Parameter Specs
-
-        //public IReadOnlyDictionary<ParameterDefinition, ParameterSpec> Parameters => _parameterSpecs;
-
-        //ConcurrentDictionary<ParameterDefinition, ParameterSpec> _parameterSpecs = new ConcurrentDictionary<ParameterDefinition, ParameterSpec>();
-
-        //public void ProcessLoadedParameters(bool includeSystem = true)
-        //{
-        //    foreach (var (parameterName, param) in Parameters.Where(t => includeSystem || t.Value.IsSystemParameter.Equals(false)))
-        //    {
-        //        param.Process();
-        //    }
-        //}
-
-        //private ParameterSpec LoadParameterSpec(ParameterDefinition parameterDefinition, IMemberSpec member)
-        //{
-        //    return _parameterSpecs.GetOrAdd(parameterDefinition, CreateParameterSpec(parameterDefinition, member));
-        //}
-
-        //private ParameterSpec CreateParameterSpec(ParameterDefinition parameterDefinition, IMemberSpec member)
-        //{
-        //    //var typeSpecs = LoadTypeSpecs(parameterDefinition.CustomAttributes.Select(t => t.AttributeType));
-        //    return new ParameterSpec(parameterDefinition, member, this);
-        //}
-
-        //public ParameterSpec[] LoadParameterSpecs(ParameterDefinition[] parameterDefinitions, IMemberSpec member)
-        //{
-        //    return parameterDefinitions?.Select(p => LoadParameterSpec(p, member)).ToArray();
-        //}
-
-        //public ParameterSpec[] TryLoadParameterSpecs(Func<ParameterDefinition[]> parameterDefinitions, IMemberSpec member)
-        //{
-        //    ParameterDefinition[] parameterInfos = null;
-        //    try
-        //    {
-        //        parameterInfos = parameterDefinitions();
-        //    }
-        //    catch (TypeLoadException typeLoadException)
-        //    {
-
-        //    }
-        //    catch (Exception)
-        //    {
-
-        //    }
-        //    return LoadParameterSpecs(parameterInfos, member);
-        //}
 
         #endregion
 

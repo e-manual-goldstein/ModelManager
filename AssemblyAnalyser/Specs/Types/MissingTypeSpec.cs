@@ -9,40 +9,45 @@ namespace AssemblyAnalyser.Specs
 {
     internal class MissingTypeSpec : TypeSpec
     {
-        public MissingTypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager) 
+        ModuleSpec _moduleSpec;
+
+        public MissingTypeSpec(string fullTypeName, string uniqueTypeName, ModuleSpec moduleSpec, ISpecManager specManager) 
             : base(fullTypeName, uniqueTypeName, specManager)
         {
             specManager.AddFault(this, FaultSeverity.Error, $"Missing Type Spec for '{fullTypeName}'");
+            _moduleSpec = moduleSpec;
         }
+
+        public override bool IsMissingSpec => true;
 
         public override void AddImplementation(TypeSpec typeSpec)
         {
-            _specManager.AddFault(FaultSeverity.Information, $"Missing TypeSpec for {UniqueTypeName}");
+            
         }
 
         public override void RegisterAsDependentParameterSpec(ParameterSpec parameterSpec)
         {
-            _specManager.AddFault(FaultSeverity.Information, $"Missing TypeSpec for {UniqueTypeName}");
+            
         }
 
         public override void RegisterAsResultType(IMemberSpec methodSpec)
         {
-            _specManager.AddFault(FaultSeverity.Information, $"Missing TypeSpec for {UniqueTypeName}");
+            
         }
 
         public override void RegisterAsDecorator(AbstractSpec decoratedSpec)
         {
-            _specManager.AddFault(FaultSeverity.Information, $"Missing TypeSpec for {UniqueTypeName}");
+            
         }
 
         public override void RegisterAsDelegateFor(EventSpec eventSpec)
         {
-            _specManager.AddFault(FaultSeverity.Information, $"Missing TypeSpec for {UniqueTypeName}");            
+            
         }
 
         public override void RegisterDependentMethodSpec(MethodSpec methodSpec)
         {
-            _specManager.AddFault(FaultSeverity.Information, $"Missing TypeSpec for {UniqueTypeName}");            
+            
         }
 
         public override void AddSubType(TypeSpec typeSpec)
@@ -51,6 +56,57 @@ namespace AssemblyAnalyser.Specs
             {
                 _subTypes.Add(typeSpec);                
             }
+        }
+
+        protected override TypeSpec CreateBaseSpec()
+        {
+            return null;
+        }
+
+
+        public override PropertySpec[] GetAllPropertySpecs()
+        {
+            return Array.Empty<PropertySpec>();
+        }
+
+        public override MethodSpec[] GetAllMethodSpecs()
+        {
+            return Array.Empty<MethodSpec>();
+        }
+
+        public override bool MatchMethodByOverride(MethodSpec method)
+        {
+            return false;
+        }
+
+        protected override ModuleSpec TryGetModule()
+        {
+            return _moduleSpec;
+        }
+
+        protected override TypeSpec[] CreateInterfaceSpecs()
+        {
+            return Array.Empty<TypeSpec>();            
+        }
+
+        protected override TypeSpec[] CreateNestedTypeSpecs()
+        {
+            return Array.Empty<TypeSpec>();
+        }
+
+        protected override FieldSpec[] CreateFieldSpecs()
+        {
+            return Array.Empty<FieldSpec>();
+        }
+
+        protected override EventSpec[] CreateEventSpecs()
+        {
+            return Array.Empty<EventSpec>();
+        }
+
+        protected override CustomAttribute[] GetAttributes()
+        {
+            return Array.Empty<CustomAttribute>();
         }
     }
 }

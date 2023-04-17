@@ -23,7 +23,8 @@ namespace AssemblyAnalyser.Tests
             _loggerProvider = NSubstitute.Substitute.For<ILoggerProvider>();
             _specManager = new SpecManager(_loggerProvider, _exceptionManager);
             var filePath = "..\\..\\..\\..\\AssemblyAnalyser.TestData\\bin\\Debug\\net6.0\\AssemblyAnalyser.TestData.dll";
-            _moduleSpec = _specManager.LoadModuleSpecFromPath(Path.GetFullPath(filePath));
+            
+            _moduleSpec = _specManager.LoadAssemblySpecFromPath(Path.GetFullPath(filePath)).LoadModuleSpecFromPath(Path.GetFullPath(filePath));
             _moduleSpec.Process();
             _specManager.ProcessSpecs(_moduleSpec.TypeSpecs, false);
             _basicClassSpec = _moduleSpec.TypeSpecs
@@ -44,7 +45,7 @@ namespace AssemblyAnalyser.Tests
             {
                 fault.ToString();
             }
-            foreach (var (name, module) in _specManager.Modules)
+            foreach (var module in _specManager.Modules)
             {
                 foreach (var type in module.TypeSpecs)
                 {

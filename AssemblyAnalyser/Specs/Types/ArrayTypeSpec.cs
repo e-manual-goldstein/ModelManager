@@ -184,7 +184,7 @@ namespace AssemblyAnalyser
 
         protected override ModuleSpec TryGetModule()
         {
-            return _specManager.LoadReferencedModuleByScopeName(_arrayType.Module, _arrayType.Scope);
+            return _specManager.LoadReferencedModuleByFullName(_arrayType.Module, _arrayType.Scope.Name);
         }
     }
 }

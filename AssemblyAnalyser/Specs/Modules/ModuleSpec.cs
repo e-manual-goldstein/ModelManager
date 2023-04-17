@@ -31,7 +31,6 @@ namespace AssemblyAnalyser
         protected ModuleSpec(string assemblyFullName, ISpecManager specManager)
             : base(specManager)
         {
-            _specManager = specManager;
             ModuleFullName = assemblyFullName;
         }
         #endregion
@@ -55,9 +54,21 @@ namespace AssemblyAnalyser
 
         public ModuleSpec[] LoadReferencedModules(bool includeSystem = false)
         {
-            return (_referencedModules ??= _specManager.LoadReferencedModules(_baseVersion))
+            return (_referencedModules ??= _specManager.LoadReferencedModules(_baseVersion).ToArray())
                 .Where(r => !r.IsSystem || includeSystem).ToArray();
-        } 
+        }
+        #endregion
+
+        #region Referenced Assemblies
+        AssemblySpec[] _referencedAssemblies;
+
+        public AssemblySpec[] ReferencedAssemblies => _referencedAssemblies ??= LoadReferencedAssemblies();
+
+        public AssemblySpec[] LoadReferencedAssemblies(bool includeSystem = false)
+        {
+            return (_referencedAssemblies ??= _specManager.TryLoadReferencedAssemblies(_baseVersion).ToArray())
+                .Where(r => !r.IsSystem || includeSystem).ToArray();
+        }
         #endregion
 
         #region Type Specs
@@ -118,7 +129,7 @@ namespace AssemblyAnalyser
                 var spec = new TypeSpec(typeDefinition, _specManager);
                 return spec;
             }
-            return new MissingTypeSpec($"{type.Namespace}.{type.Name}", type.FullName, _specManager);
+            return new MissingTypeSpec($"{type.Namespace}.{type.Name}", type.FullName, this, _specManager);
         }
 
         private TypeSpec CreateGenericParameterSpec(GenericParameter type)
@@ -207,48 +218,13 @@ namespace AssemblyAnalyser
 
         public bool TryLoadTypeSpec(Func<TypeReference> getType, out TypeSpec typeSpec)
         {
-            bool success = false;
-            try
-            {
-                typeSpec = LoadTypeSpec(getType());
-                success = true;
-            }
-            catch (TypeLoadException ex)
-            {
-                if (!string.IsNullOrEmpty(ex.TypeName))
-                {
-                    throw new NotImplementedException();
-                }
-                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
-            }
-            return success;
+            return TryLoadTypeSpec(getType(), out typeSpec);
         }
 
         public bool TryLoadTypeSpec(TypeReference typeReference, out TypeSpec typeSpec)
         {
-            bool success = false;
-            try
-            {
-                typeSpec = LoadTypeSpec(typeReference);
-                success = true;
-            }
-            catch (TypeLoadException ex)
-            {
-                if (!string.IsNullOrEmpty(ex.TypeName))
-                {
-                    throw new NotImplementedException();
-                }
-                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                typeSpec = TypeSpec.CreateErrorSpec($"{ex.Message}");
-            }
-            return success;
+            typeSpec = LoadTypeSpec(typeReference);
+            return typeSpec != null && !typeSpec.IsNullSpec;
         }
 
         public bool TryLoadTypeSpecs(Func<TypeReference[]> getTypes, out TypeSpec[] typeSpecs)
