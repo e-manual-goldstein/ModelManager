@@ -12,10 +12,9 @@ namespace AssemblyAnalyser.Specs
         ModuleSpec _moduleSpec;
 
         public MissingTypeSpec(string fullTypeName, string uniqueTypeName, ModuleSpec moduleSpec, ISpecManager specManager) 
-            : base(fullTypeName, uniqueTypeName, specManager)
+            : base(fullTypeName, uniqueTypeName, moduleSpec, specManager)
         {
-            specManager.AddFault(this, FaultSeverity.Error, $"Missing Type Spec for '{fullTypeName}'");
-            _moduleSpec = moduleSpec;
+            specManager.AddFault(this, FaultSeverity.Error, $"Missing Type Spec for '{fullTypeName}'");            
         }
 
         public override bool IsMissingSpec => true;
@@ -79,9 +78,9 @@ namespace AssemblyAnalyser.Specs
             return false;
         }
 
-        protected override ModuleSpec TryGetModule()
+        protected override PropertySpec[] CreatePropertySpecs()
         {
-            return _moduleSpec;
+            return Array.Empty<PropertySpec>();
         }
 
         protected override TypeSpec[] CreateInterfaceSpecs()

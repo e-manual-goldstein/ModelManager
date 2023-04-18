@@ -1,4 +1,5 @@
 ﻿using AssemblyAnalyser.Extensions;
+using AssemblyAnalyser.Specs;
 using Mono.Cecil;
 using System;
 using System.Collections.Generic;
@@ -10,10 +11,10 @@ namespace AssemblyAnalyser
 {
     public class SystemModuleSpec : ModuleSpec
     {
-        static string[] _systemModuleNames = new string[] { "mscorlib", "System.Core" };
+        static string[] _systemModuleNames = new string[] { "mscorlib", "System.Core", "System.Runtime" };
 
-        public SystemModuleSpec(ModuleDefinition module, string filePath, ISpecManager specManager)
-            : base(module, filePath, specManager)
+        public SystemModuleSpec(ModuleDefinition module, string filePath, AssemblySpec assemblySpec, ISpecManager specManager)
+            : base(module, filePath, assemblySpec, specManager)
         {
 
         }
@@ -26,14 +27,17 @@ namespace AssemblyAnalyser
 
         public override bool IsSystem => true;
 
-        public static string GetSystemModuleName(IMetadataScope scope)
-        {
-            return "System.Core";
-        }
-
         public override TypeSpec LoadTypeSpec(TypeReference type)
         {
-            return base.LoadTypeSpec(type);
+            return type switch
+            {
+                ArrayType arrayType => LoadFullTypeSpec(arrayType),
+                TypeDefinition typeDefinition => LoadFullTypeSpec(typeDefinition),
+                GenericInstanceType genericInstanceType => LoadFullTypeSpec(genericInstanceType),
+                GenericParameter genericParameter=> LoadFullTypeSpec(genericParameter),
+                _ => base.LoadTypeSpec(type.Resolve())
+            };
+            
         }
 
         protected override CustomAttribute[] GetAttributes()
@@ -48,7 +52,7 @@ namespace AssemblyAnalyser
 
         public override string ToString()
         {
-            return base.ToString();
+            return SystemAssemblySpec.SYSTEM_MODULE_NAME;
         }
 
         

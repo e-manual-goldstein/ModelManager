@@ -46,18 +46,23 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            Adder = _specManager.LoadMethodSpec(_adder, true);
-            Remover = _specManager.LoadMethodSpec(_remover, true);
-            EventType = _specManager.LoadTypeSpec(_eventDefinition.EventType);
+            Adder = _specManager.LoadMethodSpec(_adder, true, DeclaringType.Module.AssemblyLocator);
+            Remover = _specManager.LoadMethodSpec(_remover, true, DeclaringType.Module.AssemblyLocator);
+            EventType = _specManager.LoadTypeSpec(_eventDefinition.EventType, DeclaringType.Module.AssemblyLocator);
             EventType.RegisterAsDelegateFor(this);            
-            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
+            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this, DeclaringType.Module.AssemblyLocator);
         }
 
         protected override CustomAttribute[] GetAttributes()
         {
             return _eventDefinition.CustomAttributes.ToArray();
         }
-                
+
+        protected override TypeSpec[] TryLoadAttributeSpecs()
+        {
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, DeclaringType.Module.AssemblyLocator);
+        }
+
         public override string ToString()
         {
             return _eventDefinition.Name;

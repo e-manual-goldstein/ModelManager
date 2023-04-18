@@ -10,7 +10,7 @@ namespace AssemblyAnalyser.Specs
     public class NullTypeSpec : TypeSpec
     {
         public NullTypeSpec(ISpecManager specManager)
-            : base("null", "nullspec", specManager)
+            : base("null", "nullspec", null, specManager)
         {
             Exclude("Null Spec");
             SkipProcessing("Null Spec");
@@ -152,12 +152,6 @@ namespace AssemblyAnalyser.Specs
         protected override void ProcessInterfaceImplementations()
         {
 
-        }
-
-        protected override ModuleSpec TryGetModule()
-        {
-            _specManager.AddFault(this, FaultSeverity.Error, $"Null Type Spec does not have a Module");
-            return null;
         }
 
         //public override MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs, 

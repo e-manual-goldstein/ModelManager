@@ -1,4 +1,5 @@
-﻿using Mono.Cecil;
+﻿using AssemblyAnalyser.Extensions;
+using Mono.Cecil;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser.Specs
 {
-    internal class MissingAssemblySpec : AssemblySpec
+    public class MissingAssemblySpec : AssemblySpec
     {
         AssemblyNameReference _missingAssembly;
 
@@ -22,6 +23,14 @@ namespace AssemblyAnalyser.Specs
         public AssemblyNameReference MissingAssembly => _missingAssembly;
 
         public override bool IsSystem { get => base.IsSystem; protected set => base.IsSystem = value; }
+
+        List<MissingModuleSpec> _containedModules = new();
+
+        protected override ModuleSpec[] TryGetModuleSpecs()
+        {
+            return _containedModules.ToArray();
+        }
+
 
         public override void RegisterAsRequiredBy(ISpecDependency specDependency)
         {
@@ -48,5 +57,16 @@ namespace AssemblyAnalyser.Specs
             return $"[M]{AssemblyFullName}";
         }
 
+        protected override ModuleSpec CreateFullModuleSpec(IMetadataScope scope)
+        {
+            var spec = CreateMissingModuleSpec(scope.GetAssemblyNameReferenceForScope());
+            _containedModules.Add(spec);
+            return spec;
+        }
+
+        protected override string TryGetTargetFrameworkVersion()
+        {
+            return string.Empty;
+        }
     }
 }

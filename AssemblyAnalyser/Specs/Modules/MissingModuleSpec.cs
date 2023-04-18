@@ -8,14 +8,14 @@ namespace AssemblyAnalyser.Specs
     {
         AssemblyNameReference _missingAssembly;
 
-        public MissingModuleSpec(AssemblyNameReference missingAssembly, ISpecManager specManager) 
-            : base(missingAssembly.FullName, specManager)
+        public MissingModuleSpec(AssemblyNameReference missingAssembly, AssemblySpec assemblySpec, ISpecManager specManager) 
+            : base(missingAssembly.FullName, assemblySpec, specManager)
         {
             _missingAssembly = missingAssembly;
             Versions = new();
             ModuleShortName = missingAssembly.Name;
             Versions.Add(missingAssembly.FullName, missingAssembly);
-            specManager.AddFault(FaultSeverity.Warning, $"Asssembly not found {missingAssembly.FullName}");
+            specManager.AddFault(FaultSeverity.Warning, $"Module not found {missingAssembly.FullName}");
         }
 
         public AssemblyNameReference MissingAssembly => _missingAssembly;

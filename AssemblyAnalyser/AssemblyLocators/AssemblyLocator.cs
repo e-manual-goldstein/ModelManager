@@ -12,12 +12,13 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
-    public abstract class AssemblyLocator
+    public abstract class AssemblyLocator : IAssemblyLocator
     {
         protected List<string> _filePathsForLocator = new List<string>();
         protected const string BASE_FRAMEWORK_PATH = "C:\\Windows\\Microsoft.NET\\";
         protected const string GLOBAL_ASSEMBLY_CACHE_PATH = "C:\\Windows\\assembly";
         protected const string BASE_DOTNET_PATH = "C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\";
+        
         public AssemblyLocator()
         {            
         }

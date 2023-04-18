@@ -11,8 +11,10 @@ namespace AssemblyAnalyser
         //ModuleSpec[] LoadModuleSpecs(ModuleDefinition[] modules);
         //ModuleSpec LoadModuleSpec(IMetadataScope scope);
         //ModuleSpec LoadModuleSpecFromPath(string moduleFilePath);
-        IEnumerable<ModuleSpec> LoadReferencedModules(ModuleDefinition module);
-        ModuleSpec LoadReferencedModuleByFullName(ModuleDefinition module, string referencedModuleName);
+        IEnumerable<ModuleSpec> LoadReferencedModules(ModuleDefinition module, 
+            IAssemblyLocator assemblyLocator = null);
+        //ModuleSpec LoadReferencedModuleByFullName(ModuleDefinition module, AssemblyNameReference assemblyNameReference, 
+        //    IAssemblyLocator assemblyLocator = null);
         //ModuleSpec LoadReferencedModuleByScopeName(ModuleDefinition module, IMetadataScope scope);
     }
 }

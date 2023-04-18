@@ -32,14 +32,19 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            FieldType = _specManager.LoadTypeSpec(_fieldDefinition.FieldType);
+            FieldType = _specManager.LoadTypeSpec(_fieldDefinition.FieldType, DeclaringType.Module.AssemblyLocator);
             FieldType.RegisterAsResultType(this);            
-            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
+            _attributes = TryLoadAttributeSpecs();
         }
 
         protected override CustomAttribute[] GetAttributes()
         {
             return _fieldDefinition.CustomAttributes.ToArray();
+        }
+
+        protected override TypeSpec[] TryLoadAttributeSpecs()
+        {
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, DeclaringType.Module.AssemblyLocator);
         }
 
         public override string ToString()

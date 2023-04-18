@@ -13,8 +13,8 @@ namespace AssemblyAnalyser
     {
         GenericParameter _genericParameter;
 
-        public GenericParameterSpec(GenericParameter genericParameter, ISpecManager specManager) 
-            : base($"{genericParameter.Namespace}.{genericParameter.Name}", genericParameter.FullName, specManager)
+        public GenericParameterSpec(GenericParameter genericParameter, ModuleSpec moduleSpec, ISpecManager specManager) 
+            : base($"{genericParameter.Namespace}.{genericParameter.Name}", genericParameter.FullName, moduleSpec, specManager)
         {
             _genericParameter = genericParameter;
             Name = _genericParameter.Name;
@@ -25,11 +25,6 @@ namespace AssemblyAnalyser
 
         public bool HasDefaultConstructorConstraint { get; }
 
-        protected override ModuleSpec TryGetModule()
-        {
-            return _specManager.LoadReferencedModuleByFullName(_genericParameter.Module, _genericParameter.Scope.GetScopeNameWithoutExtension());
-        }
-
         protected override void BuildSpec()
         {
             BuildSpecInternal();
@@ -39,7 +34,7 @@ namespace AssemblyAnalyser
         {
             foreach (var constraint in _genericParameter.Constraints)
             {
-                var typeSpec = _specManager.LoadTypeSpec(constraint.ConstraintType);
+                var typeSpec = _specManager.LoadTypeSpec(constraint.ConstraintType, Module.AssemblyLocator);
                 if (typeSpec != null && typeSpec.IsClass)
                 {
                     return typeSpec;

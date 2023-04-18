@@ -39,6 +39,31 @@ namespace AssemblyAnalyser.Extensions
             return match.Success ? match.Groups["FileNameNoExtension"].Value : scope.Name;
         }
 
+        public static string GetUniqueNameFromScope(this IMetadataScope scope)
+        {
+            var version = scope switch
+            {
+                AssemblyNameDefinition assemblyNameDefinition => assemblyNameDefinition.Version.ToString(),
+                ModuleDefinition moduleDefinition => moduleDefinition.Assembly.Name.Version.ToString(),
+                AssemblyNameReference assemblyNameReference => assemblyNameReference.Version.ToString(),
+                ModuleReference moduleReference => moduleReference.Name.ParseVersion(),
+                _ => string.Empty
+            };
+            return $"{scope.GetScopeNameWithoutExtension()},{version}";
+        }
+
+        public static AssemblyNameReference GetAssemblyNameReferenceForScope(this IMetadataScope scope)
+        {
+            return scope switch
+            {
+                AssemblyNameDefinition assemblyNameDefinition => assemblyNameDefinition,
+                ModuleDefinition moduleDefinition => moduleDefinition.Assembly.Name,
+                AssemblyNameReference assemblyNameReference => assemblyNameReference,                
+                _ => null
+            };
+        }
+
+
         public static string CreateUniqueTypeSpecName(this TypeReference type, bool isArray)
         {
             var suffix = isArray ? "[]" : null;

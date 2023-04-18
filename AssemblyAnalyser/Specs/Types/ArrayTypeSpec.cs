@@ -11,8 +11,8 @@ namespace AssemblyAnalyser
     {
         ArrayType _arrayType;
 
-        public ArrayTypeSpec(ArrayType arrayType, TypeSpec elementSpec, ISpecManager specManager) :
-            base($"{arrayType.ElementType.Namespace}.{arrayType.ElementType.Name}[]", $"{arrayType.ElementType.FullName}[]", specManager)
+        public ArrayTypeSpec(ArrayType arrayType, TypeSpec elementSpec, ModuleSpec moduleSpec, ISpecManager specManager) :
+            base($"{arrayType.ElementType.Namespace}.{arrayType.ElementType.Name}[]", $"{arrayType.ElementType.FullName}[]", moduleSpec, specManager)
         {
             _arrayType = arrayType;
             ElementSpec = elementSpec;
@@ -180,11 +180,6 @@ namespace AssemblyAnalyser
         protected override void ProcessInterfaceImplementations()
         {
             base.ProcessInterfaceImplementations();
-        }
-
-        protected override ModuleSpec TryGetModule()
-        {
-            return _specManager.LoadReferencedModuleByFullName(_arrayType.Module, _arrayType.Scope.Name);
         }
     }
 }

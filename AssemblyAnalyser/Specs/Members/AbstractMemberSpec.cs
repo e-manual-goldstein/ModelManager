@@ -11,8 +11,9 @@ namespace AssemblyAnalyser
     public abstract class AbstractMemberSpec<TMemberSpec> : AbstractSpec, IMemberSpec, IImplementsSpec<TMemberSpec>
         where TMemberSpec : AbstractSpec
     {
-        protected AbstractMemberSpec(ISpecManager specManager) : base(specManager)
+        protected AbstractMemberSpec(TypeSpec declaringType, ISpecManager specManager) : base(specManager)
         {
+            _declaringType = declaringType;
         }
 
         TypeSpec _declaringType;

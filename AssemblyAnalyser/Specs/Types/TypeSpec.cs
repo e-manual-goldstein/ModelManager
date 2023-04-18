@@ -16,19 +16,19 @@ namespace AssemblyAnalyser
     {
         TypeDefinition _typeDefinition;
         
-        public TypeSpec(TypeDefinition typeDefinition, ISpecManager specManager)
-            : this($"{typeDefinition.Namespace}.{typeDefinition.Name}", typeDefinition.FullName, specManager)
+        public TypeSpec(TypeDefinition typeDefinition, ModuleSpec moduleSpec, ISpecManager specManager)
+            : this($"{typeDefinition.Namespace}.{typeDefinition.Name}", typeDefinition.FullName, moduleSpec, specManager)
         {
             _typeDefinition = typeDefinition;
             Name = typeDefinition.Name;
             Namespace = typeDefinition.Namespace;
-            IsSystem = Module?.IsSystem ?? true;
             IsClass = typeDefinition.IsClass;
         }
                 
-        protected TypeSpec(string fullTypeName, string uniqueTypeName, ISpecManager specManager) 
+        protected TypeSpec(string fullTypeName, string uniqueTypeName, ModuleSpec moduleSpec, ISpecManager specManager) 
             : base(specManager)
         {
+            _module = moduleSpec;
             if (uniqueTypeName == "System.Action")
             {
 
@@ -46,7 +46,7 @@ namespace AssemblyAnalyser
         public string FullTypeName { get; }
         public string Namespace { get; set; }
         public virtual bool IsInterface => _typeDefinition.IsInterface;
-
+        public override bool IsSystem => Module.IsSystem;
         public bool IsClass { get; }
         public bool IsArray { get; }
 
@@ -83,12 +83,17 @@ namespace AssemblyAnalyser
 
         protected virtual TypeSpec[] CreateAttributSpecs()
         {
-            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this);
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, Module.AssemblyLocator);
         }
 
         protected override CustomAttribute[] GetAttributes()
         {
             return _typeDefinition.CustomAttributes.ToArray();
+        }
+
+        protected override TypeSpec[] TryLoadAttributeSpecs()
+        {
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, Module.AssemblyLocator);
         }
 
         private void ProcessCompilerGenerated()
@@ -111,19 +116,14 @@ namespace AssemblyAnalyser
         }
 
         ModuleSpec _module;
-        public ModuleSpec Module => _module ??= TryGetModule();
-
-        protected virtual ModuleSpec TryGetModule()
-        {
-            return _specManager.LoadReferencedModuleByFullName(_typeDefinition.Module, _typeDefinition.Scope.GetScopeNameWithoutExtension());
-        }
+        public ModuleSpec Module => _module;
 
         TypeSpec _baseSpec;
         public TypeSpec BaseSpec => _baseSpec ??= CreateBaseSpec();
 
         protected virtual TypeSpec CreateBaseSpec()
         {
-            var typeSpec = _specManager.LoadTypeSpec(_typeDefinition.BaseType);
+            var typeSpec = _specManager.LoadTypeSpec(_typeDefinition.BaseType, Module.AssemblyLocator);
             if (!typeSpec.IsNullSpec)
             {
                 typeSpec.AddSubType(this);
@@ -136,7 +136,7 @@ namespace AssemblyAnalyser
 
         protected virtual TypeSpec[] CreateInterfaceSpecs()
         {
-            var specs = _specManager.LoadTypeSpecs(_typeDefinition.Interfaces.Select(i => i.InterfaceType)).ToArray();
+            var specs = _specManager.LoadTypeSpecs(_typeDefinition.Interfaces.Select(i => i.InterfaceType), Module.AssemblyLocator).ToArray();
             foreach (var interfaceSpec in specs.Where(s => !s.IsNullSpec))
             {
                 if (interfaceSpec is GenericInstanceSpec genericInstanceSpec)
@@ -157,7 +157,7 @@ namespace AssemblyAnalyser
 
         protected virtual TypeSpec[] CreateNestedTypeSpecs()
         {
-            var specs = _specManager.LoadTypeSpecs(_typeDefinition.NestedTypes.Where(n => n.DeclaringType == _typeDefinition)).ToArray();
+            var specs = _specManager.LoadTypeSpecs(_typeDefinition.NestedTypes.Where(n => n.DeclaringType == _typeDefinition), Module.AssemblyLocator).ToArray();
             foreach (var nestedType in specs.Where(s => !s.IsNullSpec))
             {
                 nestedType.SetNestedIn(this);
@@ -252,7 +252,7 @@ namespace AssemblyAnalyser
         protected virtual GenericParameterSpec[] CreateGenericTypeParameters()
         {
             return _specManager
-                .LoadTypeSpecs<GenericParameterSpec>(_typeDefinition.GenericParameters).ToArray();
+                .LoadTypeSpecs<GenericParameterSpec>(_typeDefinition.GenericParameters, Module.AssemblyLocator).ToArray();
         }
 
 
@@ -426,7 +426,7 @@ namespace AssemblyAnalyser
             var methodDefinition = method as MethodDefinition;
             if (methodDefinition == null)
             {
-                return new MissingMethodSpec(method, _specManager);
+                return new MissingMethodSpec(method, this, _specManager);
             }
             return _methodSpecs.GetOrAdd(methodDefinition.CreateUniqueMethodName(), (key) => CreateMethodSpec(methodDefinition));
         }
@@ -439,8 +439,8 @@ namespace AssemblyAnalyser
         private MethodSpec CreateMethodSpec(MethodDefinition method)
         {
             var spec = method.HasGenericParameters 
-                ? new GenericMethodSpec(method, _specManager) 
-                : new MethodSpec(method, _specManager);            
+                ? new GenericMethodSpec(method, this, _specManager) 
+                : new MethodSpec(method, this, _specManager);            
             return spec;
         }
 
@@ -490,7 +490,7 @@ namespace AssemblyAnalyser
         private PropertySpec CreatePropertySpec(PropertyDefinition propertyInfo)
         {
             //TODO: Is it faster to flag the explicit implementations here?");
-            return new PropertySpec(propertyInfo, _specManager);
+            return new PropertySpec(propertyInfo, this, _specManager);
         }
 
         public PropertySpec[] LoadPropertySpecs(PropertyDefinition[] propertyInfos)

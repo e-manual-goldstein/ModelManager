@@ -11,13 +11,14 @@ namespace AssemblyAnalyser
 {
     public class ModuleSpec : AbstractSpec
     {
+        AssemblySpec _assembly;
         //the _baseVersion is the version of the module for which an assembly has been located
         //this is the version which corresponds to the file found at FilePath
         ModuleDefinition _baseVersion;
         
         #region Constructors
-        public ModuleSpec(ModuleDefinition module, string filePath,
-             ISpecManager specManager) : this(module.Assembly.FullName, specManager)
+        public ModuleSpec(ModuleDefinition module, string filePath, AssemblySpec assemblySpec, ISpecManager specManager) 
+            : this(module.Assembly.FullName, assemblySpec, specManager)
         {
             AddSearchDirectory(module, filePath);
             Versions = new();
@@ -25,12 +26,13 @@ namespace AssemblyAnalyser
             Versions.Add(module.Assembly.FullName, module.Assembly.Name);
             ModuleShortName = module.Assembly.Name.Name;
             FilePath = filePath;
-            IsSystem = AssemblyLocator.IsSystemAssembly(filePath);
+            IsSystem = _assembly.IsSystem;
         }
 
-        protected ModuleSpec(string assemblyFullName, ISpecManager specManager)
+        protected ModuleSpec(string assemblyFullName, AssemblySpec assemblySpec, ISpecManager specManager)
             : base(specManager)
         {
+            _assembly = assemblySpec;
             ModuleFullName = assemblyFullName;
         }
         #endregion
@@ -44,7 +46,10 @@ namespace AssemblyAnalyser
 
         public string ModuleFullName { get; }
 
-        protected Dictionary<string, AssemblyNameReference> Versions { get; set; } 
+        protected Dictionary<string, AssemblyNameReference> Versions { get; set; }
+
+        public IAssemblyLocator AssemblyLocator => _assembly.AssemblyLocator;
+
         #endregion
 
         #region Referenced Modules
@@ -54,7 +59,7 @@ namespace AssemblyAnalyser
 
         public ModuleSpec[] LoadReferencedModules(bool includeSystem = false)
         {
-            return (_referencedModules ??= _specManager.LoadReferencedModules(_baseVersion).ToArray())
+            return (_referencedModules ??= _specManager.LoadReferencedModules(_baseVersion, _assembly.AssemblyLocator).ToArray())
                 .Where(r => !r.IsSystem || includeSystem).ToArray();
         }
         #endregion
@@ -66,7 +71,7 @@ namespace AssemblyAnalyser
 
         public AssemblySpec[] LoadReferencedAssemblies(bool includeSystem = false)
         {
-            return (_referencedAssemblies ??= _specManager.TryLoadReferencedAssemblies(_baseVersion).ToArray())
+            return (_referencedAssemblies ??= _specManager.TryLoadReferencedAssemblies(_baseVersion, AssemblyLocator).ToArray())
                 .Where(r => !r.IsSystem || includeSystem).ToArray();
         }
         #endregion
@@ -95,7 +100,7 @@ namespace AssemblyAnalyser
             return LoadFullTypeSpec(type);
         }
 
-        private TypeSpec LoadFullTypeSpec(TypeReference type)
+        protected TypeSpec LoadFullTypeSpec(TypeReference type)
         {
             bool typeReferenceIsArray = type.IsArray; //Resolving TypeReference to TypeDefinition causes loss of IsArray definition
             var uniqueTypeName = type.CreateUniqueTypeSpecName(typeReferenceIsArray);
@@ -126,7 +131,7 @@ namespace AssemblyAnalyser
         {
             if (type is TypeDefinition typeDefinition)
             {
-                var spec = new TypeSpec(typeDefinition, _specManager);
+                var spec = new TypeSpec(typeDefinition, this, _specManager);
                 return spec;
             }
             return new MissingTypeSpec($"{type.Namespace}.{type.Name}", type.FullName, this, _specManager);
@@ -134,26 +139,26 @@ namespace AssemblyAnalyser
 
         private TypeSpec CreateGenericParameterSpec(GenericParameter type)
         {
-            var spec = new GenericParameterSpec(type, _specManager);
+            var spec = new GenericParameterSpec(type, this, _specManager);
             return spec;
         }
 
         private TypeSpec CreateGenericTypeSpec(TypeDefinition typeDefinition)
         {
-            var spec = new GenericTypeSpec(typeDefinition, _specManager);
+            var spec = new GenericTypeSpec(typeDefinition, this, _specManager);
             return spec;
         }
 
         private TypeSpec CreateGenericInstanceSpec(GenericInstanceType type, string fullTypeName)
         {
-            var spec = new GenericInstanceSpec(type, fullTypeName, _specManager);
+            var spec = new GenericInstanceSpec(type, fullTypeName, this, _specManager);
             return spec;
         }
 
         private TypeSpec CreateArrayTypeSpec(ArrayType type, string fullTypeName)
         {
             var elementSpec = LoadTypeSpec(type.ElementType);
-            var spec = new ArrayTypeSpec(type, elementSpec, _specManager);
+            var spec = new ArrayTypeSpec(type, elementSpec, this, _specManager);
             return spec;
         }
 
@@ -182,7 +187,7 @@ namespace AssemblyAnalyser
                     }
                     else
                     {
-                        typeDefinition = GetTypeDefinition(type);
+                        typeDefinition = GetTypeDefinition(type) ?? GetTypeDefinition(type.GetElementType());
                     }
                 }
             }
@@ -270,6 +275,11 @@ namespace AssemblyAnalyser
             return _baseVersion.CustomAttributes.ToArray();
         }
 
+        protected override TypeSpec[] TryLoadAttributeSpecs()
+        {
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, AssemblyLocator);
+        }
+
         protected override void BuildSpec()
         {
             foreach (var referencedModule in ReferencedModules)
@@ -285,6 +295,7 @@ namespace AssemblyAnalyser
 
         private void AddSearchDirectory(ModuleDefinition module, string filePath)
         {
+            _specManager.AddFault(this, FaultSeverity.Debug, "Review this pattern");
             if (module.AssemblyResolver is DefaultAssemblyResolver defaultAssemblyResolver)
             {
                 if (!defaultAssemblyResolver.GetSearchDirectories().Contains(Path.GetDirectoryName(filePath)))

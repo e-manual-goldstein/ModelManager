@@ -10,7 +10,8 @@ namespace AssemblyAnalyser.Specs
 {
     public class GenericMethodSpec : MethodSpec, IHasGenericParameters
     {
-        public GenericMethodSpec(MethodDefinition methodDefinition, ISpecManager specManager) : base(methodDefinition, specManager)
+        public GenericMethodSpec(MethodDefinition methodDefinition, TypeSpec declaringType, ISpecManager specManager) 
+            : base(methodDefinition, declaringType, specManager)
         {
             ExplicitName = methodDefinition.CreateGenericMethodName();
         }
@@ -21,7 +22,7 @@ namespace AssemblyAnalyser.Specs
         private GenericParameterSpec[] TryGetGenericTypeParameters()
         {
             var genericArgumentSpecs = _specManager
-                .LoadTypeSpecs<GenericParameterSpec>(_methodDefinition.GenericParameters).ToArray();
+                .LoadTypeSpecs<GenericParameterSpec>(_methodDefinition.GenericParameters, DeclaringType.Module.AssemblyLocator).ToArray();
             {
                 foreach (var genericArgSpec in genericArgumentSpecs)
                 {

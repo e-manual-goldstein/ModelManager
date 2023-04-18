@@ -8,7 +8,7 @@ namespace AssemblyAnalyser
     {
         private MethodReference method;
 
-        public MissingMethodSpec(MethodReference method, ISpecManager specManager) : base(specManager)
+        public MissingMethodSpec(MethodReference method, TypeSpec declaringType, ISpecManager specManager) : base(declaringType, specManager)
         {
             this.method = method;
         }

@@ -12,8 +12,8 @@ namespace AssemblyAnalyser
     {
 
 
-        public GenericTypeSpec(TypeDefinition typeDefinition, ISpecManager specManager) 
-            : base(typeDefinition, specManager)
+        public GenericTypeSpec(TypeDefinition typeDefinition, ModuleSpec moduleSpec, ISpecManager specManager) 
+            : base(typeDefinition, moduleSpec, specManager)
         {
         }
 
@@ -61,11 +61,6 @@ namespace AssemblyAnalyser
         protected override CustomAttribute[] GetAttributes()
         {
             return base.GetAttributes();
-        }
-
-        protected override ModuleSpec TryGetModule()
-        {
-            return base.TryGetModule();
         }
 
         protected override TypeSpec CreateBaseSpec()

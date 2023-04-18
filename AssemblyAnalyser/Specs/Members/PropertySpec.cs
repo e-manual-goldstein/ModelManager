@@ -9,8 +9,8 @@ namespace AssemblyAnalyser
     {
         private PropertyDefinition _propertyDefinition;
 
-        public PropertySpec(PropertyDefinition propertyDefinition, ISpecManager specManager)
-            : base(specManager)
+        public PropertySpec(PropertyDefinition propertyDefinition, TypeSpec declaringType, ISpecManager specManager)
+            : base(declaringType, specManager)
         {
             _propertyDefinition = propertyDefinition;
             Name = propertyDefinition.Name;
@@ -53,12 +53,12 @@ namespace AssemblyAnalyser
             _getter = TryGetGetter();
             _setter = TryGetSetter();
             _propertyType = GetPropertyType();
-            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this);
+            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this, DeclaringType.Module.AssemblyLocator);
         }
 
         private TypeSpec GetPropertyType()
         {
-            var typeSpec = _specManager.LoadTypeSpec(_propertyDefinition.PropertyType);
+            var typeSpec = _specManager.LoadTypeSpec(_propertyDefinition.PropertyType, DeclaringType.Module.AssemblyLocator);
             if (typeSpec == null || typeSpec.IsNullSpec)
             {
                 _specManager.AddFault(this, FaultSeverity.Error, $"Could not determine PropertyType for PropertySpec {this}");
@@ -72,14 +72,14 @@ namespace AssemblyAnalyser
 
         private MethodSpec TryGetGetter()
         {
-            var spec = _specManager.LoadMethodSpec(_propertyDefinition.GetMethod, true);
+            var spec = _specManager.LoadMethodSpec(_propertyDefinition.GetMethod, true, DeclaringType.Module.AssemblyLocator);
             spec?.RegisterAsSpecialNameMethodFor(this);
             return spec;
         }
 
         private MethodSpec TryGetSetter()
         {
-            var spec = _specManager.LoadMethodSpec(_propertyDefinition.SetMethod, true);
+            var spec = _specManager.LoadMethodSpec(_propertyDefinition.SetMethod, true, DeclaringType.Module.AssemblyLocator);
             spec?.RegisterAsSpecialNameMethodFor(this);
             return spec;
         }
@@ -109,7 +109,7 @@ namespace AssemblyAnalyser
 
         protected override TypeSpec TryGetDeclaringType()
         {
-            var typeSpec = _specManager.LoadTypeSpec(_propertyDefinition.DeclaringType);
+            var typeSpec = _specManager.LoadTypeSpec(_propertyDefinition.DeclaringType, DeclaringType.Module.AssemblyLocator);
             if (typeSpec == null || typeSpec.IsNullSpec)
             {
                 _specManager.AddFault(this, FaultSeverity.Critical, $"Could not determine DeclaringType for PropertySpec {this}");
@@ -120,6 +120,11 @@ namespace AssemblyAnalyser
         protected override CustomAttribute[] GetAttributes()
         {
             return _propertyDefinition.CustomAttributes.ToArray();
+        }
+
+        protected override TypeSpec[] TryLoadAttributeSpecs()
+        {
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, DeclaringType.Module.AssemblyLocator);
         }
 
         public override string ToString()

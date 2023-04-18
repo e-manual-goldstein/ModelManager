@@ -34,6 +34,11 @@ namespace AssemblyAnalyser
             return _parameterDefinition.CustomAttributes.ToArray();
         }
 
+        protected override TypeSpec[] TryLoadAttributeSpecs()
+        {
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, Member.DeclaringType.Module.AssemblyLocator);
+        }
+
         public bool IsParams => Attributes.Any(a => a.Name == "ParamArrayAttribute");
 
         TypeSpec _parameterType;
@@ -46,7 +51,7 @@ namespace AssemblyAnalyser
 
         private TypeSpec TryGetParameterType()
         {
-            var parameterTypeSpec = _specManager.LoadTypeSpec(_parameterDefinition.ParameterType);
+            var parameterTypeSpec = _specManager.LoadTypeSpec(_parameterDefinition.ParameterType, Member.DeclaringType.Module.AssemblyLocator);
             parameterTypeSpec.RegisterAsDependentParameterSpec(this);            
             return parameterTypeSpec;
         }

@@ -1,4 +1,5 @@
-﻿using Mono.Cecil;
+﻿using AssemblyAnalyser.Extensions;
+using Mono.Cecil;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,20 +10,40 @@ namespace AssemblyAnalyser.Specs
 {
     public class SystemAssemblySpec : AssemblySpec
     {
-        public SystemAssemblySpec(AssemblyDefinition assemblyDefinition, string filePath, ISpecManager specManager) 
-            : base(assemblyDefinition, filePath, specManager)
+        public const string SYSTEM_ASSEMBLY_NAME = "CoreSystemAssembly";
+        public const string SYSTEM_MODULE_NAME = "CoreSystemModule";
+        Dictionary<string, IMetadataScope> _metadataScopes = new();
+
+        public SystemAssemblySpec(AssemblyDefinition assemblyDefinition, string filePath, 
+            IAssemblyLocator assemblyLocator, ISpecManager specManager) 
+            : base(assemblyDefinition, filePath, assemblyLocator, specManager)
         {
         }
 
+        
         public override bool IsSystem => true;
 
         protected override ModuleSpec CreateFullModuleSpec(IMetadataScope scope)
         {
-            if (scope is ModuleDefinition moduleDefinition)
+            var moduleDefinition = scope as ModuleDefinition
+                ?? _assemblyDefinition.Modules.SingleOrDefault();
+            if (moduleDefinition != null)
             {
-                return new SystemModuleSpec(moduleDefinition, moduleDefinition.FileName, _specManager);
-            }                
-            return base.CreateFullModuleSpec(scope);
+                return new SystemModuleSpec(moduleDefinition, moduleDefinition.FileName, this, _specManager);
+            }
+            _specManager.AddFault(this, FaultSeverity.Critical, "System Assembly has no Modules");
+            return CreateMissingModuleSpec(scope as AssemblyNameReference);
+        }
+
+        public override ModuleSpec LoadModuleSpecForTypeReference(TypeReference typeReference)
+        {
+            return _moduleSpecs.GetOrAdd(SYSTEM_MODULE_NAME, (key) => CreateFullModuleSpec(typeReference.Scope));
+        }
+
+        public override AssemblySpec RegisterMetaDataScope(IMetadataScope scope)
+        {
+            _metadataScopes.TryAdd(scope.GetUniqueNameFromScope(), scope);
+            return this;
         }
 
         public override string ToString()
