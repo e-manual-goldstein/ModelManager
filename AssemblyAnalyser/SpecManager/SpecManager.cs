@@ -140,13 +140,13 @@ namespace AssemblyAnalyser
             //ProcessLoadedProperties(includeSystem);
             //ProcessLoadedParameters(includeSystem);
             //ProcessLoadedFields(includeSystem);
-            ProcessLoadedEvents(includeSystem);
+            //ProcessLoadedEvents(includeSystem);
             ProcessLoadedAttributes(includeSystem);
         }
 
         #region Assembly Specs
 
-        public IReadOnlyDictionary<string, AssemblySpec> Assemblies => _assemblies;
+        public IReadOnlyDictionary<string, AssemblySpec> AssemblySpecs => _assemblies;
 
         ConcurrentDictionary<string, AssemblySpec> _assemblies = new ConcurrentDictionary<string, AssemblySpec>();
 
@@ -222,7 +222,7 @@ namespace AssemblyAnalyser
 
         #region Module Specs
 
-        public ModuleSpec[] Modules => _assemblies.Values.SelectMany(a => a.Modules).ToArray();
+        public ModuleSpec[] ModuleSpecs => _assemblies.Values.SelectMany(a => a.Modules).ToArray();
 
         public ModuleSpec LoadModuleSpecForTypeReference(TypeReference typeReference, IAssemblyLocator assemblyLocator)
         {
@@ -324,7 +324,7 @@ namespace AssemblyAnalyser
             return _nullTypeSpec ??= new NullTypeSpec(this);
         }
 
-        public TypeSpec[] TypeSpecs => Modules.SelectMany(m => m.TypeSpecs).ToArray();
+        public TypeSpec[] TypeSpecs => ModuleSpecs.SelectMany(m => m.TypeSpecs).ToArray();
 
         public TypeSpec LoadTypeSpec(TypeReference typeReference, IAssemblyLocator assemblyLocator)
         {
@@ -417,8 +417,14 @@ namespace AssemblyAnalyser
 
         #region Field Specs
 
-        public FieldSpec[] Fields => TypeSpecs.SelectMany(t => t.Fields).ToArray();
-        
+        public FieldSpec[] FieldSpecs => TypeSpecs.SelectMany(t => t.Fields).ToArray();
+
+        #endregion
+
+        #region Event Specs
+
+        public EventSpec[] EventSpecs => TypeSpecs.SelectMany(t => t.Events).ToArray();
+
         #endregion
 
         #region Attribute Specs
@@ -466,61 +472,6 @@ namespace AssemblyAnalyser
         public void ProcessLoadedAttributes(bool includeSystem = true)
         {
             throw new NotImplementedException();
-        }
-
-        #endregion
-
-        #region Event Specs
-
-        public IReadOnlyDictionary<EventDefinition, EventSpec> Events => _eventSpecs;
-
-        ConcurrentDictionary<EventDefinition, EventSpec> _eventSpecs = new ConcurrentDictionary<EventDefinition, EventSpec>();
-
-        public void ProcessLoadedEvents(bool includeSystem = true)
-        {
-            foreach (var (fieldName, field) in Events.Where(t => includeSystem || t.Value.IsSystemEvent.Equals(false)))
-            {
-                field.Process();
-            }
-        }
-
-        public EventSpec[] TryLoadEventSpecs(Func<EventDefinition[]> getEvents, TypeSpec declaringType)
-        {
-            EventDefinition[] events = null;
-            try
-            {
-                events = getEvents();
-            }
-            catch (TypeLoadException ex)
-            {
-                AddFault(FaultSeverity.Error, ex.Message);
-            }
-            catch (FileNotFoundException ex)
-            {
-                _exceptionManager.Handle(ex);
-                _logger.LogError(ex, "File Not Found");
-            }
-            finally
-            {
-                events ??= Array.Empty<EventDefinition>();
-            }
-            return LoadEventSpecs(events, declaringType);
-        }
-
-        private EventSpec LoadEventSpec(EventDefinition eventInfo, TypeSpec declaringType)
-        {
-            EventSpec fieldSpec = _eventSpecs.GetOrAdd(eventInfo, (e) => CreateEventSpec(eventInfo, declaringType));
-            return fieldSpec;
-        }
-
-        private EventSpec CreateEventSpec(EventDefinition eventInfo, TypeSpec declaringType)
-        {
-            return new EventSpec(eventInfo, declaringType, this);
-        }
-
-        public EventSpec[] LoadEventSpecs(EventDefinition[] eventInfos, TypeSpec declaringType)
-        {
-            return eventInfos.Select(e => LoadEventSpec(e, declaringType)).ToArray();
         }
 
         #endregion

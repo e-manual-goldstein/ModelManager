@@ -40,15 +40,29 @@ namespace AssemblyAnalyser
         #region Properties
 
         public TypeDefinition Definition => _typeDefinition;
+
         public bool HasDefinition => _typeDefinition != null;
 
         public string UniqueTypeName { get; }
+
         public string FullTypeName { get; }
+
         public string Namespace { get; set; }
+
         public virtual bool IsInterface => _typeDefinition.IsInterface;
+
         public override bool IsSystem => Module.IsSystem;
+
         public bool IsClass { get; }
+
         public bool IsArray { get; }
+
+        public virtual bool IsNullSpec => false;
+
+        public virtual bool IsMissingSpec { get; }
+
+        public bool IsCompilerGenerated { get; private set; }
+
 
         #endregion
 
@@ -242,7 +256,7 @@ namespace AssemblyAnalyser
 
         protected virtual EventSpec[] CreateEventSpecs()
         {
-            var specs = _specManager.TryLoadEventSpecs(() => _typeDefinition.Events.Where(m => m.DeclaringType == _typeDefinition).ToArray(), this);
+            var specs = TryLoadEventSpecs(() => _typeDefinition.Events.ToArray());
             return specs;
         }
 
@@ -254,7 +268,6 @@ namespace AssemblyAnalyser
             return _specManager
                 .LoadTypeSpecs<GenericParameterSpec>(_typeDefinition.GenericParameters, Module.AssemblyLocator).ToArray();
         }
-
 
         #region Generic Type Flags
 
@@ -409,11 +422,6 @@ namespace AssemblyAnalyser
             return BaseSpec.MatchPropertyByOverride(property);
         }
 
-        public virtual bool IsNullSpec => false;
-
-        public virtual bool IsMissingSpec { get; }
-
-        public bool IsCompilerGenerated { get; private set; }
 
         #endregion
 
@@ -543,6 +551,33 @@ namespace AssemblyAnalyser
             return LoadFieldSpecs(getFields());
         }
 
+
+        #endregion
+
+        #region Event Specs
+
+        ConcurrentDictionary<string, EventSpec> _eventSpecs = new ConcurrentDictionary<string, EventSpec>();
+
+        public EventSpec[] TryLoadEventSpecs(Func<EventDefinition[]> getEvents)
+        {
+            return LoadEventSpecs(getEvents());
+        }
+
+        private EventSpec LoadEventSpec(EventDefinition eventInfo)
+        {
+            EventSpec fieldSpec = _eventSpecs.GetOrAdd(eventInfo.FullName, (e) => CreateEventSpec(eventInfo));
+            return fieldSpec;
+        }
+
+        private EventSpec CreateEventSpec(EventDefinition eventInfo)
+        {
+            return new EventSpec(eventInfo, this, _specManager);
+        }
+
+        public EventSpec[] LoadEventSpecs(EventDefinition[] eventInfos)
+        {
+            return eventInfos.Select(e => LoadEventSpec(e)).ToArray();
+        }
 
         #endregion
 

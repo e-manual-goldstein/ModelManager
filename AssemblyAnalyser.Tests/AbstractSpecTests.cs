@@ -45,7 +45,7 @@ namespace AssemblyAnalyser.Tests
             {
                 fault.ToString();
             }
-            foreach (var module in _specManager.Modules)
+            foreach (var module in _specManager.ModuleSpecs)
             {
                 foreach (var type in module.TypeSpecs)
                 {

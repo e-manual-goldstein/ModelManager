@@ -6,7 +6,7 @@ namespace AssemblyAnalyser
 {
     public interface IFieldSpecManager
     {
-        FieldSpec[] Fields { get; }
+        FieldSpec[] FieldSpecs { get; }
 
         //FieldSpec[] TryLoadFieldSpecs(Func<FieldDefinition[]> value, TypeSpec declaringType);
 

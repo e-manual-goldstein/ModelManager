@@ -28,7 +28,8 @@ namespace AssemblyAnalyser.Tests
             _specManager.ProcessSpecs(fields);
             var parameters = methods.SelectMany(m => m.Parameters).Union(properties.SelectMany(p => p.Parameters));
             _specManager.ProcessSpecs(parameters, false);
-            _specManager.ProcessLoadedEvents();
+            var events = types.SelectMany(m => m.Events);
+            _specManager.ProcessSpecs(events);
             //_specManager.ProcessLoadedAttributes();
             _basicAttribute = _moduleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicAttribute");

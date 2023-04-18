@@ -13,7 +13,7 @@ namespace AssemblyAnalyser.Tests.System
         [TestMethod]
         public void EnsureOnlyOneSpecExistsForSystemObjectType_Test()
         {
-            var allAssemblies = ((SpecManager)_specManager).Assemblies.Values;
+            var allAssemblies = ((SpecManager)_specManager).AssemblySpecs.Values;
             _specManager.ProcessSpecs(allAssemblies);
 
             var allModules = allAssemblies.SelectMany(a => a.Modules).ToArray();

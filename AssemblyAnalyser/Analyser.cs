@@ -89,7 +89,7 @@ namespace AssemblyAnalyser
                 $"Types: {_specManager.TypeSpecs.Count()}",
                 $"Properties {_specManager.PropertySpecs.Count()}",
                 $"Methods {_specManager.MethodSpecs.Count()}",
-                $"Fields {_specManager.Fields.Count()}"
+                $"Fields {_specManager.FieldSpecs.Count()}"
             };
         }
 

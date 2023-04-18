@@ -7,7 +7,7 @@ namespace AssemblyAnalyser
     {
         //void ProcessAllModules(bool includeSystem = true, bool parallelProcessing = true);
 
-        ModuleSpec[] Modules { get; }
+        ModuleSpec[] ModuleSpecs { get; }
         //ModuleSpec[] LoadModuleSpecs(ModuleDefinition[] modules);
         //ModuleSpec LoadModuleSpec(IMetadataScope scope);
         //ModuleSpec LoadModuleSpecFromPath(string moduleFilePath);
