@@ -233,7 +233,7 @@ namespace AssemblyAnalyser
 
         protected virtual FieldSpec[] CreateFieldSpecs()
         {
-            var specs = _specManager.TryLoadFieldSpecs(() => _typeDefinition.Fields.Where(m => m.DeclaringType == _typeDefinition).ToArray(), this);
+            var specs = TryLoadFieldSpecs(() => _typeDefinition.Fields.ToArray());
             return specs;
         }
 
@@ -518,6 +518,34 @@ namespace AssemblyAnalyser
 
         #endregion
 
+        #region Field Specs
+
+        ConcurrentDictionary<string, FieldSpec> _fieldSpecs = new ConcurrentDictionary<string, FieldSpec>();
+
+        private FieldSpec LoadFieldSpec(FieldDefinition fieldDefinition)
+        {
+            FieldSpec fieldSpec = _fieldSpecs.GetOrAdd(fieldDefinition.FullName, (spec) => CreateFieldSpec(fieldDefinition));
+            return fieldSpec;
+        }
+
+        private FieldSpec CreateFieldSpec(FieldDefinition fieldInfo)
+        {
+            return new FieldSpec(fieldInfo, this, _specManager);
+        }
+
+        public FieldSpec[] LoadFieldSpecs(FieldDefinition[] fieldInfos)
+        {
+            return fieldInfos.Select(f => LoadFieldSpec(f)).ToArray();
+        }
+
+        public FieldSpec[] TryLoadFieldSpecs(Func<FieldDefinition[]> getFields)
+        {
+            return LoadFieldSpecs(getFields());
+        }
+
+
+        #endregion
+
         public override string ToString()
         {
             return 
@@ -687,26 +715,6 @@ namespace AssemblyAnalyser
             return Methods.Union(BaseSpec.GetAllMethodSpecs()).ToArray();
         }
 
-        //public virtual MethodSpec MatchMethodSpecByNameAndParameterType(string methodName, ParameterSpec[] parameterSpecs,
-        //    GenericParameterSpec[] genericTypeArgumentSpecs)
-        //{
-        //    var nameAndParameterCountMatches = GetMethodSpecs(methodName)
-        //        .Where(m => m.Parameters.Length == parameterSpecs.Length).ToArray();
-        //    var matchingMethods = nameAndParameterCountMatches.Where(m
-        //            => m.HasExactGenericTypeParameters(genericTypeArgumentSpecs)
-        //            && m.HasExactParameters(parameterSpecs)).ToArray();
-        //    if (!matchingMethods.Any())
-        //    {
-        //        return BaseSpec.MatchMethodSpecByNameAndParameterType(methodName, parameterSpecs, genericTypeArgumentSpecs);
-        //    }
-        //    else if (matchingMethods.Count() > 1)
-        //    {
-        //        _specManager.AddFault(this, FaultSeverity.Error, $"Multiple Methods found for signature. MethodName:{methodName}");
-        //        return null;
-        //    }
-        //    return matchingMethods.SingleOrDefault();
-        //}
-
         public virtual MethodSpec FindMatchingMethodSpec(IHasExplicitName namedMember, MethodSpec methodSpec)
         {
             var nameAndParameterCountMatches = GetMethodSpecs(namedMember)
@@ -724,21 +732,5 @@ namespace AssemblyAnalyser
             return matchingMethods.SingleOrDefault();
         }
 
-        //public MethodSpec MatchMethodReference(MethodReference methodReference)
-        //{
-        //    var parameterSpecs = _specManager.TryLoadParameterSpecs(() => methodReference.Parameters.ToArray(), null);
-        //    var genericTypeArgumentSpecs = _specManager
-        //        .LoadTypeSpecs<GenericParameterSpec>(methodReference.GenericParameters).ToArray();
-        //    return MatchMethodSpecByNameAndParameterType(methodReference.Name, parameterSpecs, genericTypeArgumentSpecs);
-        //}
-
-        public string DecribeFields()
-        {
-            if (!Fields.Any())
-            {
-                return string.Empty;
-            }
-            return Fields.Select(f => f.FieldName).Aggregate((a, b) => a + ";" + b);
-        }
     }
 }

@@ -111,7 +111,7 @@ namespace AssemblyAnalyser
             //_methodSpecs.Clear();
             //_parameterSpecs.Clear();
             //_propertySpecs.Clear();
-            _fieldSpecs.Clear();
+            //_fieldSpecs.Clear();
         }
 
         public void ProcessSpecs<TSpec>(IEnumerable<TSpec> specs, bool parallelProcessing = true) where TSpec : AbstractSpec
@@ -139,7 +139,7 @@ namespace AssemblyAnalyser
             //ProcessLoadedMethods(includeSystem, parallelProcessing);
             //ProcessLoadedProperties(includeSystem);
             //ProcessLoadedParameters(includeSystem);
-            ProcessLoadedFields(includeSystem);
+            //ProcessLoadedFields(includeSystem);
             ProcessLoadedEvents(includeSystem);
             ProcessLoadedAttributes(includeSystem);
         }
@@ -223,30 +223,6 @@ namespace AssemblyAnalyser
         #region Module Specs
 
         public ModuleSpec[] Modules => _assemblies.Values.SelectMany(a => a.Modules).ToArray();
-
-        //ConcurrentDictionary<string, ModuleSpec> _moduleSpecs = new ConcurrentDictionary<string, ModuleSpec>();
-
-        //public void ProcessAllModules(bool includeSystem = true, bool parallelProcessing = true)
-        //{
-        //    var list = new List<ModuleSpec>();
-
-        //    var moduleSpecs = Modules;
-
-        //    var nonSystemAssemblies = moduleSpecs.Where(a => includeSystem || !a.IsSystem).ToArray();
-
-        //    list = nonSystemAssemblies.Where(a => includeSystem || !a.IsSystem).ToList();
-        //    if (parallelProcessing)
-        //    {
-        //        Parallel.ForEach(list, l => l.Process());
-        //    }
-        //    else
-        //    {
-        //        foreach (var item in list)
-        //        {
-        //            item.Process();
-        //        }
-        //    }
-        //}
 
         public ModuleSpec LoadModuleSpecForTypeReference(TypeReference typeReference, IAssemblyLocator assemblyLocator)
         {
@@ -441,57 +417,8 @@ namespace AssemblyAnalyser
 
         #region Field Specs
 
-        public IReadOnlyDictionary<FieldDefinition, FieldSpec> Fields => _fieldSpecs;
-
-        ConcurrentDictionary<FieldDefinition, FieldSpec> _fieldSpecs = new ConcurrentDictionary<FieldDefinition, FieldSpec>();
-
-        public void ProcessLoadedFields(bool includeSystem = true)
-        {
-            foreach (var (fieldName, field) in Fields.Where(t => includeSystem || !t.Value.IsSystem))
-            {
-                field.Process();
-            }
-        }
-
-        private FieldSpec LoadFieldSpec(FieldDefinition fieldInfo, TypeSpec declaringType)
-        {
-            FieldSpec fieldSpec = _fieldSpecs.GetOrAdd(fieldInfo, (spec) => CreateFieldSpec(fieldInfo, declaringType));
-            return fieldSpec;
-        }
-
-        private FieldSpec CreateFieldSpec(FieldDefinition fieldInfo, TypeSpec declaringType)
-        {
-            return new FieldSpec(fieldInfo, declaringType, this);
-        }
-
-        public FieldSpec[] LoadFieldSpecs(FieldDefinition[] fieldInfos, TypeSpec declaringType)
-        {
-            return fieldInfos.Select(f => LoadFieldSpec(f, declaringType)).ToArray();
-        }
-
-        public FieldSpec[] TryLoadFieldSpecs(Func<FieldDefinition[]> getFields, TypeSpec declaringType)
-        {
-            FieldDefinition[] fields = null;
-            try
-            {
-                fields = getFields();
-            }
-            catch (TypeLoadException ex)
-            {
-                AddFault(FaultSeverity.Error, ex.Message);
-            }
-            catch (FileNotFoundException ex)
-            {
-                _exceptionManager.Handle(ex);
-                _logger.LogError(ex, "File Not Found");
-            }
-            finally
-            {
-                fields ??= Array.Empty<FieldDefinition>();
-            }
-            return LoadFieldSpecs(fields, declaringType);
-        }
-
+        public FieldSpec[] Fields => TypeSpecs.SelectMany(t => t.Fields).ToArray();
+        
         #endregion
 
         #region Attribute Specs

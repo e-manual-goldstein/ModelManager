@@ -24,7 +24,8 @@ namespace AssemblyAnalyser.Tests
             var properties = types.SelectMany(t => t.Properties);
             _specManager.ProcessSpecs(methods);
             _specManager.ProcessSpecs(properties);
-            _specManager.ProcessLoadedFields();
+            var fields = types.SelectMany(t => t.Fields);
+            _specManager.ProcessSpecs(fields);
             var parameters = methods.SelectMany(m => m.Parameters).Union(properties.SelectMany(p => p.Parameters));
             _specManager.ProcessSpecs(parameters, false);
             _specManager.ProcessLoadedEvents();
