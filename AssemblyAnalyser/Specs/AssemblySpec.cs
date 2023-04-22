@@ -123,7 +123,7 @@ namespace AssemblyAnalyser
 
         public ModuleSpec LoadModuleSpecFromPath(string moduleFilePath)
         {
-            var assembly = _specManager.LoadAssemblySpecFromPath(moduleFilePath);
+            //var assembly = _specManager.LoadAssemblySpecFromPath(moduleFilePath);
             
             var readerParameters = new ReaderParameters()
             {

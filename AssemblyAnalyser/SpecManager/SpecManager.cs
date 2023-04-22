@@ -26,12 +26,19 @@ namespace AssemblyAnalyser
             _logger = loggerProvider.CreateLogger("Spec Manager");
             _exceptionManager = exceptionManager;
             _assemblyResolver = CreateAssemblyResolver();
-
         }
 
         private DefaultAssemblyResolver CreateAssemblyResolver()
         {
             var resolver = new DefaultAssemblyResolver();
+            ScopeExtended += (sender, args) =>
+            {
+                if (!_assemblyResolver.GetSearchDirectories().Contains(args.ScopeDirectory))
+                {
+                    _logger.LogInformation("Extending Scope");
+                    _assemblyResolver.AddSearchDirectory(args.ScopeDirectory);
+                }
+            };
             return resolver;
         }
 
@@ -39,6 +46,8 @@ namespace AssemblyAnalyser
         public IRule[] SpecRules => _specRules.ToArray();
 
         public IAssemblyResolver AssemblyResolver => _assemblyResolver;
+
+        public event ScopeExtendedEventHandler ScopeExtended;
 
         #region Faults
 
@@ -211,6 +220,7 @@ namespace AssemblyAnalyser
         private AssemblySpec CreateFullAssemblySpec(string filePath, IAssemblyLocator assemblyLocator)
         {
             var assemblyDefinition = AssemblyDefinition.ReadAssembly(filePath);
+            ScopeExtended(this, new ScopeExtendedEventArgs(filePath));
             if (SystemModuleSpec.IsSystemModule(assemblyDefinition.Name))
             {
                 return new SystemAssemblySpec(assemblyDefinition, filePath, assemblyLocator, this);

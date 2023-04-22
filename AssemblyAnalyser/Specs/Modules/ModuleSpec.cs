@@ -20,10 +20,8 @@ namespace AssemblyAnalyser
         public ModuleSpec(ModuleDefinition module, string filePath, AssemblySpec assemblySpec, ISpecManager specManager) 
             : this(module.Assembly.FullName, assemblySpec, specManager)
         {
-            AddSearchDirectory(module, filePath);
-            Versions = new();
-            _baseVersion = module;
-            Versions.Add(module.Assembly.FullName, module.Assembly.Name);
+            Versions = new() { { module.Assembly.FullName, module.Assembly.Name } };
+            _baseVersion = module;            
             ModuleShortName = module.Assembly.Name.Name;
             FilePath = filePath;
             IsSystem = _assembly.IsSystem;
@@ -293,18 +291,6 @@ namespace AssemblyAnalyser
             }
         }
 
-        private void AddSearchDirectory(ModuleDefinition module, string filePath)
-        {
-            _specManager.AddFault(this, FaultSeverity.Debug, "Review this pattern");
-            if (module.AssemblyResolver is DefaultAssemblyResolver defaultAssemblyResolver)
-            {
-                if (!defaultAssemblyResolver.GetSearchDirectories().Contains(Path.GetDirectoryName(filePath)))
-                {
-                    defaultAssemblyResolver.AddSearchDirectory(Path.GetDirectoryName(filePath));
-                }
-            }
-        }
-        
         public void AddModuleVersion(AssemblyNameReference reference)
         {
             if (!Versions.ContainsKey(reference.Version.ToString()))

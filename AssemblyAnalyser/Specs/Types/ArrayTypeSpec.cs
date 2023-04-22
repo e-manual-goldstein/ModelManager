@@ -93,10 +93,10 @@ namespace AssemblyAnalyser
 
         public override void RegisterAsDependentParameterSpec(ParameterSpec parameterSpec)
         {
-            if (!_dependentParameterSpecs.Contains(parameterSpec))
-            {
-                _dependentParameterSpecs.Add(parameterSpec);                
-            }
+            //if (!_dependentParameterSpecs.Contains(parameterSpec))
+            //{
+            //    _dependentParameterSpecs.Add(parameterSpec);                
+            //}
         }
 
         public override void RegisterAsResultType(IMemberSpec methodSpec)
@@ -106,10 +106,10 @@ namespace AssemblyAnalyser
 
         public override void RegisterDependentMethodSpec(MethodSpec methodSpec)
         {
-            if (!_dependentMethodBodies.Contains(methodSpec))
-            {
-                _dependentMethodBodies.Add(methodSpec);                
-            }
+            //if (!_dependentMethodBodies.Contains(methodSpec))
+            //{
+            //    _dependentMethodBodies.Add(methodSpec);                
+            //}
         }
 
         public override string ToString()

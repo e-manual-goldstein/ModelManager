@@ -142,47 +142,47 @@ namespace AssemblyAnalyser
             {
                 throw new InvalidOperationException("Cannot implement a non-interface Type");
             }
-            if (!_implementations.Contains(typeSpec))
-            {
-                _specManager.AddFault(FaultSeverity.Debug, "Is it enough to just register implementations on a generic instance?");
-                _implementations.Add(typeSpec);                
-            }
+            //if (!_implementations.Contains(typeSpec))
+            //{
+            //    _specManager.AddFault(FaultSeverity.Debug, "Is it enough to just register implementations on a generic instance?");
+            //    _implementations.Add(typeSpec);                
+            //}
         }
 
         public override void RegisterAsResultType(IMemberSpec methodSpec)
         {
-            if (!_resultTypeSpecs.Contains(methodSpec))
-            {
-                _specManager.AddFault(FaultSeverity.Debug, "Is it enough to just register Result Types on a generic instance?");
-                _resultTypeSpecs.Add(methodSpec);                
-            }
+            //if (!_resultTypeSpecs.Contains(methodSpec))
+            //{
+            //    _specManager.AddFault(FaultSeverity.Debug, "Is it enough to just register Result Types on a generic instance?");
+            //    _resultTypeSpecs.Add(methodSpec);                
+            //}
         }
 
         public override void RegisterDependentMethodSpec(MethodSpec methodSpec)
         {
-            if (!_dependentMethodBodies.Contains(methodSpec))
-            {
-                _specManager.AddFault(FaultSeverity.Debug, "Is it enough to just register Dependent Methods on a generic instance?");
-                _dependentMethodBodies.Add(methodSpec);                
-            }
+            //if (!_dependentMethodBodies.Contains(methodSpec))
+            //{
+            //    _specManager.AddFault(FaultSeverity.Debug, "Is it enough to just register Dependent Methods on a generic instance?");
+            //    _dependentMethodBodies.Add(methodSpec);                
+            //}
         }
 
         public override void RegisterAsDependentParameterSpec(ParameterSpec parameterSpec)
         {
-            if (!_dependentParameterSpecs.Contains(parameterSpec))
-            {
-                _specManager.AddFault(FaultSeverity.Debug, "Is it enough to just register Dependent Parameter on a generic instance?");
-                _dependentParameterSpecs.Add(parameterSpec);                
-            }
+            //if (!_dependentParameterSpecs.Contains(parameterSpec))
+            //{
+            //    _specManager.AddFault(FaultSeverity.Debug, "Is it enough to just register Dependent Parameter on a generic instance?");
+            //    _dependentParameterSpecs.Add(parameterSpec);                
+            //}
         }
 
         public override void AddSubType(TypeSpec typeSpec)
         {
-            if (!_subTypes.Contains(typeSpec))
-            {
-                _specManager.AddFault(FaultSeverity.Debug, "Is it enough to just register a Sub Type on a generic instance?");
-                _subTypes.Add(typeSpec);                
-            }
+            //if (!_subTypes.Contains(typeSpec))
+            //{
+            //    _specManager.AddFault(FaultSeverity.Debug, "Is it enough to just register a Sub Type on a generic instance?");
+            //    _subTypes.Add(typeSpec);                
+            //}
         }
     }
 }

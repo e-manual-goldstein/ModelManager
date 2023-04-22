@@ -63,7 +63,7 @@ namespace AssemblyAnalyser
 
         public bool IsCompilerGenerated { get; private set; }
 
-
+        
         #endregion
 
         #region BuildSpec
@@ -640,7 +640,6 @@ namespace AssemblyAnalyser
         protected List<IMemberSpec> _resultTypeSpecs = new List<IMemberSpec>();
         public IMemberSpec[] ResultTypeSpecs => _resultTypeSpecs.ToArray();
         
-
         public virtual void RegisterAsResultType(IMemberSpec methodSpec)
         {
             _resultTypeLookup.GetOrAdd(methodSpec, (spec) => spec.DeclaringType);
@@ -656,11 +655,11 @@ namespace AssemblyAnalyser
 
         public virtual void RegisterAsDependentParameterSpec(ParameterSpec parameterSpec)
         {
-            if (!_dependentParameterSpecs.Contains(parameterSpec))
-            {
+            //if (!_dependentParameterSpecs.Contains(parameterSpec))
+            //{
                 _dependentParameterSpecs.Add(parameterSpec);
-                RegisterDependentTypeForModule(parameterSpec.Member.DeclaringType);
-            }
+                //RegisterDependentTypeForModule(parameterSpec.Member.DeclaringType);
+            //}
         }
 
         protected List<MethodSpec> _dependentMethodBodies = new List<MethodSpec>();
@@ -668,11 +667,11 @@ namespace AssemblyAnalyser
 
         public virtual void RegisterDependentMethodSpec(MethodSpec methodSpec)
         {
-            if (!_dependentMethodBodies.Contains(methodSpec))
-            {
+            //if (!_dependentMethodBodies.Contains(methodSpec))
+            //{
                 _dependentMethodBodies.Add(methodSpec);
-                RegisterDependentTypeForModule(methodSpec.DeclaringType);
-            }
+            //    RegisterDependentTypeForModule(methodSpec.DeclaringType);
+            //}
         }
 
         List<AbstractSpec> _decoratorForSpecs = new List<AbstractSpec>();
