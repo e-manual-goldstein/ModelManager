@@ -28,7 +28,7 @@ namespace AssemblyAnalyser
             Versions.Add(assemblyDefinition.Name.GetUniqueNameFromScope());
             AssemblyFullName = assemblyDefinition.FullName;
             FilePath = filePath;
-            IsSystemAssembly = StaticAssemblyLocator.IsSystemAssembly(filePath);//Should be no need for this eventually;
+            IsSystem = StaticAssemblyLocator.IsSystemAssembly(filePath);//Should be no need for this eventually;
         }
 
         protected AssemblySpec(string assemblyFullName, ISpecManager specManager)
@@ -42,8 +42,7 @@ namespace AssemblyAnalyser
         public string AssemblyFullName { get; }
         public string AssemblyShortName { get; protected set; }
         public string FilePath { get; set; }
-        public bool IsSystemAssembly { get; }
-
+        
         public IAssemblyLocator AssemblyLocator => _assemblyLocator;
 
         string _targetFrameworkVersion;

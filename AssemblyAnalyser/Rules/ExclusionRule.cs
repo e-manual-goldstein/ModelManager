@@ -19,7 +19,7 @@ namespace AssemblyAnalyser
         }
     }
 
-    public class ExclusionRule
+    public class ExclusionRule : IRule
     {
         Func<ISpec, bool> _excludeFunc;
 
@@ -31,6 +31,11 @@ namespace AssemblyAnalyser
         public bool Exclude(ISpec spec)
         {
             return _excludeFunc(spec);
+        }
+
+        public bool IncludeSpec(ISpec spec)
+        {
+            return !Exclude(spec);
         }
     }
 }

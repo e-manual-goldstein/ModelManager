@@ -6,5 +6,6 @@ namespace AssemblyAnalyser
 {
     public interface IRule
     {
+        bool IncludeSpec(ISpec spec);
     }
 }

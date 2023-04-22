@@ -32,5 +32,10 @@ namespace AssemblyAnalyser
         {
             return _includeFunc(spec);
         }
+
+        public bool IncludeSpec(ISpec spec)
+        {
+            return Include(spec);
+        }
     }
 }

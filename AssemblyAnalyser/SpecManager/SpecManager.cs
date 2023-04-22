@@ -42,9 +42,6 @@ namespace AssemblyAnalyser
             return resolver;
         }
 
-        List<IRule> _specRules = new List<IRule>();
-        public IRule[] SpecRules => _specRules.ToArray();
-
         public IAssemblyResolver AssemblyResolver => _assemblyResolver;
 
         public event ScopeExtendedEventHandler ScopeExtended;
@@ -106,7 +103,19 @@ namespace AssemblyAnalyser
         {
             Console.WriteLine(msg);
             _messages.Add(msg);
-        } 
+        }
+        #endregion
+
+        #region Rules
+        
+        List<IRule> _specRules = new List<IRule>();
+        public IRule[] SpecRules => _specRules.ToArray();
+
+        public void AddRule(IRule specRule)
+        {
+            _specRules.Add(specRule);
+        }
+
         #endregion
 
         public void SetWorkingDirectory(string workingDirectory)

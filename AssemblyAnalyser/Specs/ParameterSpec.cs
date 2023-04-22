@@ -12,15 +12,14 @@ namespace AssemblyAnalyser
 
         public IMemberSpec Member { get; }
         public bool IsOut { get; }
-        public bool? IsSystemParameter { get; }
-
+        
         public ParameterSpec(ParameterDefinition parameterDefinition, IMemberSpec member, ISpecManager specManager)
             : base(specManager)
         {
             _parameterDefinition = parameterDefinition;
             Name = _parameterDefinition.Name;
             FullName = $"{_parameterDefinition.ParameterType.FullName} {_parameterDefinition.Name}";
-            IsSystemParameter = member.IsSystem;
+            IsSystem = member.IsSystem;
             Member = member;
             IsOut = parameterDefinition.IsOut;
         }

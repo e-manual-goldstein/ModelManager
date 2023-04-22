@@ -18,11 +18,11 @@ namespace AssemblyAnalyser
         public AbstractSpec(ISpecManager specManager)
         {
             _specManager = specManager;
-            if (specManager != null)
-            {
-                InclusionRules.AddRange(specManager.SpecRules.OfType<InclusionRule>());
-                ExclusionRules.AddRange(specManager.SpecRules.OfType<ExclusionRule>());
-            }
+            //if (specManager != null)
+            //{
+            //    SpecialInclusionRules.AddRange(specManager.SpecRules.OfType<InclusionRule>());
+            //    SpecialExclusionRules.AddRange(specManager.SpecRules.OfType<ExclusionRule>());
+            //}
         }
 
         public string Name { get; protected set; }
@@ -54,7 +54,7 @@ namespace AssemblyAnalyser
 
         public void Process()
         {
-            if (ShouldProcess())
+            if (ShouldBuild())
             {
                 Build();
             }
@@ -76,20 +76,20 @@ namespace AssemblyAnalyser
             _processed = true;
         }
 
-        private bool ShouldProcess()
+        private bool ShouldBuild()
         {
-            return !_processing && !_processed;
+            return !_processing && !_processed;// && IsIncluded() && !IsExcluded();
         }
 
         #region Inclusion / Exclusion
         public bool IsExcluded()
         {
-            return ExclusionRules.Any(r => r.Exclude(this));
+            return SpecialExclusionRules.Any(r => r.Exclude(this)) || GeneralSpecRules.Any(r => !r.IncludeSpec(this));
         }
 
         public bool IsIncluded()
         {
-            return InclusionRules.All(r => r.Include(this));
+            return SpecialInclusionRules.All(r => r.Include(this)) || GeneralSpecRules.All(r => r.IncludeSpec(this));
         }
 
         public string ExcludedReason { get; set; }
@@ -97,11 +97,13 @@ namespace AssemblyAnalyser
         public void Exclude(string excludedReason)
         {
             ExcludedReason = excludedReason;
-            ExclusionRules.Add(new ExclusionRule(s => true));
+            SpecialExclusionRules.Add(new ExclusionRule(s => true));
         }
 
-        public List<ExclusionRule> ExclusionRules { get; private set; } = new List<ExclusionRule>();
-        public List<InclusionRule> InclusionRules { get; private set; } = new List<InclusionRule>();
+        public IRule[] GeneralSpecRules => _specManager.SpecRules;
+
+        public List<ExclusionRule> SpecialExclusionRules { get; private set; } = new List<ExclusionRule>();
+        public List<InclusionRule> SpecialInclusionRules { get; private set; } = new List<InclusionRule>();
         #endregion
 
         #region Skip Processing
