@@ -1,10 +1,13 @@
-﻿using ModelManager.Core;
+﻿using Microsoft.Win32;
+using ModelManager.Core;
 using ModelManager.Tabs.Outputs;
 using ModelManager.Utils;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Metadata;
 using System.Text;
 
 using System.Threading.Tasks;
@@ -36,9 +39,9 @@ namespace ModelManager.Tabs
 
 		private IOutputSource _executingTab;
 		private MethodInfo _executedAction;
-		private Dictionary<string, Control> _inputControls;
+		private Dictionary<string, FrameworkElement> _inputControls = new();
 		private List<UIElement> _disposableElements;
-		private Dictionary<string, Control> _mandatoryControls;
+		private Dictionary<string, FrameworkElement> _mandatoryControls = new();
 		private TextBlock _errorMessage;
 		private ProgressBar _progressBar;
 
@@ -327,8 +330,6 @@ namespace ModelManager.Tabs
 
 		public void DisplayInputFields(AbstractServiceTab callingService, MethodInfo callingAction)
 		{
-			_mandatoryControls = new Dictionary<string, Control>();
-			_inputControls = new Dictionary<string, Control>();
 			int i = 1;
 			_executedAction = callingAction;
 			_executingTab = callingService;
@@ -337,11 +338,25 @@ namespace ModelManager.Tabs
 				var fieldLabel = createFieldLabel(parameter, i);
 				_disposableElements.Add(fieldLabel);
 				if (parameter.ParameterType == typeof(bool))
+				{
 					_inputControls[parameter.Name] = createBoolField(parameter, i);
-				else
+				}
+				else if (parameter.ParameterType == typeof(FileInfo))
+				{
+                    _inputControls[parameter.Name] = createFilePathInput(parameter, i);
+                }
+                else if (parameter.ParameterType == typeof(DirectoryInfo))
+                {
+                    _inputControls[parameter.Name] = createFilePathInput(parameter, i);
+                }
+                else
+				{
 					_inputControls[parameter.Name] = createInputField(parameter, i);
+				}
 				if (parameter.IsMandatory())
+				{
 					_mandatoryControls[parameter.Name] = _inputControls[parameter.Name];
+				}
 				_disposableElements.Add(_inputControls[parameter.Name]);
 				i++;
 			}
@@ -468,25 +483,33 @@ namespace ModelManager.Tabs
 			return parameters.ToArray();
 		}
 
-		private object getFieldValue(ParameterInfo parameter, Control inputControl)
+		private object getFieldValue(ParameterInfo parameter, FrameworkElement inputControl)
 		{
-			var inputField = inputControl as TextBox;
-			if (inputField != null)
+			return inputControl switch
 			{
-				var fieldType = parameter.ParameterType.IsGenericType ?
-					parameter.ParameterType.GetGenericArguments()[0] :
-					parameter.ParameterType;
-				if (string.IsNullOrWhiteSpace(inputField.Text))
-					return null;
-				return Convert.ChangeType(inputField.Text, fieldType);
-			}
-			var checkBox = inputControl as CheckBox;
-			if (checkBox != null)
-				return checkBox.IsChecked;
-			return null;
+				TextBox textBox => getTextBoxValue(parameter, textBox),
+				CheckBox checkBox => checkBox.IsChecked,
+				Canvas canvas => getFilePath(parameter, canvas),
+				_ => null
+			};			
 		}
 
-		private TextBlock createFieldLabel(ParameterInfo parameter, int fieldId)
+        private object getFilePath(ParameterInfo parameter, Canvas canvas)
+        {
+			return getTextBoxValue(parameter, canvas.Children.OfType<TextBox>().Single());
+        }
+
+        private object getTextBoxValue(ParameterInfo parameter, TextBox textBox)
+		{
+            var fieldType = parameter.ParameterType.IsGenericType ?
+                    parameter.ParameterType.GetGenericArguments()[0] :
+                    parameter.ParameterType;
+            if (string.IsNullOrWhiteSpace(textBox.Text))
+                return null;
+            return Convert.ChangeType(textBox.Text, fieldType);
+        }
+
+        private TextBlock createFieldLabel(ParameterInfo parameter, int fieldId)
 		{
 			var label = new TextBlock();
 			var labelText = AppUtils.CreateDisplayString(parameter.Name, 25);
@@ -526,7 +549,45 @@ namespace ModelManager.Tabs
 			return checkBox;
 		}
 
-		private void addStringHelperControls(int fieldId)
+		//create a groupbox input field to prompt the user to select a file as input
+		private Canvas createFilePathInput(ParameterInfo parameter, int fieldId)
+		{
+            var inputBox = new TextBox();
+            inputBox.AcceptsReturn = false;
+            inputBox.AcceptsTab = false;
+            inputBox.Width = FIELD_WIDTH;
+            inputBox.Name = parameter.Name;
+
+			var button = new Button();
+			button.Width = BUTTON_WIDTH;
+			button.Height = FIELD_HEIGHT;
+			button.Content = "Select File";
+			button.Click += (sender, args) =>
+			{
+				var dialog = new OpenFileDialog() { };
+				dialog.FileOk += (s, e) =>
+				{
+					inputBox.Text = dialog.FileName;//inputBox.Text = e.
+				};
+				dialog.ShowDialog();
+
+			};
+			Canvas.SetLeft(button, inputBox.Width + CANVAS_MARGIN);
+			var canvas = new Canvas();
+			canvas.Width = (FIELD_WIDTH * 2) + CANVAS_MARGIN;
+			canvas.Height = FIELD_HEIGHT + CANVAS_MARGIN;
+			Canvas.SetLeft(canvas, CANVAS_MARGIN + FIELD_LABEL_WIDTH);
+			var top = CANVAS_MARGIN + (fieldId * FIELD_HEIGHT);
+            Canvas.SetTop(canvas, top);
+
+			canvas.Children.Add(inputBox);
+			canvas.Children.Add(button);
+            _tabCanvas.Children.Add(canvas);
+            return canvas;
+        }
+
+
+        private void addStringHelperControls(int fieldId)
 		{
 			//TODO: Have a think about how this will work
 			//addRegexToggleButton(fieldId);
