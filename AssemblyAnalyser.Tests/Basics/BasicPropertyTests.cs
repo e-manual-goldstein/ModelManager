@@ -148,6 +148,8 @@ namespace AssemblyAnalyser.Tests
             Assert.AreEqual(tertiary.BaseSpec, primary);
         }
 
+        #endregion
+
         [TestMethod]
         //This is a test specifically for Types defined with Property members that have parameters
         //This feature appears to only be possible in VisualBasic and not C#
@@ -155,6 +157,7 @@ namespace AssemblyAnalyser.Tests
         {
             //Assert there are two identically named properties
             Assert.AreEqual(2, _basicVBClassSpec.Properties.Where(p => p.Name == "PropertyWithParameters").Count());
+            //Assert that each Property Spec is uniquely discoverable by Name and Parameters
             foreach (var property in _basicVBClassSpec.Properties)
             {
                 var propertySpec = _basicVBClassSpec
@@ -162,12 +165,11 @@ namespace AssemblyAnalyser.Tests
                 Assert.IsNotNull(propertySpec);
             }            
         }
-        #endregion
         
         [TestMethod]
         //This is a test specifically for Types defined with Property members whose names do not match those of the implemented interfaces
         //This feature appears to only be possible in VisualBasic and not C#
-        public void BasicPropertyWithAlternateNameHasOverride_Test()
+        public void BasicPropertyWithAlternateNameHasOverrides_Test()
         {
             var alternateNamedFunction = _basicVBClassSpec.Properties.Where(p => p.Name == "AlternateNamedProperty").Single();
 

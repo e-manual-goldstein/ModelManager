@@ -14,6 +14,7 @@ namespace AssemblyAnalyser.Tests
         ModuleSpec _vbModuleSpec;
         TypeSpec _basicVBClassSpec;
         TypeSpec _basicSubClassSpec;
+        TypeSpec _basicVBInterfaceSpec;
 
         [TestInitialize]
         public override void Initialize()
@@ -27,6 +28,8 @@ namespace AssemblyAnalyser.Tests
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.VBTestData.Basics.BasicVBClass");
             _basicSubClassSpec = _moduleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicSubClass");
+            _basicVBInterfaceSpec = _vbModuleSpec.TypeSpecs
+                    .Single(d => d.FullTypeName == "AssemblyAnalyser.VBTestData.Basics.IBasicVBInterface");
         }
 
         #region Basic Method Tests
@@ -50,6 +53,9 @@ namespace AssemblyAnalyser.Tests
             var interfaceImplementation = _basicClassSpec.GetMethodSpecs("PublicMethod").SingleOrDefault();
             interfaceImplementation.ForceRebuildSpec();
             Assert.IsTrue(interfaceImplementation.ImplementationFor.Any());
+            
+            var interfaceMemberSpec = _basicInterfaceSpec.GetMethodSpecs("PublicMethod").SingleOrDefault();
+            Assert.IsTrue(interfaceImplementation.ImplementationFor.Contains(interfaceMemberSpec));
         }
 
         [TestMethod]
@@ -119,7 +125,9 @@ namespace AssemblyAnalyser.Tests
             alternateNamedFunction.ForceRebuildSpec();
 
             Assert.IsTrue(alternateNamedFunction.ImplementationFor.Any());
-            
+
+            var interfaceMemberSpec = _basicVBInterfaceSpec.GetMethodSpecs("BasicFunction").Single();
+            Assert.IsTrue(alternateNamedFunction.ImplementationFor.Contains(interfaceMemberSpec));
         }
 
         [TestMethod]

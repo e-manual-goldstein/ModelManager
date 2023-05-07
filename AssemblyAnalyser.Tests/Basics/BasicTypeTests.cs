@@ -38,8 +38,9 @@ namespace AssemblyAnalyser.Tests
         }
 
         #region Basic Class Tests
+
         [TestMethod]
-        public void BasicClassSpecIsNotErrorSpec_Test()
+        public void BasicClassSpecIsNotMissingSpec_Test()
         {
             Assert.IsFalse(_basicClassSpec.IsMissingSpec);
         }
@@ -66,6 +67,7 @@ namespace AssemblyAnalyser.Tests
         public void BasicClassSpecHasBasicAttribute_Test()
         {
             Assert.AreEqual(1, _basicClassSpec.Attributes.Where(a => a.Name == "BasicAttribute").Count());
+            Assert.AreEqual(_basicAttribute, _basicClassSpec.Attributes.Single(a => a.Name == "BasicAttribute"));
         }
 
         [TestMethod]
