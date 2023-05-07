@@ -131,7 +131,7 @@ namespace AssemblyAnalyser
                 .ToArray();            
         }
 
-        protected override void ProcessInterfaceImplementations()
+        protected override void CheckInterfaceImplementations()
         {
             //No processing required for instances of Generic Types
         }

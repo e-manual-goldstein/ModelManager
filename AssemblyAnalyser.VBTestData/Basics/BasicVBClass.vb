@@ -19,7 +19,7 @@ Namespace AssemblyAnalyser.VBTestData.Basics
             End Get
         End Property
 
-        Public Property AlternateNamedProperty As String Implements IBasicVBInterface.BasicProperty
+        Public Overridable Property AlternateNamedProperty As String Implements IBasicVBInterface.BasicProperty
             Get
                 Return ""
             End Get

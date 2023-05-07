@@ -234,7 +234,7 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            
+            _modules = TryGetModuleSpecs();
         }
 
         protected virtual ModuleSpec[] TryGetModuleSpecs()

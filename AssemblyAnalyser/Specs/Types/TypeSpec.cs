@@ -90,7 +90,7 @@ namespace AssemblyAnalyser
             _properties = CreatePropertySpecs();
             _events = CreateEventSpecs();
             _attributes = CreateAttributSpecs();
-            ProcessInterfaceImplementations();
+            CheckInterfaceImplementations();
             ProcessCompilerGenerated();
             ProcessGenerics();
         }
@@ -307,62 +307,74 @@ namespace AssemblyAnalyser
 
         #endregion
 
-        protected virtual void ProcessInterfaceImplementations()
+        protected virtual void CheckInterfaceImplementations()
         {
-            if (IsInterface != true) // Skip unless explicitly labelled as NOT an interface
+            foreach (var @interface in Interfaces.Where(i => !i.IsGenericInstance))
             {
-                foreach (var interfaceSpec in Interfaces.Where(i => !i.IsGenericInstance))
+                foreach (var interfaceMember in @interface.Properties)
                 {
-                    RegisterMemberImplementations(interfaceSpec);
+                    if (!interfaceMember.ImplementationFor.Intersect(Properties).Any())
+                    {
+
+                    }
+                }
+                foreach (var interfaceMember in @interface.Methods)
+                {
+                    if (!interfaceMember.ImplementationFor.Intersect(Methods).Any())
+                    {
+
+                    }
                 }
             }
         }
 
+        [Obsolete]
         private void RegisterMemberImplementations(TypeSpec interfaceSpec)
         {
-            foreach (var interfaceMethod in interfaceSpec.Methods)
-            {
-                if (!MatchMethodByOverride(interfaceMethod))
-                {
-                    var methodSpec = FindMatchingMethodSpec(interfaceMethod, interfaceMethod);
-                    if (methodSpec == null)
-                    {
-                        _specManager.AddFault(this, FaultSeverity.Error, $"Missing Implementation: {interfaceMethod}");
-                    }
-                    else
-                    {
-                        methodSpec.RegisterAsImplementation(interfaceMethod);
-                    }
-                }
-            }
-            foreach (var interfaceProperty in interfaceSpec.Properties)
-            {
-                if (!MatchBySpecialNameMethods(interfaceProperty))
-                {
-                    if (!MatchPropertyByOverride(interfaceProperty))
-                    {
-                        var propertySpec = GetPropertySpec(interfaceProperty.ExplicitName, true) ?? GetPropertySpec(interfaceProperty.Name, true);
-                        if (propertySpec == null)
-                        {
-                            _specManager.AddFault(this, FaultSeverity.Error, $"Missing Implementation {interfaceProperty}");
-                        }
-                        else
-                        {
-                            propertySpec.RegisterAsImplementation(interfaceProperty);
-                        }
-                    }
-                }
-            }
+            //foreach (var interfaceMethod in interfaceSpec.Methods)
+            //{
+            //    if (!MatchMethodByOverride(interfaceMethod))
+            //    {
+            //        var methodSpec = FindMatchingMethodSpec(interfaceMethod, interfaceMethod);
+            //        if (methodSpec == null)
+            //        {
+            //            _specManager.AddFault(this, FaultSeverity.Error, $"Missing Implementation: {interfaceMethod}");
+            //        }
+            //        else
+            //        {
+            //            methodSpec.RegisterAsImplementation(interfaceMethod);
+            //        }
+            //    }
+            //}
+            //foreach (var interfaceProperty in interfaceSpec.Properties)
+            //{
+            //    if (!MatchBySpecialNameMethods(interfaceProperty))
+            //    {
+            //        if (!MatchPropertyByOverride(interfaceProperty))
+            //        {
+            //            var propertySpec = GetPropertySpec(interfaceProperty.ExplicitName, true) ?? GetPropertySpec(interfaceProperty.Name, true);
+            //            if (propertySpec == null)
+            //            {
+            //                _specManager.AddFault(this, FaultSeverity.Error, $"Missing Implementation {interfaceProperty}");
+            //            }
+            //            else
+            //            {
+            //                propertySpec.RegisterAsImplementation(interfaceProperty);
+            //            }
+            //        }
+            //    }
+            //}
         }
 
+        [Obsolete]
         protected virtual bool MatchBySpecialNameMethods(PropertySpec interfaceProperty)
         {
-            var specialNameMethods = Methods.Where(m => m.IsSpecialName && m.ImplementationFor != null).ToArray();
+            var specialNameMethods = Methods.Where(m => m.IsSpecialName).ToArray();
             var implementers = specialNameMethods.Where(m 
                 => m.ImplementationFor.Contains(interfaceProperty.Getter)
                 || m.ImplementationFor.Contains(interfaceProperty.Setter))
                 .ToArray();
-            var backedProperties = implementers.Select(m => m.SpecialNameMethodForMember).Distinct().ToArray();
+            var backedProperties = implementers.Select(m => m.SpecialNameMethodForMember).Where(t => t != null).Distinct().ToArray();
             if (!backedProperties.Any())
             {
                 return BaseSpec.MatchBySpecialNameMethods(interfaceProperty);
@@ -390,6 +402,7 @@ namespace AssemblyAnalyser
             return true;
         }
 
+        [Obsolete]
         public virtual bool MatchMethodByOverride(MethodSpec method)
         {
             var methodOverrides = Methods.Where(m => m.Overrides.Contains(method));
@@ -406,6 +419,7 @@ namespace AssemblyAnalyser
             return BaseSpec.MatchMethodByOverride(method);
         }
 
+        [Obsolete]
         public virtual bool MatchPropertyByOverride(PropertySpec property)
         {
             var propertyOverrides = Properties.Where(m => m.Overrides.Contains(property));
@@ -448,7 +462,8 @@ namespace AssemblyAnalyser
         {
             var spec = method.HasGenericParameters 
                 ? new GenericMethodSpec(method, this, _specManager) 
-                : new MethodSpec(method, this, _specManager);            
+                : new MethodSpec(method, this, _specManager);
+            RegisterImplementations(spec);
             return spec;
         }
 
@@ -498,7 +513,74 @@ namespace AssemblyAnalyser
         private PropertySpec CreatePropertySpec(PropertyDefinition propertyInfo)
         {
             //TODO: Is it faster to flag the explicit implementations here?");
-            return new PropertySpec(propertyInfo, this, _specManager);
+            var spec = new PropertySpec(propertyInfo, this, _specManager);
+            RegisterImplementations(spec);
+            return spec;
+        }
+
+        private void RegisterImplementations(PropertySpec spec)
+        {
+            foreach (var @interface in Interfaces.Where(i => !i.IsGenericInstance)) 
+                {
+                    if (spec.Name.StartsWith(@interface.FullTypeName))
+                    {
+                        var trimmedPropertyName = spec.Name.Replace($"{@interface.FullTypeName}.", "");
+                        var matchingExplicitInterfaceProperties = @interface.Properties.Where(i => i.Name == trimmedPropertyName);
+                        if (matchingExplicitInterfaceProperties.Count() != 1)
+                        {
+                            _specManager.AddFault(this, FaultSeverity.Error, "Could not determine implementation");
+                        }
+                        else
+                        {
+                            spec.RegisterAsImplementation(matchingExplicitInterfaceProperties.Single());                            
+                        }
+                    }
+                var matchingInterfaceProperties = @interface.Properties
+                    .Where(i => i.Name == spec.Name && i.HasExactParameters(spec.Parameters));
+                if (!matchingInterfaceProperties.Any())
+                {
+                    continue;
+                }
+                else if (matchingInterfaceProperties.Count() > 1)
+                {
+
+                }
+                spec.RegisterAsImplementation(matchingInterfaceProperties.Single());
+            }
+            
+        }
+
+        private void RegisterImplementations(MethodSpec spec)
+        {
+            foreach (var @interface in Interfaces.Where(i => !i.IsGenericInstance))
+            {
+                if (spec.Name.StartsWith(@interface.FullTypeName))
+                {
+                    var trimmedMethodName = spec.Name.Replace($"{@interface.FullTypeName}.", "");
+                    var matchingExplicitInterfaceMethods = @interface.Methods
+                        .Where(i => i.Name == trimmedMethodName && i.HasExactParameters(spec.Parameters));
+                    if (matchingExplicitInterfaceMethods.Count() != 1)
+                    {
+                        _specManager.AddFault(this, FaultSeverity.Error, "Could not determine implementation");
+                    }
+                    else
+                    {
+                        spec.RegisterAsImplementation(matchingExplicitInterfaceMethods.Single());
+                    }
+                    continue;
+                }
+                var matchingInterfaceMethods = @interface.Methods
+                    .Where(i => i.Name == spec.Name && i.HasExactParameters(spec.Parameters));
+                if (!matchingInterfaceMethods.Any())
+                {
+                    continue;
+                }
+                else if (matchingInterfaceMethods.Count() > 1)
+                {
+
+                }
+                spec.RegisterAsImplementation(matchingInterfaceMethods.Single());
+            }
         }
 
         public PropertySpec[] LoadPropertySpecs(PropertyDefinition[] propertyInfos)

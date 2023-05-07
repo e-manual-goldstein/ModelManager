@@ -69,12 +69,14 @@ namespace AssemblyAnalyser
             return typeSpec is ArrayTypeSpec arrayTypeSpec && arrayTypeSpec.ElementSpec == ElementSpec;
         }
 
+        [Obsolete]
         public override bool MatchMethodByOverride(MethodSpec method)
         {
             _specManager.AddFault(this, FaultSeverity.Error, "Unexpected MatchMethodByOverride");
             return false;
         }
 
+        [Obsolete]
         public override bool MatchPropertyByOverride(PropertySpec property)
         {
             _specManager.AddFault(this, FaultSeverity.Error, "Unexpected MatchMethodByOverride");
@@ -172,14 +174,15 @@ namespace AssemblyAnalyser
             return Array.Empty<CustomAttribute>();
         }
 
+        [Obsolete]
         protected override bool MatchBySpecialNameMethods(PropertySpec interfaceProperty)
         {
             return base.MatchBySpecialNameMethods(interfaceProperty);
         }
 
-        protected override void ProcessInterfaceImplementations()
+        protected override void CheckInterfaceImplementations()
         {
-            base.ProcessInterfaceImplementations();
+            base.CheckInterfaceImplementations();
         }
     }
 }

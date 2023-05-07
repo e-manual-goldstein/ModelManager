@@ -133,7 +133,7 @@ namespace AssemblyAnalyser
             return base.CreateGenericTypeParameters();
         }
 
-        protected override void ProcessInterfaceImplementations()
+        protected override void CheckInterfaceImplementations()
         {
             _specManager.AddFault(FaultSeverity.Debug, "Unfinished ProcessInterfaceImplementations for GenericParameterSpec");            
         }

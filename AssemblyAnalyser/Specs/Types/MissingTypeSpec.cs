@@ -73,6 +73,7 @@ namespace AssemblyAnalyser.Specs
             return Array.Empty<MethodSpec>();
         }
 
+        [Obsolete]
         public override bool MatchMethodByOverride(MethodSpec method)
         {
             return false;
@@ -106,6 +107,43 @@ namespace AssemblyAnalyser.Specs
         protected override CustomAttribute[] GetAttributes()
         {
             return Array.Empty<CustomAttribute>();
+        }
+
+        protected override TypeSpec[] TryLoadAttributeSpecs()
+        {
+            return base.TryLoadAttributeSpecs();
+        }
+
+        protected override MethodSpec[] CreateMethodSpecs()
+        {
+            return Array.Empty<MethodSpec>();
+        }
+
+        public override PropertySpec GetPropertySpec(string name, bool includeInherited = false)
+        {
+            return base.GetPropertySpec(name, includeInherited);
+        }
+
+        protected override void CheckInterfaceImplementations()
+        {
+            base.CheckInterfaceImplementations();
+        }
+
+        [Obsolete]
+        protected override bool MatchBySpecialNameMethods(PropertySpec interfaceProperty)
+        {
+            return base.MatchBySpecialNameMethods(interfaceProperty);
+        }
+
+        [Obsolete]
+        public override bool MatchPropertyByOverride(PropertySpec property)
+        {
+            return base.MatchPropertyByOverride(property);
+        }
+
+        public override MethodSpec FindMatchingMethodSpec(IHasExplicitName namedMember, MethodSpec methodSpec)
+        {
+            return base.FindMatchingMethodSpec(namedMember, methodSpec);
         }
     }
 }

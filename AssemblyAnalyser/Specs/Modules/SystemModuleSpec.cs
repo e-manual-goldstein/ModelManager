@@ -11,7 +11,14 @@ namespace AssemblyAnalyser
 {
     public class SystemModuleSpec : ModuleSpec
     {
-        static string[] _systemModuleNames = new string[] { "mscorlib", "System.Core", "System.Runtime" };
+        static string[] _systemModuleNames = new string[] { 
+            "mscorlib", 
+            "System.Core", 
+            "System.Runtime", 
+            "System.Private.CoreLib", 
+            "System.Private.DataContractSerialization",
+            "System.Private.Xml"
+        };
 
         public SystemModuleSpec(ModuleDefinition module, string filePath, AssemblySpec assemblySpec, ISpecManager specManager)
             : base(module, filePath, assemblySpec, specManager)

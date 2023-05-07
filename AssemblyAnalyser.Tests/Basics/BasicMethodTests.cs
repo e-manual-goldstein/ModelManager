@@ -52,7 +52,7 @@ namespace AssemblyAnalyser.Tests
         }
 
         [TestMethod]
-        public void ExplicitlyImplementedPropertyLinkedToInterface_Test()
+        public void ExplicitlyImplementedMemberLinkedToInterface_Test()
         {
             _basicClassSpec.ForceRebuildSpec();
             var interfaceMethod = _basicInterfaceSpec.GetMethodSpecs("MethodForExplicitImplementation").Single();

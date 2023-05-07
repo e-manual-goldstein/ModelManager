@@ -108,9 +108,9 @@ namespace AssemblyAnalyser
             return base.CreateGenericTypeParameters();
         }
 
-        protected override void ProcessInterfaceImplementations()
+        protected override void CheckInterfaceImplementations()
         {
-            base.ProcessInterfaceImplementations();
+            base.CheckInterfaceImplementations();
         }
 
         public override string ToString()

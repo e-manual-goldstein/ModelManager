@@ -203,6 +203,10 @@ namespace AssemblyAnalyser
                 var assemblyLocation = locator.LocateAssemblyByName(assemblyReference.FullName);
                 if (string.IsNullOrEmpty(assemblyLocation))
                 {
+                    if (SystemModuleSpec.IsSystemModule(assemblyReference))
+                    {
+                        return _assemblies[SystemAssemblySpec.SYSTEM_ASSEMBLY_NAME];
+                    }
                     return _assemblies
                         .GetOrAdd(assemblyReference.Name, (key) => new MissingAssemblySpec(assemblyReference, this));                    
                 }

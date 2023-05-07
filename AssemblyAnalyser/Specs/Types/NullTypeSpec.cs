@@ -149,7 +149,7 @@ namespace AssemblyAnalyser.Specs
             return Array.Empty<CustomAttribute>();
         }
 
-        protected override void ProcessInterfaceImplementations()
+        protected override void CheckInterfaceImplementations()
         {
 
         }
@@ -165,16 +165,19 @@ namespace AssemblyAnalyser.Specs
             return null;
         }
 
+        [Obsolete]
         public override bool MatchMethodByOverride(MethodSpec method)
         {
             return false;
         }
 
+        [Obsolete]
         public override bool MatchPropertyByOverride(PropertySpec property)
         {
             return false;
         }
 
+        [Obsolete]
         protected override bool MatchBySpecialNameMethods(PropertySpec interfaceProperty)
         {
             _specManager.AddFault(interfaceProperty, FaultSeverity.Warning, "Backed Property not found");
