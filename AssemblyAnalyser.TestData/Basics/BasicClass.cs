@@ -22,6 +22,21 @@ namespace AssemblyAnalyser.TestData.Basics
 
         public string PropertyWithUniqueName { get; set; }
 
+        public void NonOverridableMethod(int parameter)
+        {
+
+        }
+
+        public virtual void OverridableMethod(int parameter)
+        {
+
+        }
+        
+        public virtual void SecondOverridableMethod(int parameter)
+        {
+
+        }
+
         public void MethodWithUniqueName(int property)
         {
 

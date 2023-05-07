@@ -22,9 +22,11 @@ namespace AssemblyAnalyser
         public abstract TypeSpec ResultType { get; }
 
         public string ExplicitName { get; protected set; }
+        public bool IsOverride { get; protected set; }
+        public bool IsHideBySig { get; protected set; }
 
-        List<TMemberSpec> _implementationFor = new();
-        public TMemberSpec[] ImplementationFor => _implementationFor.ToArray();
+        protected List<TMemberSpec> _implementationFor = new();
+        public virtual TMemberSpec[] ImplementationFor => _implementationFor.ToArray();
 
         public void RegisterAsImplementation(TMemberSpec implementedSpec)
         {
@@ -36,6 +38,15 @@ namespace AssemblyAnalyser
 
         protected abstract TypeSpec TryGetDeclaringType();
 
+        TMemberSpec _baseSpec;
+        public TMemberSpec BaseSpec => _baseSpec ??= TryGetBaseSpec();
+
+        protected abstract TMemberSpec TryGetBaseSpec();
+
+        protected override void BuildSpec()
+        {
+            _baseSpec ??= TryGetBaseSpec();
+        }
 
         #region Parameters
 

@@ -227,12 +227,16 @@ namespace AssemblyAnalyser
             return declaredProperties.SingleOrDefault();
         }
 
-        public PropertySpec MatchPropertySpecByNameAndParameterType(string name, ParameterSpec[] parameterSpecs)
+        public virtual PropertySpec MatchPropertySpecByNameAndParameterType(string name, ParameterSpec[] parameterSpecs, bool includeInherited = false)
         {
-            var matchingProperties = Properties.Where(p
-                    => p.Name == name
+            var matchingProperties = Properties.Where(p => 
+                    p.Name == name
                     && p.Parameters.Length == parameterSpecs.Length
                     && p.HasExactParameters(parameterSpecs));
+            if (!matchingProperties.Any() && includeInherited) 
+            {
+                return BaseSpec.MatchPropertySpecByNameAndParameterType(name, parameterSpecs, includeInherited);
+            }
             if (matchingProperties.Count() > 1)
             {
                 var methodArray = matchingProperties.ToArray();
@@ -328,114 +332,113 @@ namespace AssemblyAnalyser
             }
         }
 
-        [Obsolete]
-        private void RegisterMemberImplementations(TypeSpec interfaceSpec)
-        {
-            //foreach (var interfaceMethod in interfaceSpec.Methods)
-            //{
-            //    if (!MatchMethodByOverride(interfaceMethod))
-            //    {
-            //        var methodSpec = FindMatchingMethodSpec(interfaceMethod, interfaceMethod);
-            //        if (methodSpec == null)
-            //        {
-            //            _specManager.AddFault(this, FaultSeverity.Error, $"Missing Implementation: {interfaceMethod}");
-            //        }
-            //        else
-            //        {
-            //            methodSpec.RegisterAsImplementation(interfaceMethod);
-            //        }
-            //    }
-            //}
-            //foreach (var interfaceProperty in interfaceSpec.Properties)
-            //{
-            //    if (!MatchBySpecialNameMethods(interfaceProperty))
-            //    {
-            //        if (!MatchPropertyByOverride(interfaceProperty))
-            //        {
-            //            var propertySpec = GetPropertySpec(interfaceProperty.ExplicitName, true) ?? GetPropertySpec(interfaceProperty.Name, true);
-            //            if (propertySpec == null)
-            //            {
-            //                _specManager.AddFault(this, FaultSeverity.Error, $"Missing Implementation {interfaceProperty}");
-            //            }
-            //            else
-            //            {
-            //                propertySpec.RegisterAsImplementation(interfaceProperty);
-            //            }
-            //        }
-            //    }
-            //}
-        }
+        //[Obsolete]
+        //private void RegisterMemberImplementations(TypeSpec interfaceSpec)
+        //{
+        //    //foreach (var interfaceMethod in interfaceSpec.Methods)
+        //    //{
+        //    //    if (!MatchMethodByOverride(interfaceMethod))
+        //    //    {
+        //    //        var methodSpec = FindMatchingMethodSpec(interfaceMethod, interfaceMethod);
+        //    //        if (methodSpec == null)
+        //    //        {
+        //    //            _specManager.AddFault(this, FaultSeverity.Error, $"Missing Implementation: {interfaceMethod}");
+        //    //        }
+        //    //        else
+        //    //        {
+        //    //            methodSpec.RegisterAsImplementation(interfaceMethod);
+        //    //        }
+        //    //    }
+        //    //}
+        //    //foreach (var interfaceProperty in interfaceSpec.Properties)
+        //    //{
+        //    //    if (!MatchBySpecialNameMethods(interfaceProperty))
+        //    //    {
+        //    //        if (!MatchPropertyByOverride(interfaceProperty))
+        //    //        {
+        //    //            var propertySpec = GetPropertySpec(interfaceProperty.ExplicitName, true) ?? GetPropertySpec(interfaceProperty.Name, true);
+        //    //            if (propertySpec == null)
+        //    //            {
+        //    //                _specManager.AddFault(this, FaultSeverity.Error, $"Missing Implementation {interfaceProperty}");
+        //    //            }
+        //    //            else
+        //    //            {
+        //    //                propertySpec.RegisterAsImplementation(interfaceProperty);
+        //    //            }
+        //    //        }
+        //    //    }
+        //    //}
+        //}
 
-        [Obsolete]
-        protected virtual bool MatchBySpecialNameMethods(PropertySpec interfaceProperty)
-        {
-            var specialNameMethods = Methods.Where(m => m.IsSpecialName).ToArray();
-            var implementers = specialNameMethods.Where(m 
-                => m.ImplementationFor.Contains(interfaceProperty.Getter)
-                || m.ImplementationFor.Contains(interfaceProperty.Setter))
-                .ToArray();
-            var backedProperties = implementers.Select(m => m.SpecialNameMethodForMember).Where(t => t != null).Distinct().ToArray();
-            if (!backedProperties.Any())
-            {
-                return BaseSpec.MatchBySpecialNameMethods(interfaceProperty);
-            }
-            if (backedProperties.Count() > 1)
-            {
-                _specManager.AddFault(this, FaultSeverity.Error, "Multiple backed Properties found");
-                return false;
-            }
-            var backedProperty = backedProperties.Single();
-            //var matchingGetter = specialNameMethods
-            //    .Where(m => m.Implements == interfaceProperty.Getter)
-            //    .SingleOrDefault();
-            //var matchingSetter = specialNameMethods
-            //    .Where(m => m.Implements == interfaceProperty.Getter)
-            //    .SingleOrDefault();
-            //if (matchingGetter.SpecialNameMethodForMember != matchingSetter.SpecialNameMethodForMember)
-            //{
-            //    _specManager.AddFault(this, FaultSeverity.Error, "Unexpected mismatch of special name methods");
-            //}
-            //else
-            //{
-                (backedProperty as PropertySpec).RegisterAsImplementation(interfaceProperty);
-            //}
-            return true;
-        }
+        //[Obsolete]
+        //protected virtual bool MatchBySpecialNameMethods(PropertySpec interfaceProperty)
+        //{
+        //    var specialNameMethods = Methods.Where(m => m.IsSpecialName).ToArray();
+        //    var implementers = specialNameMethods.Where(m 
+        //        => m.ImplementationFor.Contains(interfaceProperty.Getter)
+        //        || m.ImplementationFor.Contains(interfaceProperty.Setter))
+        //        .ToArray();
+        //    var backedProperties = implementers.Select(m => m.SpecialNameMethodForMember).Where(t => t != null).Distinct().ToArray();
+        //    if (!backedProperties.Any())
+        //    {
+        //        return BaseSpec.MatchBySpecialNameMethods(interfaceProperty);
+        //    }
+        //    if (backedProperties.Count() > 1)
+        //    {
+        //        _specManager.AddFault(this, FaultSeverity.Error, "Multiple backed Properties found");
+        //        return false;
+        //    }
+        //    var backedProperty = backedProperties.Single();
+        //    //var matchingGetter = specialNameMethods
+        //    //    .Where(m => m.Implements == interfaceProperty.Getter)
+        //    //    .SingleOrDefault();
+        //    //var matchingSetter = specialNameMethods
+        //    //    .Where(m => m.Implements == interfaceProperty.Getter)
+        //    //    .SingleOrDefault();
+        //    //if (matchingGetter.SpecialNameMethodForMember != matchingSetter.SpecialNameMethodForMember)
+        //    //{
+        //    //    _specManager.AddFault(this, FaultSeverity.Error, "Unexpected mismatch of special name methods");
+        //    //}
+        //    //else
+        //    //{
+        //        (backedProperty as PropertySpec).RegisterAsImplementation(interfaceProperty);
+        //    //}
+        //    return true;
+        //}
 
-        [Obsolete]
-        public virtual bool MatchMethodByOverride(MethodSpec method)
-        {
-            var methodOverrides = Methods.Where(m => m.Overrides.Contains(method));
-            if (methodOverrides.Any())
-            {
-                if (methodOverrides.Count() > 1)
-                {
-                    _specManager.AddFault(this, FaultSeverity.Critical, $"Multiple Methods found to override spec {method}");
-                    return true;
-                }
-                methodOverrides.Single().RegisterAsImplementation(method);
-                return true;
-            }
-            return BaseSpec.MatchMethodByOverride(method);
-        }
+        //[Obsolete]
+        //public virtual bool MatchMethodByOverride(MethodSpec method)
+        //{
+        //    var methodOverrides = Methods.Where(m => m.Overrides.Contains(method));
+        //    if (methodOverrides.Any())
+        //    {
+        //        if (methodOverrides.Count() > 1)
+        //        {
+        //            _specManager.AddFault(this, FaultSeverity.Critical, $"Multiple Methods found to override spec {method}");
+        //            return true;
+        //        }
+        //        methodOverrides.Single().RegisterAsImplementation(method);
+        //        return true;
+        //    }
+        //    return BaseSpec.MatchMethodByOverride(method);
+        //}
 
-        [Obsolete]
-        public virtual bool MatchPropertyByOverride(PropertySpec property)
-        {
-            var propertyOverrides = Properties.Where(m => m.Overrides.Contains(property));
-            if (propertyOverrides.Any())
-            {
-                if (propertyOverrides.Count() > 1)
-                {
-                    _specManager.AddFault(this, FaultSeverity.Critical, $"Multiple Methods found to override spec {property}");
-                    return true;
-                }                
-                propertyOverrides.Single().RegisterAsImplementation(property);
-                return true;
-            }
-            return BaseSpec.MatchPropertyByOverride(property);
-        }
-
+        //[Obsolete]
+        //public virtual bool MatchPropertyByOverride(PropertySpec property)
+        //{
+        //    var propertyOverrides = Properties.Where(m => m.Overrides.Contains(property));
+        //    if (propertyOverrides.Any())
+        //    {
+        //        if (propertyOverrides.Count() > 1)
+        //        {
+        //            _specManager.AddFault(this, FaultSeverity.Critical, $"Multiple Methods found to override spec {property}");
+        //            return true;
+        //        }                
+        //        propertyOverrides.Single().RegisterAsImplementation(property);
+        //        return true;
+        //    }
+        //    return BaseSpec.MatchPropertyByOverride(property);
+        //}
 
         #endregion
 
@@ -514,73 +517,68 @@ namespace AssemblyAnalyser
         {
             //TODO: Is it faster to flag the explicit implementations here?");
             var spec = new PropertySpec(propertyInfo, this, _specManager);
-            RegisterImplementations(spec);
+            //RegisterImplementations(spec);
             return spec;
         }
 
-        private void RegisterImplementations(PropertySpec spec)
-        {
-            foreach (var @interface in Interfaces.Where(i => !i.IsGenericInstance)) 
-                {
-                    if (spec.Name.StartsWith(@interface.FullTypeName))
-                    {
-                        var trimmedPropertyName = spec.Name.Replace($"{@interface.FullTypeName}.", "");
-                        var matchingExplicitInterfaceProperties = @interface.Properties.Where(i => i.Name == trimmedPropertyName);
-                        if (matchingExplicitInterfaceProperties.Count() != 1)
-                        {
-                            _specManager.AddFault(this, FaultSeverity.Error, "Could not determine implementation");
-                        }
-                        else
-                        {
-                            spec.RegisterAsImplementation(matchingExplicitInterfaceProperties.Single());                            
-                        }
-                    }
-                var matchingInterfaceProperties = @interface.Properties
-                    .Where(i => i.Name == spec.Name && i.HasExactParameters(spec.Parameters));
-                if (!matchingInterfaceProperties.Any())
-                {
-                    continue;
-                }
-                else if (matchingInterfaceProperties.Count() > 1)
-                {
+        //private void RegisterImplementations(PropertySpec spec)
+        //{
+        //    foreach (var @override in spec.Overrides)
+        //    {
+        //        if (@override.DeclaringType.IsInterface)
+        //        {
+        //            spec.RegisterAsImplementation(@override);
+        //        }
+        //        else
+        //        {
+        //            //Abastract Class Possibly?
+        //        }
+        //    }
 
-                }
-                spec.RegisterAsImplementation(matchingInterfaceProperties.Single());
-            }
+        //    //foreach (var @interface in Interfaces.Where(i => !i.IsGenericInstance)) 
+        //    //    {
+        //    //        if (spec.Name.StartsWith(@interface.FullTypeName))
+        //    //        {
+        //    //            var trimmedPropertyName = spec.Name.Replace($"{@interface.FullTypeName}.", "");
+        //    //            var matchingExplicitInterfaceProperties = @interface.Properties.Where(i => i.Name == trimmedPropertyName);
+        //    //            if (matchingExplicitInterfaceProperties.Count() != 1)
+        //    //            {
+        //    //                _specManager.AddFault(this, FaultSeverity.Error, "Could not determine implementation");
+        //    //            }
+        //    //            else
+        //    //            {
+        //    //                spec.RegisterAsImplementation(matchingExplicitInterfaceProperties.Single());                            
+        //    //            }
+        //    //        }
+        //    //    var matchingInterfaceProperties = @interface.Properties
+        //    //        .Where(i => i.Name == spec.Name && i.HasExactParameters(spec.Parameters));
+        //    //    if (!matchingInterfaceProperties.Any())
+        //    //    {
+        //    //        continue;
+        //    //    }
+        //    //    else if (matchingInterfaceProperties.Count() > 1)
+        //    //    {
+
+        //    //    }
+        //    //    spec.RegisterAsImplementation(matchingInterfaceProperties.Single());
+        //    //}
             
-        }
+        //}
 
         private void RegisterImplementations(MethodSpec spec)
         {
-            foreach (var @interface in Interfaces.Where(i => !i.IsGenericInstance))
+            foreach (var @override in spec.Overrides)
             {
-                if (spec.Name.StartsWith(@interface.FullTypeName))
+                if (@override.DeclaringType.IsInterface)
                 {
-                    var trimmedMethodName = spec.Name.Replace($"{@interface.FullTypeName}.", "");
-                    var matchingExplicitInterfaceMethods = @interface.Methods
-                        .Where(i => i.Name == trimmedMethodName && i.HasExactParameters(spec.Parameters));
-                    if (matchingExplicitInterfaceMethods.Count() != 1)
-                    {
-                        _specManager.AddFault(this, FaultSeverity.Error, "Could not determine implementation");
-                    }
-                    else
-                    {
-                        spec.RegisterAsImplementation(matchingExplicitInterfaceMethods.Single());
-                    }
-                    continue;
+                    spec.RegisterAsImplementation(@override);
                 }
-                var matchingInterfaceMethods = @interface.Methods
-                    .Where(i => i.Name == spec.Name && i.HasExactParameters(spec.Parameters));
-                if (!matchingInterfaceMethods.Any())
+                else
                 {
-                    continue;
+                    //Abastract Class Possibly?
                 }
-                else if (matchingInterfaceMethods.Count() > 1)
-                {
-
-                }
-                spec.RegisterAsImplementation(matchingInterfaceMethods.Single());
             }
+
         }
 
         public PropertySpec[] LoadPropertySpecs(PropertyDefinition[] propertyInfos)
@@ -831,18 +829,18 @@ namespace AssemblyAnalyser
             return Methods.Union(BaseSpec.GetAllMethodSpecs()).ToArray();
         }
 
-        public virtual MethodSpec FindMatchingMethodSpec(IHasExplicitName namedMember, MethodSpec methodSpec)
+        public virtual MethodSpec FindMatchingMethodSpec(MethodSpec methodSpec)
         {
-            var nameAndParameterCountMatches = GetMethodSpecs(namedMember)
+            var nameAndParameterCountMatches = GetMethodSpecs(methodSpec)
                 .Where(m => m.Parameters.Length == methodSpec.Parameters.Length).ToArray();
             var matchingMethods = nameAndParameterCountMatches.Where(m => m.MatchesSpec(methodSpec)).ToArray();
             if (!matchingMethods.Any())
             {
-                return BaseSpec.FindMatchingMethodSpec(namedMember, methodSpec);
+                return BaseSpec.FindMatchingMethodSpec(methodSpec);
             }
             else if (matchingMethods.Count() > 1)
             {
-                _specManager.AddFault(this, FaultSeverity.Error, $"Multiple Methods found for signature. MethodName:{namedMember.ExplicitName}");
+                _specManager.AddFault(this, FaultSeverity.Error, $"Multiple Methods found for signature. MethodName:{methodSpec.ExplicitName}");
                 return null;
             }
             return matchingMethods.SingleOrDefault();

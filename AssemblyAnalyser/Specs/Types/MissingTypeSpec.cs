@@ -73,11 +73,11 @@ namespace AssemblyAnalyser.Specs
             return Array.Empty<MethodSpec>();
         }
 
-        [Obsolete]
-        public override bool MatchMethodByOverride(MethodSpec method)
-        {
-            return false;
-        }
+        //[Obsolete]
+        //public override bool MatchMethodByOverride(MethodSpec method)
+        //{
+        //    return false;
+        //}
 
         protected override PropertySpec[] CreatePropertySpecs()
         {
@@ -129,21 +129,21 @@ namespace AssemblyAnalyser.Specs
             base.CheckInterfaceImplementations();
         }
 
-        [Obsolete]
-        protected override bool MatchBySpecialNameMethods(PropertySpec interfaceProperty)
-        {
-            return base.MatchBySpecialNameMethods(interfaceProperty);
-        }
+        //[Obsolete]
+        //protected override bool MatchBySpecialNameMethods(PropertySpec interfaceProperty)
+        //{
+        //    return base.MatchBySpecialNameMethods(interfaceProperty);
+        //}
 
-        [Obsolete]
-        public override bool MatchPropertyByOverride(PropertySpec property)
-        {
-            return base.MatchPropertyByOverride(property);
-        }
+        //[Obsolete]
+        //public override bool MatchPropertyByOverride(PropertySpec property)
+        //{
+        //    return base.MatchPropertyByOverride(property);
+        //}
 
-        public override MethodSpec FindMatchingMethodSpec(IHasExplicitName namedMember, MethodSpec methodSpec)
+        public override MethodSpec FindMatchingMethodSpec(MethodSpec methodSpec)
         {
-            return base.FindMatchingMethodSpec(namedMember, methodSpec);
+            return base.FindMatchingMethodSpec(methodSpec);
         }
     }
 }

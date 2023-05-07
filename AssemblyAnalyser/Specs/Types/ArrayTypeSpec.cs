@@ -40,7 +40,7 @@ namespace AssemblyAnalyser
             _specManager.AddFault(this, FaultSeverity.Error, "Unexpected SubType");
         }
 
-        public override MethodSpec FindMatchingMethodSpec(IHasExplicitName namedMember, MethodSpec methodSpec)
+        public override MethodSpec FindMatchingMethodSpec(MethodSpec methodSpec)
         {
             _specManager.AddFault(this, FaultSeverity.Error, "Unexpected FindMatchingMethodSpec");
             return null;
@@ -69,19 +69,19 @@ namespace AssemblyAnalyser
             return typeSpec is ArrayTypeSpec arrayTypeSpec && arrayTypeSpec.ElementSpec == ElementSpec;
         }
 
-        [Obsolete]
-        public override bool MatchMethodByOverride(MethodSpec method)
-        {
-            _specManager.AddFault(this, FaultSeverity.Error, "Unexpected MatchMethodByOverride");
-            return false;
-        }
+        //[Obsolete]
+        //public override bool MatchMethodByOverride(MethodSpec method)
+        //{
+        //    _specManager.AddFault(this, FaultSeverity.Error, "Unexpected MatchMethodByOverride");
+        //    return false;
+        //}
 
-        [Obsolete]
-        public override bool MatchPropertyByOverride(PropertySpec property)
-        {
-            _specManager.AddFault(this, FaultSeverity.Error, "Unexpected MatchMethodByOverride");
-            return false;
-        }
+        //[Obsolete]
+        //public override bool MatchPropertyByOverride(PropertySpec property)
+        //{
+        //    _specManager.AddFault(this, FaultSeverity.Error, "Unexpected MatchMethodByOverride");
+        //    return false;
+        //}
 
         public override void RegisterAsDecorator(AbstractSpec decoratedSpec)
         {
@@ -174,11 +174,11 @@ namespace AssemblyAnalyser
             return Array.Empty<CustomAttribute>();
         }
 
-        [Obsolete]
-        protected override bool MatchBySpecialNameMethods(PropertySpec interfaceProperty)
-        {
-            return base.MatchBySpecialNameMethods(interfaceProperty);
-        }
+        //[Obsolete]
+        //protected override bool MatchBySpecialNameMethods(PropertySpec interfaceProperty)
+        //{
+        //    return base.MatchBySpecialNameMethods(interfaceProperty);
+        //}
 
         protected override void CheckInterfaceImplementations()
         {

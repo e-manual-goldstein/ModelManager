@@ -160,28 +160,33 @@ namespace AssemblyAnalyser.Specs
         //    return null;
         //}
 
-        public override MethodSpec FindMatchingMethodSpec(IHasExplicitName namedMember, MethodSpec methodSpec)
+        public override MethodSpec FindMatchingMethodSpec(MethodSpec methodSpec)
         {
             return null;
         }
 
-        [Obsolete]
-        public override bool MatchMethodByOverride(MethodSpec method)
-        {
-            return false;
-        }
+        //[Obsolete]
+        //public override bool MatchMethodByOverride(MethodSpec method)
+        //{
+        //    return false;
+        //}
 
-        [Obsolete]
-        public override bool MatchPropertyByOverride(PropertySpec property)
-        {
-            return false;
-        }
+        //[Obsolete]
+        //public override bool MatchPropertyByOverride(PropertySpec property)
+        //{
+        //    return false;
+        //}
 
-        [Obsolete]
-        protected override bool MatchBySpecialNameMethods(PropertySpec interfaceProperty)
+        //[Obsolete]
+        //protected override bool MatchBySpecialNameMethods(PropertySpec interfaceProperty)
+        //{
+        //    _specManager.AddFault(interfaceProperty, FaultSeverity.Warning, "Backed Property not found");
+        //    return false;
+        //}
+
+        public override PropertySpec MatchPropertySpecByNameAndParameterType(string name, ParameterSpec[] parameterSpecs, bool includeInherited = false)
         {
-            _specManager.AddFault(interfaceProperty, FaultSeverity.Warning, "Backed Property not found");
-            return false;
+            return null;
         }
     }
 }

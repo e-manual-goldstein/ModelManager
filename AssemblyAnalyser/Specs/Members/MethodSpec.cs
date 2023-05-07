@@ -20,10 +20,8 @@ namespace AssemblyAnalyser
             IsConstructor = methodDefinition.IsConstructor;
             IsSpecialName = methodDefinition.IsSpecialName;
             ExplicitName = methodDefinition.CreateExplicitMemberName();
-            if (methodDefinition.IsGenericInstance)
-            {
-
-            }
+            IsHideBySig = methodDefinition.IsHideBySig;
+            IsOverride = methodDefinition.HasOverrides;
         }
 
         protected MethodSpec(TypeSpec declaringType, ISpecManager specManager) : base(declaringType, specManager)
@@ -97,6 +95,7 @@ namespace AssemblyAnalyser
                 ProcessExceptionClauseCatchTypes(body);
             }
             _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this, DeclaringType.Module.AssemblyLocator);
+            base.BuildSpec();
         }
 
         private TypeSpec TryGetReturnType()
@@ -118,6 +117,10 @@ namespace AssemblyAnalyser
 
         private MethodSpec[] TryGetOverrides()
         {
+            if (_methodDefinition.Overrides.Any())
+            {
+
+            }
             return _specManager.LoadSpecsForMethodReferences(_methodDefinition.Overrides, DeclaringType.Module.AssemblyLocator).ToArray();
         }
 
@@ -224,6 +227,15 @@ namespace AssemblyAnalyser
         public virtual bool MatchesSpec(MethodSpec methodSpec)
         {
             return this.HasExactParameters(methodSpec.Parameters);
+        }
+
+        protected override MethodSpec TryGetBaseSpec()
+        {                    
+            if (IsHideBySig)
+            {
+                return DeclaringType.BaseSpec.FindMatchingMethodSpec(this);
+            }
+            return null;
         }
 
         //public bool HasExactParameters(ParameterSpec[] parameterSpecs)

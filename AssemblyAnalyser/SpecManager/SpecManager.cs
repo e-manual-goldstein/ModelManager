@@ -400,15 +400,18 @@ namespace AssemblyAnalyser
                 {
                     yield return LoadMethodSpec(methodDefinition, true, assemblyLocator);
                 }
-                try
+                else
                 {
-                    methodDefinition = methodReference.Resolve();
+                    try
+                    {
+                        methodDefinition = methodReference.Resolve();
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                    yield return LoadMethodSpec(methodDefinition, true, assemblyLocator);
                 }
-                catch
-                {
-                    continue;
-                }
-                yield return LoadMethodSpec(methodDefinition, true, assemblyLocator);
             }            
         }
 

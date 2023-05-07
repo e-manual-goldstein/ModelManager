@@ -62,7 +62,7 @@ namespace AssemblyAnalyser.Tests
 
             var methodImpl = interfaceImplementations.Single();
 
-            Assert.IsNotNull(methodImpl.ImplementationFor);
+            Assert.IsTrue(methodImpl.ImplementationFor.Any());
             Assert.IsTrue(methodImpl.ImplementationFor.Contains(interfaceMethod));
         }
 
@@ -133,7 +133,7 @@ namespace AssemblyAnalyser.Tests
             var overloadedMethods = _basicClassSpec.GetMethodSpecs("OverloadedMethod");
             foreach (var overload in overloadedMethods)
             {
-                var methodSpec = _basicClassSpec.FindMatchingMethodSpec(overload, overload);
+                var methodSpec = _basicClassSpec.FindMatchingMethodSpec(overload);
                 Assert.IsNotNull(methodSpec);
             }
         }

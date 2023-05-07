@@ -13,6 +13,15 @@ Namespace AssemblyAnalyser.VBTestData.Basics
             End Set
         End Property
 
+        Public Overrides Property OverridableProperty As String
+            Get
+                Return ""
+            End Get
+            Set(value As String)
+                
+            End Set
+        End Property
+
     End Class
 
 End Namespace

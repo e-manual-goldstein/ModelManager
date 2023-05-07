@@ -273,7 +273,7 @@ namespace AssemblyAnalyser.Tests
 
             foreach (var method in interfaceWithSynonymousMethods.Methods)
             {
-                Assert.IsNotNull(classWithSynonymousMethods.FindMatchingMethodSpec(method, method));
+                Assert.IsNotNull(classWithSynonymousMethods.FindMatchingMethodSpec(method));
             }
 
         }

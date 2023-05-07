@@ -1,10 +1,7 @@
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 
 namespace AssemblyAnalyser.Tests
 {
@@ -13,7 +10,9 @@ namespace AssemblyAnalyser.Tests
     {
         ModuleSpec _vbModuleSpec;
         TypeSpec _basicVBClassSpec;
+        TypeSpec _basicVBSubClassSpec;
         TypeSpec _basicSubClassSpec;
+        TypeSpec _basicGrandchildClassSpec;
 
         [TestInitialize] 
         public override void Initialize() 
@@ -24,8 +23,12 @@ namespace AssemblyAnalyser.Tests
             _vbModuleSpec.Process();
             _basicVBClassSpec = _vbModuleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.VBTestData.Basics.BasicVBClass");
+            _basicVBSubClassSpec = _vbModuleSpec.TypeSpecs
+                .Single(d => d.FullTypeName == "AssemblyAnalyser.VBTestData.Basics.BasicVBSubClass");
             _basicSubClassSpec = _moduleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicSubClass");
+            _basicGrandchildClassSpec = _moduleSpec.TypeSpecs
+                .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicGrandchildClass");
         }
 
         #region Basic Property Tests
@@ -49,9 +52,11 @@ namespace AssemblyAnalyser.Tests
         {
             _basicClassSpec.ForceRebuildSpec();
             var interfaceProperty = _basicInterfaceSpec.GetPropertySpec("PropertyForExplicitImplementation");
+            interfaceProperty.ForceRebuildSpec();
             var interfaceImplementation = _basicClassSpec.GetPropertySpec(interfaceProperty.ExplicitName);
-            
-            Assert.IsNotNull(interfaceImplementation.ImplementationFor);
+            interfaceImplementation.ForceRebuildSpec();
+
+            Assert.IsTrue(interfaceImplementation.ImplementationFor.Any());
             Assert.IsTrue(interfaceImplementation.ImplementationFor.Contains(interfaceProperty));
         }
 
@@ -99,6 +104,40 @@ namespace AssemblyAnalyser.Tests
             Assert.AreEqual(inheritedProperty, publicPropertySpec);
             Assert.AreEqual(inheritedProperty, baseProperty);
             
+        }
+
+        [TestMethod]
+        public void OverridingPropertyHasOwnSpec_Test()
+        {
+            var overridablePropertySpecs = _specManager.PropertySpecs.Where(p => p.Name == "OverridableProperty");
+
+            Assert.IsTrue(overridablePropertySpecs.Any());
+            Assert.AreEqual(2, overridablePropertySpecs.Count());
+
+            var primary = overridablePropertySpecs.SingleOrDefault(p => p.DeclaringType == _basicVBClassSpec);
+            var secondary = overridablePropertySpecs.SingleOrDefault(p => p.DeclaringType == _basicVBSubClassSpec);
+            Assert.AreNotEqual(primary, secondary); 
+        }
+
+        [TestMethod]
+        public void OverridingPropertyIsLinkedToOverriddenProperty_Test()
+        {
+            var overridablePropertySpecs = _specManager.PropertySpecs.Where(p => p.Name == "OverridableProperty").ToArray();
+            var primary = overridablePropertySpecs.SingleOrDefault(p => p.DeclaringType == _basicVBClassSpec);
+            var secondary = overridablePropertySpecs.SingleOrDefault(p => p.DeclaringType == _basicVBSubClassSpec);
+
+            Assert.AreEqual(secondary.BaseSpec, primary);
+        }
+
+        [TestMethod]
+        public void OverridingPropertyIsLinkedToOverriddenPropertyOnGrandparentClass_Test()
+        {
+            var overridablePropertySpecs = _specManager.MethodSpecs
+                .Where(p => p.Name == "SecondOverridableMethod").ToArray();
+            var primary = overridablePropertySpecs.SingleOrDefault(p => p.DeclaringType == _basicClassSpec);
+            var tertiary = overridablePropertySpecs.SingleOrDefault(p => p.DeclaringType == _basicGrandchildClassSpec);
+            
+            Assert.AreEqual(tertiary.BaseSpec, primary);
         }
 
         [TestMethod]
