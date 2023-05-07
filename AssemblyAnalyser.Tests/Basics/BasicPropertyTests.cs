@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.IO;
 using System.Linq;
+using System.Net.Cache;
 
 namespace AssemblyAnalyser.Tests
 {
@@ -10,6 +11,7 @@ namespace AssemblyAnalyser.Tests
     {
         ModuleSpec _vbModuleSpec;
         TypeSpec _basicVBClassSpec;
+        TypeSpec _basicVBInterfaceSpec;
         TypeSpec _basicVBSubClassSpec;
         TypeSpec _basicSubClassSpec;
         TypeSpec _basicGrandchildClassSpec;
@@ -29,6 +31,8 @@ namespace AssemblyAnalyser.Tests
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicSubClass");
             _basicGrandchildClassSpec = _moduleSpec.TypeSpecs
                 .Single(d => d.FullTypeName == "AssemblyAnalyser.TestData.Basics.BasicGrandchildClass");
+            _basicVBInterfaceSpec = _vbModuleSpec.TypeSpecs
+                .Single(d => d.FullTypeName == "AssemblyAnalyser.VBTestData.Basics.IBasicVBInterface");
         }
 
         #region Basic Property Tests
@@ -43,8 +47,12 @@ namespace AssemblyAnalyser.Tests
         public void BasicPropertySpecLinkedToInterfaceImplementationMember_Test()
         {
             _basicClassSpec.ForceRebuildSpec();
-            var interfaceImplementation = _basicClassSpec.GetPropertySpec("ReadOnlyInterfaceImpl");
-            Assert.IsNotNull(interfaceImplementation.ImplementationFor);
+            var interfacePropertySpec = _basicInterfaceSpec.GetPropertySpec("ReadOnlyInterfaceImpl");
+            var concretePropertySpec = _basicClassSpec.GetPropertySpec("ReadOnlyInterfaceImpl");
+            concretePropertySpec.ForceRebuildSpec();
+            Assert.IsTrue(concretePropertySpec.ImplementationFor.Any());
+            Assert.IsTrue(concretePropertySpec.ImplementationFor.Contains(interfacePropertySpec));
+            
         }
 
         [TestMethod]
@@ -172,11 +180,14 @@ namespace AssemblyAnalyser.Tests
         //This feature appears to only be possible in VisualBasic and not C#
         public void BasicPropertyWithAlternateNameMatchesInterfaceImplementation_Test()
         {
+            
             var alternateNamedProperty = _basicVBClassSpec.Properties.Where(p => p.Name == "AlternateNamedProperty").Single();
-            alternateNamedProperty.DeclaringType.ForceRebuildSpec();
+            alternateNamedProperty.ForceRebuildSpec();
 
-            Assert.IsNotNull(alternateNamedProperty.ImplementationFor);
+            var interfacePropertySpec = _basicVBInterfaceSpec.GetPropertySpec("BasicProperty");
 
+            Assert.IsTrue(alternateNamedProperty.ImplementationFor.Any());
+            Assert.IsTrue(alternateNamedProperty.ImplementationFor.Contains(interfacePropertySpec));
         }
     }
 }

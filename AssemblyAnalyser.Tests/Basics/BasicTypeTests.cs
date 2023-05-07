@@ -125,7 +125,7 @@ namespace AssemblyAnalyser.Tests
         [TestMethod]
         public void BasicClassSpecHasMultipleNonPropertyMethods_Test()
         {
-            var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.InnerSpecs());
+            var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.GetInnerSpecs());
             var constructors = _basicClassSpec.Methods.Where(m => m.IsConstructor);
             var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
             var nonPropertyMethods = _basicClassSpec.Methods.Except(constructors).Except(propertyMethods).Except(eventMethods);
@@ -136,7 +136,7 @@ namespace AssemblyAnalyser.Tests
         [TestMethod]
         public void BasicClassSpecHasParameterlessMethods_Test()
         {
-            var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.InnerSpecs());
+            var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.GetInnerSpecs());
             var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
             var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods).Except(eventMethods);
 
@@ -146,7 +146,7 @@ namespace AssemblyAnalyser.Tests
         [TestMethod]
         public void BasicClassSpecHasMultipleParameteredMethods_Test()
         {
-            var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.InnerSpecs());
+            var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.GetInnerSpecs());
             var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
             var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods).Except(eventMethods);
 
@@ -156,7 +156,7 @@ namespace AssemblyAnalyser.Tests
         [TestMethod]
         public void BasicClassSpecParameteredMethodHasTwoParameters_Test()
         {
-            var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.InnerSpecs());
+            var propertyMethods = _basicClassSpec.Properties.SelectMany(c => c.GetInnerSpecs());
             var eventMethods = _basicClassSpec.Events.SelectMany(c => c.InnerSpecs());
             var nonPropertyMethods = _basicClassSpec.Methods.Except(propertyMethods).Except(eventMethods);
             var parameteredMethod = nonPropertyMethods.Single(d => d.Name == "PublicMethodWithParameters" && !d.IsConstructor && d.Parameters.Any());

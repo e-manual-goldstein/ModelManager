@@ -25,11 +25,15 @@ namespace AssemblyAnalyser
         public bool IsOverride { get; protected set; }
         public bool IsHideBySig { get; protected set; }
 
-        protected List<TMemberSpec> _implementationFor = new();
+        List<TMemberSpec> _implementationFor = new();
         public virtual TMemberSpec[] ImplementationFor => _implementationFor.ToArray();
 
         public void RegisterAsImplementation(TMemberSpec implementedSpec)
         {
+            if (DeclaringType.IsInterface)
+            {
+                _specManager.AddFault(this, FaultSeverity.Critical, "Interface Member cannot be registered as an Implementation");
+            }
             if (!_implementationFor.Contains(implementedSpec))
             {
                 _implementationFor.Add(implementedSpec);

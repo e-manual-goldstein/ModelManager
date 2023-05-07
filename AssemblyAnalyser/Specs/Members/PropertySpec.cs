@@ -63,8 +63,14 @@ namespace AssemblyAnalyser
         PropertySpec[] _overrides;
         public PropertySpec[] Overrides => _overrides ??= TryGetOverrides();
 
-        public override PropertySpec[] ImplementationFor => InnerSpecs().SelectMany(s => s.ImplementationFor)
-            .Select(p => p.SpecialNameMethodForMember).OfType<PropertySpec>().ToArray();
+        PropertySpec[] _implementationFor;
+        public override PropertySpec[] ImplementationFor => _implementationFor ??= TryGetPropertyImplementations();
+
+        private PropertySpec[] TryGetPropertyImplementations()
+        {
+            return GetInnerSpecs(true).SelectMany(s => s.ImplementationFor)
+                .Select(p => p.SpecialNameMethodForMember).OfType<PropertySpec>().ToArray();
+        }
 
         public override bool IsSystem => DeclaringType.IsSystem;
 
@@ -76,9 +82,20 @@ namespace AssemblyAnalyser
             return new[] { _propertyDefinition.GetMethod, _propertyDefinition.SetMethod };
         }
 
-        public IEnumerable<MethodSpec> InnerSpecs()
+        public IEnumerable<MethodSpec> GetInnerSpecs(bool buildSpecs = false)
         {
-            return new[] { Getter, Setter }.Where(c => c != null);
+            var specs = new[] { Getter, Setter };
+            foreach (var spec in specs)
+            {
+                if (spec != null)
+                {
+                    if (buildSpecs)
+                    {
+                        spec.Process();
+                    }
+                    yield return spec;
+                }
+            }
         }
 
         private bool CheckOverrides()

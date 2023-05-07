@@ -48,7 +48,8 @@ namespace AssemblyAnalyser.Tests
         public void BasicMethodSpecLinkedToInterfaceImplementationMember_Test()
         {
             var interfaceImplementation = _basicClassSpec.GetMethodSpecs("PublicMethod").SingleOrDefault();
-            Assert.IsNotNull(interfaceImplementation.ImplementationFor);
+            interfaceImplementation.ForceRebuildSpec();
+            Assert.IsTrue(interfaceImplementation.ImplementationFor.Any());
         }
 
         [TestMethod]
@@ -61,7 +62,7 @@ namespace AssemblyAnalyser.Tests
             Assert.AreEqual(1, interfaceImplementations.Count());
 
             var methodImpl = interfaceImplementations.Single();
-
+            methodImpl.ForceRebuildSpec();
             Assert.IsTrue(methodImpl.ImplementationFor.Any());
             Assert.IsTrue(methodImpl.ImplementationFor.Contains(interfaceMethod));
         }
@@ -115,9 +116,9 @@ namespace AssemblyAnalyser.Tests
         public void BasicMethodWithAlternateNameMatchesInterfaceImplementation_Test()
         {
             var alternateNamedFunction = _basicVBClassSpec.Methods.Where(p => p.Name == "AlternateNamedFunction").Single();
-            alternateNamedFunction.DeclaringType.ForceRebuildSpec();
+            alternateNamedFunction.ForceRebuildSpec();
 
-            Assert.IsNotNull(alternateNamedFunction.ImplementationFor);
+            Assert.IsTrue(alternateNamedFunction.ImplementationFor.Any());
             
         }
 

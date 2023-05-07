@@ -69,7 +69,14 @@ namespace AssemblyAnalyser
                     //Abstract Class Possibly?
                 }
             }
-
+            foreach (var @interface in DeclaringType.Interfaces)
+            {
+                var method = @interface.FindMatchingMethodSpec(this);
+                if (method != null)
+                {
+                    RegisterAsImplementation(method);
+                }
+            }
         }
 
         IMemberSpec _specialNameMethodForMember;
@@ -132,7 +139,7 @@ namespace AssemblyAnalyser
 
         private IMemberSpec TryGetMemberForSpecialName()
         {
-            var properties = DeclaringType.GetAllPropertySpecs().Where(p => p.InnerSpecs().Contains(this)).ToArray();
+            var properties = DeclaringType.GetAllPropertySpecs().Where(p => p.GetInnerSpecs().Contains(this)).ToArray();
             if (properties.Count() > 1)
             {
                 _specManager.AddFault(this, FaultSeverity.Error, $"Multiple Property Specs found for Special Name");
