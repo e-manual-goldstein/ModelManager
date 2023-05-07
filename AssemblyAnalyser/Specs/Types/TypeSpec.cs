@@ -466,7 +466,6 @@ namespace AssemblyAnalyser
             var spec = method.HasGenericParameters 
                 ? new GenericMethodSpec(method, this, _specManager) 
                 : new MethodSpec(method, this, _specManager);
-            RegisterImplementations(spec);
             return spec;
         }
 
@@ -565,21 +564,7 @@ namespace AssemblyAnalyser
             
         //}
 
-        private void RegisterImplementations(MethodSpec spec)
-        {
-            foreach (var @override in spec.Overrides)
-            {
-                if (@override.DeclaringType.IsInterface)
-                {
-                    spec.RegisterAsImplementation(@override);
-                }
-                else
-                {
-                    //Abastract Class Possibly?
-                }
-            }
 
-        }
 
         public PropertySpec[] LoadPropertySpecs(PropertyDefinition[] propertyInfos)
         {

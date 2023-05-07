@@ -56,16 +56,21 @@ namespace AssemblyAnalyser
         List<TypeSpec> _exceptionCatchTypes = new List<TypeSpec>();
         public TypeSpec[] ExceptionCatchTypes => _exceptionCatchTypes.ToArray();
 
-        //List<MethodSpec> _implementationFor = new();
-        //public MethodSpec[] ImplementationFor => _implementationFor.ToArray();
+        private void RegisterImplementations()
+        {
+            foreach (var @override in Overrides)
+            {
+                if (@override.DeclaringType.IsInterface)
+                {
+                    RegisterAsImplementation(@override);
+                }
+                else
+                {
+                    //Abstract Class Possibly?
+                }
+            }
 
-        //public void RegisterAsImplementation(MethodSpec implementedSpec)
-        //{
-        //    if (!_implementationFor.Contains(implementedSpec))
-        //    {
-        //        _implementationFor.Add(implementedSpec);
-        //    }
-        //}
+        }
 
         IMemberSpec _specialNameMethodForMember;
         public IMemberSpec SpecialNameMethodForMember => _specialNameMethodForMember ??= TryGetMemberForSpecialName();
@@ -95,6 +100,7 @@ namespace AssemblyAnalyser
                 ProcessExceptionClauseCatchTypes(body);
             }
             _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this, DeclaringType.Module.AssemblyLocator);
+            RegisterImplementations();
             base.BuildSpec();
         }
 

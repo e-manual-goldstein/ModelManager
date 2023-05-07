@@ -118,15 +118,12 @@ namespace AssemblyAnalyser
             {
                 return _typeSpecs.GetOrAdd(uniqueTypeName, (key) => CreateArrayTypeSpec(arrayType, key));
             }
-            if (!type.IsDefinition)
-            {
-                TryGetTypeDefinition(ref type);
-            }
             return _typeSpecs.GetOrAdd(uniqueTypeName, (key) => CreateFullTypeSpec(type));
         }
 
         private TypeSpec CreateFullTypeSpec(TypeReference type)
         {
+            TryGetTypeDefinition(ref type); //Try this only ONCE per TypeReference
             if (type is TypeDefinition typeDefinition)
             {
                 var spec = new TypeSpec(typeDefinition, this, _specManager);
@@ -195,7 +192,7 @@ namespace AssemblyAnalyser
                 type = typeDefinition;
                 return;
             }
-            _specManager.AddFault("Could not fully resolve TypeDefinition");
+            _specManager.AddFault(this, FaultSeverity.Warning, $"Could not fully resolve TypeDefinition {typeDefinition}");
         }
 
         private TypeDefinition TryResolveTypeDefinition(TypeReference type)

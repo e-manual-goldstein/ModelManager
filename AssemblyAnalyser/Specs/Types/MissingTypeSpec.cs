@@ -19,6 +19,8 @@ namespace AssemblyAnalyser.Specs
 
         public override bool IsMissingSpec => true;
 
+        public override bool IsInterface => false; //Can't say for certain that a Missing Type is an interface
+
         public override void AddImplementation(TypeSpec typeSpec)
         {
             

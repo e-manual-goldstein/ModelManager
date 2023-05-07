@@ -13,8 +13,10 @@ namespace AssemblyAnalyser
     {
         static string[] _systemModuleNames = new string[] { 
             "mscorlib", 
-            "System.Core", 
+            "System.Core",
+            "System.Configuration.ConfigurationManager",
             "System.Runtime", 
+            "System.Data.Common", 
             "System.Private.CoreLib", 
             "System.Private.DataContractSerialization",
             "System.Private.Xml"

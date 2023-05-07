@@ -392,6 +392,16 @@ namespace AssemblyAnalyser
             return LoadTypeSpec(method.DeclaringType, assemblyLocator).LoadMethodSpec(method);
         }
 
+        public MethodSpec LoadMethodSpec(MethodReference method, bool allowNull, IAssemblyLocator assemblyLocator)
+        {
+            if (method == null)
+            {
+                AddFault(allowNull ? FaultSeverity.Debug : FaultSeverity.Warning, "No MethodSpec for null MethodDefintion");
+                return null;
+            }
+            return LoadTypeSpec(method.DeclaringType, assemblyLocator).LoadMethodSpec(method);
+        }
+
         public IEnumerable<MethodSpec> LoadSpecsForMethodReferences(IEnumerable<MethodReference> methodReferences, IAssemblyLocator assemblyLocator)
         {
             foreach (var methodReference in methodReferences)
@@ -399,6 +409,10 @@ namespace AssemblyAnalyser
                 if (methodReference is MethodDefinition methodDefinition)
                 {
                     yield return LoadMethodSpec(methodDefinition, true, assemblyLocator);
+                }
+                else if (methodReference.DeclaringType?.Scope != null)
+                {
+                    yield return LoadMethodSpec(methodReference, true, assemblyLocator);
                 }
                 else
                 {
