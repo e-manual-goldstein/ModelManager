@@ -446,14 +446,41 @@ namespace AssemblyAnalyser
 
         ConcurrentDictionary<string, MethodSpec> _methodSpecs = new ConcurrentDictionary<string, MethodSpec>();
 
-        public MethodSpec LoadMethodSpec(MethodReference method)
+        public virtual MethodSpec LoadMethodSpec(MethodReference method)
         {
-            var methodDefinition = method as MethodDefinition;
-            if (methodDefinition == null)
+            var methodDefinition = TryGetMethodDefinition(method);
+            if (methodDefinition != null)
             {
-                return new MissingMethodSpec(method, this, _specManager);
+                return _methodSpecs.GetOrAdd(methodDefinition.CreateUniqueMethodName(), (key) => CreateMethodSpec(methodDefinition));
             }
-            return _methodSpecs.GetOrAdd(methodDefinition.CreateUniqueMethodName(), (key) => CreateMethodSpec(methodDefinition));
+            return new MissingMethodSpec(method, this, _specManager);
+        }
+
+        public virtual MethodDefinition TryGetMethodDefinition(MethodReference method)
+        {
+            if (method is MethodDefinition methodDefinition)
+            {
+                return methodDefinition;
+            }
+            else if (IsSystem)
+            {
+                try
+                {
+                    //Should be able to safely resolve method for System Types
+                    return method.Resolve();
+                }
+                catch
+                {
+                    _specManager.AddFault(this, FaultSeverity.Critical, $"Failed to resolve MethodDefinition for System Type. Method: {method.Name}");
+                    return null;
+                }
+            }
+            var methodsByName = Definition.Methods.Where(m => m.FullName == method.FullName).ToArray();
+            if (methodsByName.Length > 1)
+            {
+                var methodsByParam = methodsByName.Where(p => p.HasExactParameters(method.Parameters.ToArray())).ToArray();
+            }
+            return methodsByName.SingleOrDefault();
         }
 
         public MethodSpec LoadMethodSpec(MethodDefinition method)

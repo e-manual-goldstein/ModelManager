@@ -1,4 +1,5 @@
-﻿using Mono.Cecil;
+﻿using AssemblyAnalyser.Extensions;
+using Mono.Cecil;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -184,5 +185,14 @@ namespace AssemblyAnalyser
             //    _subTypes.Add(typeSpec);                
             //}
         }
+
+        public override MethodSpec LoadMethodSpec(MethodReference method)
+        {
+            _specManager.AddFault(this, FaultSeverity.Debug, "Unfinished Implementation");
+            return null;
+        }
+
+        
+
     }
 }

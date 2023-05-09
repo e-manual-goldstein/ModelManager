@@ -62,8 +62,7 @@ namespace AssemblyAnalyser.Extensions
                 _ => null
             };
         }
-
-
+        
         public static string CreateUniqueTypeSpecName(this TypeReference type, bool isArray)
         {
             var suffix = isArray ? "[]" : null;
@@ -101,8 +100,6 @@ namespace AssemblyAnalyser.Extensions
             return $"{prefix}{argumentString}>";
         }
 
-
-
         public static string CreateUniqueMethodName(this MethodDefinition methodDefinition)
         {
             return methodDefinition.HasGenericParameters
@@ -134,6 +131,61 @@ namespace AssemblyAnalyser.Extensions
         public static string CreateExplicitMemberName(this MethodDefinition methodDefinition)
         {
             return $"{methodDefinition.DeclaringType.FullName}.{methodDefinition.Name}";
+        }
+
+        public static bool HasExactParameters(this MethodDefinition hasParameters, ParameterDefinition[] parameters)
+        {
+            if (parameters.Length == hasParameters.Parameters.Count)
+            {
+                for (int i = 0; i < parameters.Length; i++)
+                {
+                    if (!hasParameters.Parameters[i].MatchesParameter(parameters[i]))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private static bool MatchesParameter(this ParameterDefinition targetParameter, ParameterDefinition candidateParameter)
+        {
+            return targetParameter.ParameterType.MatchesType(candidateParameter.ParameterType)
+                && targetParameter.IsOut == candidateParameter.IsOut
+                && targetParameter.IsParams() == candidateParameter.IsParams();
+        }
+
+        private static bool MatchesType(this TypeReference targetType, TypeReference candidateType)
+        {
+            throw new NotImplementedException();
+        }
+
+        private static bool IsParams(this ParameterDefinition parameterDefinition)
+        {
+            return parameterDefinition.CustomAttributes.Any(a => a.AttributeType.Name == "ParamArrayAttribute");
+        }
+
+        public static bool HasExactGenericTypeParameters(this MethodDefinition hasGenericParameters
+            , GenericParameter[] genericTypeParameters)
+        {
+            if (genericTypeParameters.Length == hasGenericParameters.GenericParameters.Count)
+            {
+                for (int i = 0; i < genericTypeParameters.Length; i++)
+                {
+                    if (!hasGenericParameters.GenericParameters[i].IsValidGenericTypeMatchFor(genericTypeParameters[i]))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private static bool IsValidGenericTypeMatchFor(this GenericParameter targetParameter, GenericParameter candidateParameter)
+        {
+            throw new NotImplementedException();
         }
     }
 }

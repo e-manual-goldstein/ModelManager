@@ -188,5 +188,10 @@ namespace AssemblyAnalyser.Specs
         {
             return null;
         }
+
+        public override MethodSpec LoadMethodSpec(MethodReference method)
+        {
+            return null;
+        }
     }
 }

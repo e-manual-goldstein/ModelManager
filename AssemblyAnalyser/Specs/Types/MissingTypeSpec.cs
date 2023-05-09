@@ -9,8 +9,6 @@ namespace AssemblyAnalyser.Specs
 {
     internal class MissingTypeSpec : TypeSpec
     {
-        ModuleSpec _moduleSpec;
-
         public MissingTypeSpec(string fullTypeName, string uniqueTypeName, ModuleSpec moduleSpec, ISpecManager specManager) 
             : base(fullTypeName, uniqueTypeName, moduleSpec, specManager)
         {
@@ -146,6 +144,11 @@ namespace AssemblyAnalyser.Specs
         public override MethodSpec FindMatchingMethodSpec(MethodSpec methodSpec)
         {
             return base.FindMatchingMethodSpec(methodSpec);
+        }
+
+        public override MethodSpec LoadMethodSpec(MethodReference method)
+        {
+            return base.LoadMethodSpec(method);
         }
     }
 }

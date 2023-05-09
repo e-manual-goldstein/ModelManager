@@ -184,5 +184,10 @@ namespace AssemblyAnalyser
         {
             base.CheckInterfaceImplementations();
         }
+
+        public override MethodSpec LoadMethodSpec(MethodReference method)
+        {
+            return base.LoadMethodSpec(method);
+        }
     }
 }

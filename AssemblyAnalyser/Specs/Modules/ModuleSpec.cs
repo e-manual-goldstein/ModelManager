@@ -303,7 +303,18 @@ namespace AssemblyAnalyser
 
         public TypeDefinition GetTypeDefinition(TypeReference typeReference)
         {
-            var types = _baseVersion.Types.ToArray();
+            var types = _baseVersion.Types.Where(t => t.FullName == typeReference.FullName).ToArray();
+            if (types.Any())
+            {
+                if (types.Length > 1)
+                {
+
+                }
+                else
+                {
+                    return types.Single();
+                }
+            }
             return _baseVersion.GetType(typeReference.FullName);
         }
 

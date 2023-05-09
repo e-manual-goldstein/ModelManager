@@ -157,5 +157,10 @@ namespace AssemblyAnalyser
         {
             return base.GetAllMethodSpecs();
         }
+
+        public override MethodSpec LoadMethodSpec(MethodReference method)
+        {
+            return base.LoadMethodSpec(method);
+        }
     }
 }
