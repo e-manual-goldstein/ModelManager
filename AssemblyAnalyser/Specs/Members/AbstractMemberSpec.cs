@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
-    public abstract class AbstractMemberSpec<TMemberSpec> : AbstractSpec, IMemberSpec, IImplementsSpec<TMemberSpec>
-        where TMemberSpec : AbstractSpec
+    public abstract class AbstractMemberSpec<TMemberSpec> : AbstractSpec, IAbstractMemberSpec, IImplementsSpec<TMemberSpec>
+        where TMemberSpec : AbstractSpec, IAbstractMemberSpec
     {
         protected AbstractMemberSpec(TypeSpec declaringType, ISpecManager specManager) : base(specManager)
         {
@@ -34,10 +34,20 @@ namespace AssemblyAnalyser
             {
                 _specManager.AddFault(this, FaultSeverity.Critical, "Interface Member cannot be registered as an Implementation");
             }
-            if (!_implementationFor.Contains(implementedSpec))
+            _implementationFor.Add(implementedSpec);
+            implementedSpec.RegisterImplementation(this);
+        }
+
+        List<IMemberSpec> _implementations = new();
+        public virtual IMemberSpec[] Implementations => _implementations.ToArray();
+
+        public void RegisterImplementation(IMemberSpec implementingMemberSpec)
+        {
+            if (!DeclaringType.IsInterface)
             {
-                _implementationFor.Add(implementedSpec);
+                _specManager.AddFault(this, FaultSeverity.Critical, "Interface Member cannot be registered as an Implementation");
             }
+            _implementations.Add(implementingMemberSpec);
         }
 
         protected abstract TypeSpec TryGetDeclaringType();

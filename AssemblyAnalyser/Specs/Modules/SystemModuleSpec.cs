@@ -25,13 +25,17 @@ namespace AssemblyAnalyser
         public SystemModuleSpec(ModuleDefinition module, string filePath, AssemblySpec assemblySpec, ISpecManager specManager)
             : base(module, filePath, assemblySpec, specManager)
         {
-
+            ModuleShortName = SystemAssemblySpec.SYSTEM_MODULE_NAME;
         }
 
         public static bool IsSystemModule(IMetadataScope metadataScope)
         {
             var scopeName = metadataScope.GetScopeNameWithoutExtension();
-            return _systemModuleNames.Contains(scopeName);
+            if (_systemModuleNames.Contains(scopeName))
+            {
+                return true;
+            }
+            return false;
         }
 
         public override bool IsSystem => true;
@@ -56,7 +60,10 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            base.BuildSpec();
+            foreach (var exportedType in _baseVersion.ExportedTypes)
+            {
+                LoadTypeSpec(exportedType.Resolve());
+            }
         }
 
         public override string ToString()

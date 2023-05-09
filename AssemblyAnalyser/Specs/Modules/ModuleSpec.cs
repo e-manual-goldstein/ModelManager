@@ -14,7 +14,7 @@ namespace AssemblyAnalyser
         AssemblySpec _assembly;
         //the _baseVersion is the version of the module for which an assembly has been located
         //this is the version which corresponds to the file found at FilePath
-        ModuleDefinition _baseVersion;
+        protected ModuleDefinition _baseVersion;
         
         #region Constructors
         public ModuleSpec(ModuleDefinition module, string filePath, AssemblySpec assemblySpec, ISpecManager specManager) 

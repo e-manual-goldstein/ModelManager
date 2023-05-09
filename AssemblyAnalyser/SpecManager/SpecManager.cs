@@ -205,7 +205,7 @@ namespace AssemblyAnalyser
                 {
                     if (SystemModuleSpec.IsSystemModule(assemblyReference))
                     {
-                        return _assemblies[SystemAssemblySpec.SYSTEM_ASSEMBLY_NAME];
+                        return (_assemblies[SystemAssemblySpec.SYSTEM_ASSEMBLY_NAME] as SystemAssemblySpec).WithReferencedAssembly(assemblyReference);
                     }
                     return _assemblies
                         .GetOrAdd(assemblyReference.Name, (key) => new MissingAssemblySpec(assemblyReference, this));                    
@@ -386,7 +386,10 @@ namespace AssemblyAnalyser
         {
             if (method == null)
             {
-                AddFault(allowNull ? FaultSeverity.Debug : FaultSeverity.Warning, "No MethodSpec for null MethodDefintion");
+                if (!allowNull)
+                {
+                    AddFault(FaultSeverity.Error, "No MethodSpec for null MethodDefintion");
+                }
                 return null;
             }
             return LoadTypeSpec(method.DeclaringType, assemblyLocator).LoadMethodSpec(method);

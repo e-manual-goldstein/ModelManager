@@ -69,12 +69,15 @@ namespace AssemblyAnalyser
                     //Abstract Class Possibly?
                 }
             }
-            foreach (var @interface in DeclaringType.Interfaces)
+            if (!DeclaringType.IsInterface)
             {
-                var method = @interface.FindMatchingMethodSpec(this);
-                if (method != null)
+                foreach (var @interface in DeclaringType.Interfaces)
                 {
-                    RegisterAsImplementation(method);
+                    var method = @interface.FindMatchingMethodSpec(this);
+                    if (method != null)
+                    {
+                        RegisterAsImplementation(method);
+                    }
                 }
             }
         }

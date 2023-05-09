@@ -18,6 +18,7 @@ namespace AssemblyAnalyser.Specs
             IAssemblyLocator assemblyLocator, ISpecManager specManager) 
             : base(assemblyDefinition, filePath, assemblyLocator, specManager)
         {
+            AssemblyShortName = SYSTEM_ASSEMBLY_NAME;
         }
 
         
@@ -59,6 +60,12 @@ namespace AssemblyAnalyser.Specs
         protected override CustomAttribute[] GetAttributes()
         {
             return base.GetAttributes();
+        }
+
+        public AssemblySpec WithReferencedAssembly(AssemblyNameReference assemblyReference)
+        {
+            RegisterMetaDataScope(assemblyReference);
+            return this;
         }
     }
 }
