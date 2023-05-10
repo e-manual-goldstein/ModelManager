@@ -22,10 +22,10 @@ namespace AssemblyAnalyser.Tests
             _specManager.ProcessSpecs(types, false);
             var methods = types.SelectMany(t => t.Methods);
             var properties = types.SelectMany(t => t.Properties);
-            _specManager.ProcessSpecs(methods);
-            _specManager.ProcessSpecs(properties);
+            _specManager.ProcessSpecs(methods, false);
+            _specManager.ProcessSpecs(properties, false);
             var fields = types.SelectMany(t => t.Fields);
-            _specManager.ProcessSpecs(fields);
+            _specManager.ProcessSpecs(fields, false);
             var parameters = methods.SelectMany(m => m.Parameters).Union(properties.SelectMany(p => p.Parameters));
             _specManager.ProcessSpecs(parameters, false);
             var events = types.SelectMany(m => m.Events);

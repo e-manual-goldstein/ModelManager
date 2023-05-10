@@ -94,7 +94,7 @@ namespace AssemblyAnalyser
                     _specManager.AddFault(this, FaultSeverity.Error, $"Attempt to over-write {nameof(SpecialNameMethodForMember)}");
                     return;
                 }
-                _specManager.AddFault(this, FaultSeverity.Debug, $"Re-registering identical memberSpec for {nameof(SpecialNameMethodForMember)}");               
+                _specManager.AddMessage($"Re-registering identical memberSpec for {nameof(SpecialNameMethodForMember)}");               
             }
             _specialNameMethodForMember = memberSpec;
         }

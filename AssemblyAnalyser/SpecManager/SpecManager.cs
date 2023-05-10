@@ -132,7 +132,7 @@ namespace AssemblyAnalyser
             //_fieldSpecs.Clear();
         }
 
-        public void ProcessSpecs<TSpec>(IEnumerable<TSpec> specs, bool parallelProcessing = true) where TSpec : AbstractSpec
+        public void ProcessSpecs<TSpec>(IEnumerable<TSpec> specs, bool parallelProcessing = false) where TSpec : AbstractSpec
         {
             if (!parallelProcessing)
             {

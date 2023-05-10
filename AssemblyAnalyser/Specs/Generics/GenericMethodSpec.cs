@@ -24,10 +24,11 @@ namespace AssemblyAnalyser.Specs
             var genericArgumentSpecs = _specManager
                 .LoadTypeSpecs<GenericParameterSpec>(_methodDefinition.GenericParameters, DeclaringType.Module.AssemblyLocator).ToArray();
             {
-                foreach (var genericArgSpec in genericArgumentSpecs)
-                {
-                    genericArgSpec.RegisterAsGenericTypeParameterFor(this);
-                }
+                //TODO: Is this even needed?
+                //foreach (var genericArgSpec in genericArgumentSpecs)
+                //{
+                //    genericArgSpec.RegisterAsGenericTypeParameterFor(this);
+                //}
             }
             return genericArgumentSpecs;
         }

@@ -53,7 +53,7 @@ namespace AssemblyAnalyser
         public void RegisterAsGenericTypeParameterFor(GenericMethodSpec genericMethodSpec)
         {
             _genericParameterFor = genericMethodSpec;
-            _specManager.AddFault(FaultSeverity.Debug, "Implementation not finished for 'RegisterAsGenericTypeParameterFor'");
+            _specManager.AddMessage("Implementation not finished for 'RegisterAsGenericTypeParameterFor'");
         }
 
         internal bool IsValidGenericTypeMatchFor(GenericParameterSpec genericTypeArgumentSpec)

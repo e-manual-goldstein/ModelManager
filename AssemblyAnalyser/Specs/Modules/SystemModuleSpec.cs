@@ -14,6 +14,7 @@ namespace AssemblyAnalyser
         static string[] _systemModuleNames = new string[] { 
             "mscorlib", 
             "System.Core",
+            "netstandard",
             "System.Configuration.ConfigurationManager",
             "System.Runtime", 
             "System.Data.Common", 
