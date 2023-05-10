@@ -462,17 +462,17 @@ namespace AssemblyAnalyser
             {
                 return methodDefinition;
             }
-            else if (IsSystem)
+            else if (Module.IsSystem)
             {
                 try
                 {
                     //Should be able to safely resolve method for System Types
                     return method.Resolve();
                 }
-                catch
+                catch (Exception ex)
                 {
-                    _specManager.AddFault(this, FaultSeverity.Critical, $"Failed to resolve MethodDefinition for System Type. Method: {method.Name}");
-                    return null;
+                    _specManager.AddFault(this, FaultSeverity.Critical, $"Failed to resolve {method} for System Type. {ex.Message}");
+                    //return null;
                 }
             }
             var methodsByName = Definition.Methods.Where(m => m.FullName == method.FullName).ToArray();
@@ -480,7 +480,23 @@ namespace AssemblyAnalyser
             {
                 var methodsByParam = methodsByName.Where(p => p.HasExactParameters(method.Parameters.ToArray())).ToArray();
             }
+            if (method.HasGenericParameters)
+            {
+                return TryGetGenericMethodDefinition(method);
+            }
             return methodsByName.SingleOrDefault();
+        }
+
+        public virtual MethodDefinition TryGetGenericMethodDefinition(MethodReference method)
+        {
+            var genericMethods = Definition.Methods.Where(m => m.HasGenericParameters).ToArray();
+            if (genericMethods.Length > 1)
+            {
+                var methodsByParam = genericMethods.Where(p => p.HasExactParameters(method.Parameters.ToArray())).ToArray();
+                _specManager.AddFault(this, FaultSeverity.Critical, "Unfinished Implementation");
+            }
+            return genericMethods.SingleOrDefault();
+
         }
 
         public MethodSpec LoadMethodSpec(MethodDefinition method)

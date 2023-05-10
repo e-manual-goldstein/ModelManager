@@ -192,7 +192,7 @@ namespace AssemblyAnalyser
                 type = typeDefinition;
                 return;
             }
-            _specManager.AddFault(this, FaultSeverity.Warning, $"Could not fully resolve TypeDefinition {typeDefinition}");
+            _specManager.AddFault(this, FaultSeverity.Warning, $"Could not fully resolve TypeDefinition {type}");
         }
 
         private TypeDefinition TryResolveTypeDefinition(TypeReference type)

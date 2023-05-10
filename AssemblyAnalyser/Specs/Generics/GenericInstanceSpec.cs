@@ -189,7 +189,7 @@ namespace AssemblyAnalyser
         public override MethodSpec LoadMethodSpec(MethodReference method)
         {
             _specManager.AddFault(this, FaultSeverity.Debug, "Unfinished Implementation");
-            return null;
+            return InstanceOf.LoadMethodSpec(method);
         }
 
         
