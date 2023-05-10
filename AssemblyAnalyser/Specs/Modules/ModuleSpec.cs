@@ -102,6 +102,10 @@ namespace AssemblyAnalyser
         {
             bool typeReferenceIsArray = type.IsArray; //Resolving TypeReference to TypeDefinition causes loss of IsArray definition
             var uniqueTypeName = type.CreateUniqueTypeSpecName(typeReferenceIsArray);
+            if (type.IsByReference)
+            {
+                type = type.GetElementType();
+            }
             if (type.IsGenericParameter && type is GenericParameter genericParameter)
             {
                 return _typeSpecs.GetOrAdd(uniqueTypeName, (key) => CreateGenericParameterSpec(genericParameter));
@@ -159,33 +163,34 @@ namespace AssemblyAnalyser
 
         private void TryGetTypeDefinition(ref TypeReference type)
         {
-            TypeDefinition typeDefinition = null;
             if (type.IsGenericInstance)
             {
                 throw new ArgumentException("Cannot have TypeDefinition for Generic Instance");
             }
-            if (typeDefinition == null)
+            if (type.IsByReference)
             {
+                type = type.GetElementType();
+            }
+            TypeDefinition typeDefinition = null;
+            var scopeName = type.Scope.GetScopeNameWithoutExtension();
                 
-                var scopeName = type.Scope.GetScopeNameWithoutExtension();
-                
-                if (scopeName == _baseVersion.GetScopeNameWithoutExtension())
+            if (scopeName == _baseVersion.GetScopeNameWithoutExtension())
+            {
+                if (type.IsGenericParameter)
                 {
-                    if (type.IsGenericParameter)
+                    var genericParameter = GetGenericParameter(type);
+                    if (genericParameter != null)
                     {
-                        var genericParameter = GetGenericParameter(type);
-                        if (genericParameter != null)
-                        {
-                            type = genericParameter;
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        typeDefinition = GetTypeDefinition(type) ?? GetTypeDefinition(type.GetElementType());
+                        type = genericParameter;
+                        return;
                     }
                 }
+                else
+                {
+                    typeDefinition = GetTypeDefinition(type) ?? GetTypeDefinition(type.GetElementType());
+                }
             }
+           
             typeDefinition ??= TryResolveTypeDefinition(type);
             if (typeDefinition != null)
             {
@@ -328,7 +333,8 @@ namespace AssemblyAnalyser
             }
             else
             {
-                throw new NotImplementedException();
+                var genericParameter = typeReference as GenericParameter;
+                return genericParameter;
             }
         }
 

@@ -29,7 +29,7 @@ namespace AssemblyAnalyser
             : base(specManager)
         {
             _module = moduleSpec;
-            if (uniqueTypeName == "System.Action")
+            if (fullTypeName == "Sdm.Cluster.Customers.Api.ICustomer")
             {
 
             }

@@ -2,16 +2,12 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using AssemblyAnalyser.Extensions;
 using System;
 using AssemblyAnalyser.Specs;
 using System.Collections.Concurrent;
-using System.IO;
-using System.Threading.Tasks;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
-using StaticAssemblyLocator = AssemblyAnalyser.AssemblyLocator;
 
 namespace AssemblyAnalyser
 {
@@ -28,7 +24,7 @@ namespace AssemblyAnalyser
             Versions.Add(assemblyDefinition.Name.GetUniqueNameFromScope());
             AssemblyFullName = assemblyDefinition.FullName;
             FilePath = filePath;
-            IsSystem = StaticAssemblyLocator.IsSystemAssembly(filePath);//Should be no need for this eventually;
+            //IsSystem = StaticAssemblyLocator.IsSystemAssembly(filePath);//Should be no need for this eventually;
         }
 
         protected AssemblySpec(string assemblyFullName, ISpecManager specManager)

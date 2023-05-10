@@ -89,6 +89,10 @@ namespace AssemblyAnalyser.Extensions
             {
                 return CreateGenericArgumentsAggregateName(genericInstanceType);
             }
+            if (type is ByReferenceType)
+            {
+                return type.GetElementType().FullName;
+            }
             return $"{type.FullName}";
         }
 
