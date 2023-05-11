@@ -9,7 +9,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using AssemblyAnalyser.Specs;
 using AssemblyAnalyser.Faults;
-using Mono.Cecil.Cil;
 
 namespace AssemblyAnalyser
 {
@@ -202,14 +201,14 @@ namespace AssemblyAnalyser
             try
             {
                 var assemblyLocation = specContext.AssemblyLocator.LocateAssemblyByName(assemblyReference.FullName);
-                if (string.IsNullOrEmpty(assemblyLocation))
+                if (string.IsNullOrEmpty(assemblyLocation) && !SystemModuleSpec.IsSystemModule(assemblyReference))
                 {
-                    if (SystemModuleSpec.IsSystemModule(assemblyReference))
-                    {
-                        return (_assemblies[SystemAssemblySpec.SYSTEM_ASSEMBLY_NAME] as SystemAssemblySpec).WithReferencedAssembly(assemblyReference);
-                    }
                     return _assemblies
                         .GetOrAdd(assemblyReference.Name, (key) => new MissingAssemblySpec(assemblyReference, this, specContext));                    
+                }
+                else if (SystemModuleSpec.IsSystemModule(assemblyReference))
+                {
+                    return GetOrCreateSystemModule(assemblyReference, specContext);
                 }
                 var assemblySpec = LoadAssemblySpec(assemblyReference, assemblyLocation, specContext);
                 return assemblySpec;
@@ -220,6 +219,12 @@ namespace AssemblyAnalyser
                 AddFault(FaultSeverity.Error, $"Unable to load assembly {assemblyReference.FullName}. Required by {assemblyReference}");
             }
             return null;
+        }
+
+        private AssemblySpec GetOrCreateSystemModule(AssemblyNameReference assemblyReference, ISpecContext specContext)
+        {
+            return _assemblies.GetOrAdd(SystemAssemblySpec.SYSTEM_ASSEMBLY_NAME, 
+                (key) => new SystemAssemblySpec(assemblyReference, this, specContext));
         }
 
         public AssemblySpec LoadAssemblySpec(IMetadataScope assemblyNameReference, string filePath, ISpecContext specContext)
@@ -469,11 +474,11 @@ namespace AssemblyAnalyser
             {
                 if (!allowNull)
                 {
-                    AddFault(FaultSeverity.Error, "No PropertySpec for null PropertyDefinition");
+                    AddFault(FaultSeverity.Error, "No FieldSpec for null FieldReference");
                 }
                 return null;
             }
-            return LoadTypeSpec(fieldReference.DeclaringType, specContext).LoadFieldSpec(fieldReference.Resolve());
+            return LoadTypeSpec(fieldReference.DeclaringType, specContext).LoadFieldSpec(fieldReference);
         }
 
         #endregion

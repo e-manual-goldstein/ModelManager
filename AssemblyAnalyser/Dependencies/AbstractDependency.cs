@@ -9,6 +9,11 @@
             Parent = parent;
             Child = child;
 
+            if (parent == null || child == null)
+            {
+
+            }
+
             parent.AddChild(this);
             child.AddParent(this);
         }

@@ -173,7 +173,14 @@ namespace AssemblyAnalyser
                     {
                         continue;
                     }
-                    _specManager.RegisterOperandDependency(instruction.Operand, this, _specContext);
+                    try
+                    {
+                        _specManager.RegisterOperandDependency(instruction.Operand, this, _specContext);
+                    }
+                    catch (Exception ex)
+                    {
+                        _specManager.AddFault(this, FaultSeverity.Error, $"Error registering operand dependency, {ex.Message}");
+                    }
                 }
             }
         }

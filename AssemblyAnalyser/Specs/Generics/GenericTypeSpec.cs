@@ -38,6 +38,11 @@ namespace AssemblyAnalyser
             }
         }
 
+        public override void AddSubType(TypeSpec typeSpec)
+        {
+            base.AddSubType(typeSpec);
+        }
+
         public override void AddChild(ISpecDependency specDependency)
         {
             base.AddChild(specDependency);

@@ -471,10 +471,16 @@ namespace AssemblyAnalyser
                     //return null;
                 }
             }
-            var methodsByName = Definition.Methods.Where(m => m.FullName == method.FullName).ToArray();
+            var methodsByName = Definition.Methods
+                .Where(m => m.FullName == method.FullName && m.HasGenericParameters == method.HasGenericParameters).ToArray();
             if (methodsByName.Length > 1)
             {
                 var methodsByParam = methodsByName.Where(p => p.HasExactParameters(method.Parameters.ToArray())).ToArray();
+                if (methodsByParam.Length > 1)
+                {
+
+                }
+                return methodsByParam.SingleOrDefault();
             }
             if (method.HasGenericParameters)
             {
@@ -632,15 +638,15 @@ namespace AssemblyAnalyser
 
         #region Field Specs
 
-        ConcurrentDictionary<string, FieldSpec> _fieldSpecs = new ConcurrentDictionary<string, FieldSpec>();
+        protected ConcurrentDictionary<string, FieldSpec> _fieldSpecs = new ConcurrentDictionary<string, FieldSpec>();
 
-        public FieldSpec LoadFieldSpec(FieldDefinition fieldDefinition)
+        public virtual FieldSpec LoadFieldSpec(FieldReference fieldReference)
         {
-            FieldSpec fieldSpec = _fieldSpecs.GetOrAdd(fieldDefinition.FullName, (spec) => CreateFieldSpec(fieldDefinition));
+            FieldSpec fieldSpec = _fieldSpecs.GetOrAdd(fieldReference.FullName, (spec) => CreateFieldSpec(fieldReference));
             return fieldSpec;
         }
 
-        public FieldDefinition TryGetFieldDefinition(FieldReference fieldReference)
+        public virtual FieldDefinition TryGetFieldDefinition(FieldReference fieldReference)
         {
             if (fieldReference is FieldDefinition fieldDefinition)
             {

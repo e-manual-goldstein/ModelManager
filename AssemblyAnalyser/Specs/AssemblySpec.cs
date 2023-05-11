@@ -13,7 +13,7 @@ namespace AssemblyAnalyser
 {
     public class AssemblySpec : AbstractSpec
     {
-        protected readonly AssemblyDefinition _assemblyDefinition;
+        protected AssemblyDefinition _assemblyDefinition;
 
         public AssemblySpec(AssemblyDefinition assemblyDefinition, string filePath, ISpecManager specManager, ISpecContext specContext) 
             : this(assemblyDefinition.FullName, specManager, specContext)

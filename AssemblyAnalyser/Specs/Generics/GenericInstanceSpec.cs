@@ -72,15 +72,9 @@ namespace AssemblyAnalyser
             return typeSpec;
         }
 
-        //Is this really necessary?
         protected override TypeSpec CreateBaseSpec()
         {
-            var typeSpec = _specManager.LoadTypeSpec(_genericInstance.ElementType, _specContext);            
-            if (!typeSpec.IsNullSpec)
-            {
-                typeSpec.AddSubType(this);
-            }            
-            return typeSpec;
+            return _specManager.GetNullTypeSpec(_specContext);
         }
 
         protected override TypeSpec[] CreateInterfaceSpecs()
@@ -130,6 +124,34 @@ namespace AssemblyAnalyser
         {
             return _specManager.LoadTypeSpecs<GenericParameterSpec>(_genericInstance.GenericParameters, _specContext)
                 .ToArray();            
+        }
+
+        public override FieldSpec LoadFieldSpec(FieldReference fieldReference)
+        {
+            FieldSpec fieldSpec = _fieldSpecs.GetOrAdd(fieldReference.FullName, 
+                (spec) => CreateGenericFieldInstanceSpec(fieldReference));
+            return fieldSpec;
+        }
+
+        private FieldSpec CreateGenericFieldInstanceSpec(FieldReference fieldReference)
+        {
+            var genericField = GetGenericField(fieldReference);
+            if (genericField == null)
+            {
+                _specManager.AddFault(this, FaultSeverity.Error, $"No Field found to match {fieldReference}");
+            }
+            return new GenericFieldInstanceSpec(genericField, this, _specManager, _specContext);
+        }
+
+        private FieldSpec GetGenericField(FieldReference fieldReference)
+        {
+            var fields = InstanceOf.Fields;
+            var matchByName = fields.Where(f => f.Name == fieldReference.Name).ToArray();
+            if (matchByName.Length > 1)
+            {
+
+            }
+            return matchByName.SingleOrDefault();
         }
 
         protected override void CheckInterfaceImplementations()

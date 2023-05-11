@@ -20,6 +20,17 @@ namespace AssemblyAnalyser.Specs
             AssemblyShortName = SYSTEM_ASSEMBLY_NAME;
         }
 
+        public SystemAssemblySpec(AssemblyNameReference assemblyReference, ISpecManager specManager, ISpecContext specContext) 
+            : base(assemblyReference.FullName, specManager, specContext)
+        {
+            var assemblyLocation = specContext.AssemblyLocator.LocateAssemblyByName(assemblyReference.FullName);
+            if (!string.IsNullOrEmpty(assemblyLocation))
+            {
+                _assemblyDefinition = AssemblyDefinition.ReadAssembly(assemblyLocation);
+            }
+            AssemblyShortName = SYSTEM_ASSEMBLY_NAME;
+        }
+
         
         public override bool IsSystem => true;
 
