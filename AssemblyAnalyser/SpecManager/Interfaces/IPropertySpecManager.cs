@@ -8,8 +8,8 @@ namespace AssemblyAnalyser
     {
         PropertySpec[] PropertySpecs { get; }
 
-        PropertySpec LoadPropertySpec(PropertyReference property, bool allowNull, IAssemblyLocator assemblyLocator);
-        IEnumerable<PropertySpec> LoadPropertySpecs(IEnumerable<PropertyReference> properties, IAssemblyLocator assemblyLocator);        
+        PropertySpec LoadPropertySpec(PropertyReference property, bool allowNull, ISpecContext specContext);
+        IEnumerable<PropertySpec> LoadPropertySpecs(IEnumerable<PropertyReference> properties, ISpecContext specContext);        
 
     }
 }

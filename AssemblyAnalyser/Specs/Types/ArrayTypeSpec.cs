@@ -11,8 +11,9 @@ namespace AssemblyAnalyser
     {
         ArrayType _arrayType;
 
-        public ArrayTypeSpec(ArrayType arrayType, TypeSpec elementSpec, ModuleSpec moduleSpec, ISpecManager specManager) :
-            base($"{arrayType.ElementType.Namespace}.{arrayType.ElementType.Name}[]", $"{arrayType.ElementType.FullName}[]", moduleSpec, specManager)
+        public ArrayTypeSpec(ArrayType arrayType, TypeSpec elementSpec, ModuleSpec moduleSpec, ISpecManager specManager, ISpecContext specContext) :
+            base($"{arrayType.ElementType.Namespace}.{arrayType.ElementType.Name}[]", $"{arrayType.ElementType.FullName}[]",
+                moduleSpec, specManager, specContext)
         {
             _arrayType = arrayType;
             ElementSpec = elementSpec;
@@ -131,7 +132,7 @@ namespace AssemblyAnalyser
 
         protected override TypeSpec CreateBaseSpec()
         {
-            return _specManager.GetNullTypeSpec();
+            return _specManager.GetNullTypeSpec(_specContext);
         }
 
         protected override EventSpec[] CreateEventSpecs()

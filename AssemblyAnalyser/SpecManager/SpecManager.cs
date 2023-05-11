@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AssemblyAnalyser.Specs;
 using AssemblyAnalyser.Faults;
+using Mono.Cecil.Cil;
 
 namespace AssemblyAnalyser
 {
@@ -176,31 +177,31 @@ namespace AssemblyAnalyser
             };
             var moduleDefinition = AssemblyDefinition.ReadAssembly(assemblySpecPath, readerParameters);
             IAssemblyLocator assemblyLocator = AssemblyLocator.GetLocator(moduleDefinition.MainModule);
-            return LoadAssemblySpec(moduleDefinition.Name, assemblySpecPath, assemblyLocator);
+            return LoadAssemblySpec(moduleDefinition.Name, assemblySpecPath, new SpecContext(assemblyLocator));
         }
 
-        public IEnumerable<AssemblySpec> TryLoadReferencedAssemblies(ModuleDefinition moduleDefinition, IAssemblyLocator assemblyLocator)
+        public IEnumerable<AssemblySpec> TryLoadReferencedAssemblies(ModuleDefinition moduleDefinition, ISpecContext specContext)
         {
             foreach (var assemblyNameReference in moduleDefinition.AssemblyReferences)
             {
-                yield return LoadReferencedAssemblyByFullName(moduleDefinition, assemblyNameReference, assemblyLocator);
+                yield return LoadReferencedAssemblyByFullName(moduleDefinition, assemblyNameReference, specContext);
             }
         }
 
-        public AssemblySpec LoadReferencedAssemblyByFullName(ModuleDefinition module, AssemblyNameReference assemblyNameReference, IAssemblyLocator assemblyLocator)
+        public AssemblySpec LoadReferencedAssemblyByFullName(ModuleDefinition module, AssemblyNameReference assemblyNameReference, ISpecContext specContext)
         {
             if (module.GetScopeNameWithoutExtension() == assemblyNameReference.GetUniqueNameFromScope())
             {
-                return LoadAssemblySpec(module.Assembly.Name, module.FileName, assemblyLocator);
+                return LoadAssemblySpec(module.Assembly.Name, module.FileName, specContext);
             }
-            return LoadReferencedAssembly(assemblyLocator, assemblyNameReference);
+            return LoadReferencedAssembly(specContext, assemblyNameReference);
         }
 
-        private AssemblySpec LoadReferencedAssembly(IAssemblyLocator locator, AssemblyNameReference assemblyReference)
+        private AssemblySpec LoadReferencedAssembly(ISpecContext specContext, AssemblyNameReference assemblyReference)
         {
             try
             {
-                var assemblyLocation = locator.LocateAssemblyByName(assemblyReference.FullName);
+                var assemblyLocation = specContext.AssemblyLocator.LocateAssemblyByName(assemblyReference.FullName);
                 if (string.IsNullOrEmpty(assemblyLocation))
                 {
                     if (SystemModuleSpec.IsSystemModule(assemblyReference))
@@ -208,9 +209,9 @@ namespace AssemblyAnalyser
                         return (_assemblies[SystemAssemblySpec.SYSTEM_ASSEMBLY_NAME] as SystemAssemblySpec).WithReferencedAssembly(assemblyReference);
                     }
                     return _assemblies
-                        .GetOrAdd(assemblyReference.Name, (key) => new MissingAssemblySpec(assemblyReference, this));                    
+                        .GetOrAdd(assemblyReference.Name, (key) => new MissingAssemblySpec(assemblyReference, this, specContext));                    
                 }
-                var assemblySpec = LoadAssemblySpec(assemblyReference, assemblyLocation, locator);
+                var assemblySpec = LoadAssemblySpec(assemblyReference, assemblyLocation, specContext);
                 return assemblySpec;
             }
             catch (FileNotFoundException ex)
@@ -221,24 +222,24 @@ namespace AssemblyAnalyser
             return null;
         }
 
-        public AssemblySpec LoadAssemblySpec(IMetadataScope assemblyNameReference, string filePath, IAssemblyLocator assemblyLocator)
+        public AssemblySpec LoadAssemblySpec(IMetadataScope assemblyNameReference, string filePath, ISpecContext specContext)
         {
             var assemblyKey = SystemModuleSpec.IsSystemModule(assemblyNameReference)
                 ? SystemAssemblySpec.SYSTEM_ASSEMBLY_NAME
                 : assemblyNameReference.GetScopeNameWithoutExtension();
-            return _assemblies.GetOrAdd(assemblyKey, (key) => CreateFullAssemblySpec(filePath, assemblyLocator))
+            return _assemblies.GetOrAdd(assemblyKey, (key) => CreateFullAssemblySpec(filePath, specContext))
                 .RegisterMetaDataScope(assemblyNameReference);
         }
 
-        private AssemblySpec CreateFullAssemblySpec(string filePath, IAssemblyLocator assemblyLocator)
+        private AssemblySpec CreateFullAssemblySpec(string filePath, ISpecContext specContext)
         {
             var assemblyDefinition = AssemblyDefinition.ReadAssembly(filePath);
             ScopeExtended(this, new ScopeExtendedEventArgs(filePath));
             if (SystemModuleSpec.IsSystemModule(assemblyDefinition.Name))
             {
-                return new SystemAssemblySpec(assemblyDefinition, filePath, assemblyLocator, this);
+                return new SystemAssemblySpec(assemblyDefinition, filePath, this, specContext);
             }
-            return new AssemblySpec(assemblyDefinition, filePath, assemblyLocator, this);
+            return new AssemblySpec(assemblyDefinition, filePath, this, specContext);
         }
 
         #endregion
@@ -247,7 +248,7 @@ namespace AssemblyAnalyser
 
         public ModuleSpec[] ModuleSpecs => _assemblies.Values.SelectMany(a => a.Modules).ToArray();
 
-        public ModuleSpec LoadModuleSpecForTypeReference(TypeReference typeReference, IAssemblyLocator assemblyLocator)
+        public ModuleSpec LoadModuleSpecForTypeReference(TypeReference typeReference, ISpecContext specContext)
         {
             if (typeReference == null)
             {
@@ -258,7 +259,7 @@ namespace AssemblyAnalyser
             {
 
             }
-            var assemblySpec = LoadReferencedAssemblyByFullName(typeReference.Module, assemblyNameReference, assemblyLocator);
+            var assemblySpec = LoadReferencedAssemblyByFullName(typeReference.Module, assemblyNameReference, specContext);
             return assemblySpec.LoadModuleSpecForTypeReference(typeReference);
         }
 
@@ -272,31 +273,31 @@ namespace AssemblyAnalyser
         //    return LoadModuleSpec(moduleDefinition);
         //}
 
-        public IEnumerable<ModuleSpec> LoadReferencedModules(ModuleDefinition baseModule, IAssemblyLocator assemblyLocator)
+        public IEnumerable<ModuleSpec> LoadReferencedModules(ModuleDefinition baseModule, ISpecContext specContext)
         {
             foreach (var assemblyReference in baseModule.AssemblyReferences)
             {
-                yield return LoadReferencedModuleByFullName(baseModule, assemblyReference, assemblyLocator);
+                yield return LoadReferencedModuleByFullName(baseModule, assemblyReference, specContext);
             }            
         }
 
-        public ModuleSpec LoadReferencedModuleByFullName(ModuleDefinition module, AssemblyNameReference assemblyNameReference, 
-            IAssemblyLocator assemblyLocator)
+        public ModuleSpec LoadReferencedModuleByFullName(ModuleDefinition module, AssemblyNameReference assemblyNameReference,
+            ISpecContext specContext)
         {
             if (module.GetScopeNameWithoutExtension() == assemblyNameReference.FullName)
             {
-                return LoadReferencedAssemblyByFullName(module, assemblyNameReference, assemblyLocator).LoadModuleSpec(module);
+                return LoadReferencedAssemblyByFullName(module, assemblyNameReference, specContext).LoadModuleSpec(module);
             }
-            if (assemblyLocator == null)
+            if (specContext == null)
             {
-                assemblyLocator ??= AssemblyLocator.GetLocator(module);
+                specContext ??= new SpecContext(AssemblyLocator.GetLocator(module));
             }
-            return LoadReferencedModule(assemblyLocator, assemblyNameReference);
+            return LoadReferencedModule(specContext, assemblyNameReference);
         }
 
-        private ModuleSpec LoadReferencedModule(IAssemblyLocator locator, AssemblyNameReference assemblyReference)
+        private ModuleSpec LoadReferencedModule(ISpecContext specContext, AssemblyNameReference assemblyReference)
         {
-            return LoadReferencedAssembly(locator, assemblyReference).LoadModuleSpec(assemblyReference);
+            return LoadReferencedAssembly(specContext, assemblyReference).LoadModuleSpec(assemblyReference);
         }
 
         //public ModuleSpec[] LoadModuleSpecs(ModuleDefinition[] modules)
@@ -342,37 +343,37 @@ namespace AssemblyAnalyser
 
         static NullTypeSpec _nullTypeSpec;
 
-        public TypeSpec GetNullTypeSpec()
+        public TypeSpec GetNullTypeSpec(ISpecContext specContext)
         {
-            return _nullTypeSpec ??= new NullTypeSpec(this);
+            return _nullTypeSpec ??= new NullTypeSpec(this, specContext);
         }
 
         public TypeSpec[] TypeSpecs => ModuleSpecs.SelectMany(m => m.TypeSpecs).ToArray();
 
-        public TypeSpec LoadTypeSpec(TypeReference typeReference, IAssemblyLocator assemblyLocator)
+        public TypeSpec LoadTypeSpec(TypeReference typeReference, ISpecContext specContext)
         {
             if (typeReference == null)
             {
-                return GetNullTypeSpec();
+                return GetNullTypeSpec(specContext);
             }
-            ModuleSpec module = LoadModuleSpecForTypeReference(typeReference, assemblyLocator);
+            ModuleSpec module = LoadModuleSpecForTypeReference(typeReference, specContext);
             return module.LoadTypeSpec(typeReference);
         }
 
-        public IEnumerable<TypeSpec> LoadTypeSpecs(IEnumerable<TypeReference> types, IAssemblyLocator assemblyLocator)
+        public IEnumerable<TypeSpec> LoadTypeSpecs(IEnumerable<TypeReference> types, ISpecContext specContext)
         {
             foreach (var typeReference in types)
             {
-                yield return LoadTypeSpec(typeReference, assemblyLocator);
+                yield return LoadTypeSpec(typeReference, specContext);
             }
         }
 
-        public IEnumerable<TSpec> LoadTypeSpecs<TSpec>(IEnumerable<TypeReference> types, IAssemblyLocator assemblyLocator) 
+        public IEnumerable<TSpec> LoadTypeSpecs<TSpec>(IEnumerable<TypeReference> types, ISpecContext specContext) 
             where TSpec : TypeSpec
         {
             foreach (var typeReference in types)
             {
-                yield return LoadTypeSpec(typeReference, assemblyLocator) as TSpec;
+                yield return LoadTypeSpec(typeReference, specContext) as TSpec;
             }
         }
 
@@ -382,7 +383,7 @@ namespace AssemblyAnalyser
 
         public MethodSpec[] MethodSpecs => TypeSpecs.SelectMany(t => t.Methods).ToArray();
 
-        public MethodSpec LoadMethodSpec(MethodDefinition method, bool allowNull, IAssemblyLocator assemblyLocator)
+        public MethodSpec LoadMethodSpec(MethodDefinition method, bool allowNull, ISpecContext specContext)
         {
             if (method == null)
             {
@@ -392,30 +393,30 @@ namespace AssemblyAnalyser
                 }
                 return null;
             }
-            return LoadTypeSpec(method.DeclaringType, assemblyLocator).LoadMethodSpec(method);
+            return LoadTypeSpec(method.DeclaringType, specContext).LoadMethodSpec(method);
         }
 
-        public MethodSpec LoadMethodSpec(MethodReference method, bool allowNull, IAssemblyLocator assemblyLocator)
+        public MethodSpec LoadMethodSpec(MethodReference method, bool allowNull, ISpecContext specContext)
         {
             if (method == null)
             {
                 AddFault(allowNull ? FaultSeverity.Debug : FaultSeverity.Warning, "No MethodSpec for null MethodDefintion");
                 return null;
             }
-            return LoadTypeSpec(method.DeclaringType, assemblyLocator).LoadMethodSpec(method);
+            return LoadTypeSpec(method.DeclaringType, specContext).LoadMethodSpec(method);
         }
 
-        public IEnumerable<MethodSpec> LoadSpecsForMethodReferences(IEnumerable<MethodReference> methodReferences, IAssemblyLocator assemblyLocator)
+        public IEnumerable<MethodSpec> LoadSpecsForMethodReferences(IEnumerable<MethodReference> methodReferences, ISpecContext specContext)
         {
             foreach (var methodReference in methodReferences)
             {
                 if (methodReference is MethodDefinition methodDefinition)
                 {
-                    yield return LoadMethodSpec(methodDefinition, true, assemblyLocator);
+                    yield return LoadMethodSpec(methodDefinition, true, specContext);
                 }
                 else if (methodReference.DeclaringType?.Scope != null)
                 {
-                    yield return LoadMethodSpec(methodReference, true, assemblyLocator);
+                    yield return LoadMethodSpec(methodReference, true, specContext);
                 }
                 else
                 {
@@ -427,7 +428,7 @@ namespace AssemblyAnalyser
                     {
                         continue;
                     }
-                    yield return LoadMethodSpec(methodDefinition, true, assemblyLocator);
+                    yield return LoadMethodSpec(methodDefinition, true, specContext);
                 }
             }            
         }
@@ -438,21 +439,21 @@ namespace AssemblyAnalyser
 
         public PropertySpec[] PropertySpecs => TypeSpecs.SelectMany(t => t.Properties).ToArray();
 
-        public PropertySpec LoadPropertySpec(PropertyReference propertyReference, bool allowNull, IAssemblyLocator assemblyLocator)
+        public PropertySpec LoadPropertySpec(PropertyReference propertyReference, bool allowNull, ISpecContext specContext)
         {
             if (propertyReference == null)
             {
                 AddFault(allowNull ? FaultSeverity.Debug : FaultSeverity.Warning, "No PropertySpec for null PropertyDefinition");
                 return null;
             }
-            return LoadTypeSpec(propertyReference.DeclaringType, assemblyLocator).LoadPropertySpec(propertyReference.Resolve());
+            return LoadTypeSpec(propertyReference.DeclaringType, specContext).LoadPropertySpec(propertyReference.Resolve());
         }
 
-        public IEnumerable<PropertySpec> LoadPropertySpecs(IEnumerable<PropertyReference> propertyReferences, IAssemblyLocator assemblyLocator)
+        public IEnumerable<PropertySpec> LoadPropertySpecs(IEnumerable<PropertyReference> propertyReferences, ISpecContext specContext)
         {
             foreach (var propertyReference in propertyReferences)
             {
-                yield return LoadPropertySpec(propertyReference, true, assemblyLocator);
+                yield return LoadPropertySpec(propertyReference, true, specContext);
             }
         }
 
@@ -461,6 +462,19 @@ namespace AssemblyAnalyser
         #region Field Specs
 
         public FieldSpec[] FieldSpecs => TypeSpecs.SelectMany(t => t.Fields).ToArray();
+
+        public FieldSpec LoadFieldSpec(FieldReference fieldReference, bool allowNull, ISpecContext specContext)
+        {
+            if (fieldReference == null)
+            {
+                if (!allowNull)
+                {
+                    AddFault(FaultSeverity.Error, "No PropertySpec for null PropertyDefinition");
+                }
+                return null;
+            }
+            return LoadTypeSpec(fieldReference.DeclaringType, specContext).LoadFieldSpec(fieldReference.Resolve());
+        }
 
         #endregion
 
@@ -476,7 +490,7 @@ namespace AssemblyAnalyser
 
         ConcurrentDictionary<string, TypeSpec> _attributeSpecs = new ConcurrentDictionary<string, TypeSpec>();
 
-        public TypeSpec[] TryLoadAttributeSpecs(Func<CustomAttribute[]> getAttributes, AbstractSpec decoratedSpec, IAssemblyLocator assemblyLocator)
+        public TypeSpec[] TryLoadAttributeSpecs(Func<CustomAttribute[]> getAttributes, AbstractSpec decoratedSpec, ISpecContext specContext)
         {
             CustomAttribute[] attributes = null;
             try
@@ -496,17 +510,17 @@ namespace AssemblyAnalyser
             {
                 attributes ??= Array.Empty<CustomAttribute>();
             }
-            return LoadAttributeSpecs(attributes, decoratedSpec, assemblyLocator);
+            return LoadAttributeSpecs(attributes, decoratedSpec, specContext);
         }
 
-        public TypeSpec[] LoadAttributeSpecs(CustomAttribute[] attibutes, AbstractSpec decoratedSpec, IAssemblyLocator assemblyLocator)
+        public TypeSpec[] LoadAttributeSpecs(CustomAttribute[] attibutes, AbstractSpec decoratedSpec, ISpecContext specContext)
         {
-            return attibutes.Select(f => LoadAttributeSpec(f, decoratedSpec, assemblyLocator)).ToArray();
+            return attibutes.Select(f => LoadAttributeSpec(f, decoratedSpec, specContext)).ToArray();
         }
 
-        private TypeSpec LoadAttributeSpec(CustomAttribute attribute, AbstractSpec decoratedSpec, IAssemblyLocator assemblyLocator)
+        private TypeSpec LoadAttributeSpec(CustomAttribute attribute, AbstractSpec decoratedSpec, ISpecContext specContext)
         {
-            var attributeSpec = LoadTypeSpec(attribute.AttributeType, assemblyLocator);
+            var attributeSpec = LoadTypeSpec(attribute.AttributeType, specContext);
             _attributeSpecs.GetOrAdd(attributeSpec.FullTypeName, attributeSpec);
             attributeSpec.RegisterAsDecorator(decoratedSpec);
             return attributeSpec;
@@ -535,7 +549,7 @@ namespace AssemblyAnalyser
         }
         #endregion
 
-        public ISpecDependency RegisterOperandDependency(object operand, MethodSpec methodSpec)
+        public ISpecDependency RegisterOperandDependency(object operand, MethodSpec methodSpec, ISpecContext specContext)
         {
             if (operand is MethodReference methodRef)
             {
@@ -547,9 +561,10 @@ namespace AssemblyAnalyser
             }
             return operand switch
             {
-                //TypeReference typeReference => new MethodToTypeDependency(methodSpec, LoadTypeSpec(typeReference)),
-                //MethodReference methodReference => new MethodToMethodDependency(methodSpec, LoadMethodSpec(methodReference)),
-                //FieldReference fieldReference => fieldReference.Module,
+                TypeReference typeReference => new MethodToTypeDependency(LoadTypeSpec(typeReference, specContext), methodSpec),
+                MethodReference methodReference => new MethodToMethodDependency(LoadMethodSpec(methodReference, false, specContext), methodSpec),
+                PropertyReference propertyReference => new MethodToPropertyDependency(LoadPropertySpec(propertyReference, false, specContext), methodSpec),
+                FieldReference fieldReference => new MethodToFieldDependency(LoadFieldSpec(fieldReference, false, specContext), methodSpec),
                 //ParameterReference parameterReference => parameterReference.ParameterType.Module,
                 //VariableReference variableReference => variableReference.VariableType.Module,
                 //Instruction operandInstruction => operandInstruction.Operand,

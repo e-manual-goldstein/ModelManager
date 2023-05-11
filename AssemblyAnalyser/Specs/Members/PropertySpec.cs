@@ -9,8 +9,8 @@ namespace AssemblyAnalyser
     {
         private PropertyDefinition _propertyDefinition;
 
-        public PropertySpec(PropertyDefinition propertyDefinition, TypeSpec declaringType, ISpecManager specManager)
-            : base(declaringType, specManager)
+        public PropertySpec(PropertyDefinition propertyDefinition, TypeSpec declaringType, ISpecManager specManager, ISpecContext specContext)
+            : base(declaringType, specManager, specContext)
         {
             _propertyDefinition = propertyDefinition;
             Name = propertyDefinition.Name;
@@ -26,7 +26,7 @@ namespace AssemblyAnalyser
 
         private MethodSpec TryGetGetter()
         {
-            var spec = _specManager.LoadMethodSpec(_propertyDefinition.GetMethod, true, DeclaringType.Module.AssemblyLocator);
+            var spec = _specManager.LoadMethodSpec(_propertyDefinition.GetMethod, true, _specContext);
             spec?.RegisterAsSpecialNameMethodFor(this);
             return spec;
         }
@@ -36,7 +36,7 @@ namespace AssemblyAnalyser
 
         private MethodSpec TryGetSetter()
         {
-            var spec = _specManager.LoadMethodSpec(_propertyDefinition.SetMethod, true, DeclaringType.Module.AssemblyLocator);
+            var spec = _specManager.LoadMethodSpec(_propertyDefinition.SetMethod, true, _specContext);
             spec?.RegisterAsSpecialNameMethodFor(this);
             return spec;
         }
@@ -48,7 +48,7 @@ namespace AssemblyAnalyser
 
         private TypeSpec GetPropertyType()
         {
-            var typeSpec = _specManager.LoadTypeSpec(_propertyDefinition.PropertyType, DeclaringType.Module.AssemblyLocator);
+            var typeSpec = _specManager.LoadTypeSpec(_propertyDefinition.PropertyType, _specContext);
             if (typeSpec == null || typeSpec.IsNullSpec)
             {
                 _specManager.AddFault(this, FaultSeverity.Error, $"Could not determine PropertyType for PropertySpec {this}");
@@ -113,7 +113,7 @@ namespace AssemblyAnalyser
             _getter = TryGetGetter();
             _setter = TryGetSetter();
             _propertyType = GetPropertyType();
-            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this, DeclaringType.Module.AssemblyLocator);
+            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this, _specContext);
             base.BuildSpec();
         }
 
@@ -142,7 +142,7 @@ namespace AssemblyAnalyser
 
         protected override TypeSpec TryGetDeclaringType()
         {
-            var typeSpec = _specManager.LoadTypeSpec(_propertyDefinition.DeclaringType, DeclaringType.Module.AssemblyLocator);
+            var typeSpec = _specManager.LoadTypeSpec(_propertyDefinition.DeclaringType, _specContext);
             if (typeSpec == null || typeSpec.IsNullSpec)
             {
                 _specManager.AddFault(this, FaultSeverity.Critical, $"Could not determine DeclaringType for PropertySpec {this}");
@@ -157,10 +157,13 @@ namespace AssemblyAnalyser
 
         protected override TypeSpec[] TryLoadAttributeSpecs()
         {
-            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, DeclaringType.Module.AssemblyLocator);
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, _specContext);
         }
 
-        protected override PropertySpec TryGetBaseSpec()
+        PropertySpec _baseSpec;
+        public PropertySpec BaseSpec => _baseSpec ??= TryGetBaseSpec();
+
+        protected PropertySpec TryGetBaseSpec()
         {
             if (IsHideBySig)
             {

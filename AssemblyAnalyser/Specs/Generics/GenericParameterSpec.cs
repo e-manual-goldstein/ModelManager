@@ -13,8 +13,8 @@ namespace AssemblyAnalyser
     {
         GenericParameter _genericParameter;
 
-        public GenericParameterSpec(GenericParameter genericParameter, ModuleSpec moduleSpec, ISpecManager specManager) 
-            : base($"{genericParameter.Namespace}.{genericParameter.Name}", genericParameter.FullName, moduleSpec, specManager)
+        public GenericParameterSpec(GenericParameter genericParameter, ModuleSpec moduleSpec, ISpecManager specManager, ISpecContext specContext) 
+            : base($"{genericParameter.Namespace}.{genericParameter.Name}", genericParameter.FullName, moduleSpec, specManager, specContext)
         {
             _genericParameter = genericParameter;
             Name = _genericParameter.Name;
@@ -34,7 +34,7 @@ namespace AssemblyAnalyser
         {
             foreach (var constraint in _genericParameter.Constraints)
             {
-                var typeSpec = _specManager.LoadTypeSpec(constraint.ConstraintType, Module.AssemblyLocator);
+                var typeSpec = _specManager.LoadTypeSpec(constraint.ConstraintType, _specContext);
                 if (typeSpec != null && typeSpec.IsClass)
                 {
                     return typeSpec;
@@ -68,14 +68,14 @@ namespace AssemblyAnalyser
             return (typeSpec is GenericParameterSpec genericParameterSpec) ? IsValidGenericTypeMatchFor(genericParameterSpec) : false;
         }
 
-        public override void RegisterAsRequiredBy(ISpecDependency specDependency)
+        public override void AddChild(ISpecDependency specDependency)
         {
-            base.RegisterAsRequiredBy(specDependency);
+            base.AddChild(specDependency);
         }
 
-        public override void RegisterDependency(ISpecDependency specDependency)
+        public override void AddParent(ISpecDependency specDependency)
         {
-            base.RegisterDependency(specDependency);
+            base.AddParent(specDependency);
         }
 
         protected override TypeSpec[] CreateAttributSpecs()

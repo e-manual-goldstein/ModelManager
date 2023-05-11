@@ -12,8 +12,8 @@ namespace AssemblyAnalyser.Specs
     {
         AssemblyNameReference _missingAssembly;
 
-        public MissingAssemblySpec(AssemblyNameReference missingAssembly, ISpecManager specManager)
-            : base(missingAssembly.FullName, specManager)
+        public MissingAssemblySpec(AssemblyNameReference missingAssembly, ISpecManager specManager, ISpecContext specContext)
+            : base(missingAssembly.FullName, specManager, specContext)
         {
             _missingAssembly = missingAssembly;
             AssemblyShortName = missingAssembly.Name;            
@@ -32,14 +32,14 @@ namespace AssemblyAnalyser.Specs
         }
 
 
-        public override void RegisterAsRequiredBy(ISpecDependency specDependency)
+        public override void AddChild(ISpecDependency specDependency)
         {
-            base.RegisterAsRequiredBy(specDependency);
+            base.AddChild(specDependency);
         }
 
-        public override void RegisterDependency(ISpecDependency specDependency)
+        public override void AddParent(ISpecDependency specDependency)
         {
-            base.RegisterDependency(specDependency);
+            base.AddParent(specDependency);
         }
 
         protected override void BuildSpec()

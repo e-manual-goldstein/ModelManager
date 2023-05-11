@@ -8,7 +8,8 @@ namespace AssemblyAnalyser
     {
         private MethodReference method;
 
-        public MissingMethodSpec(MethodReference method, TypeSpec declaringType, ISpecManager specManager) : base(declaringType, specManager)
+        public MissingMethodSpec(MethodReference method, TypeSpec declaringType, ISpecManager specManager, ISpecContext specContext) 
+            : base(declaringType, specManager, specContext)
         {
             this.method = method;
         }
@@ -26,14 +27,14 @@ namespace AssemblyAnalyser
             return base.MatchesSpec(methodSpec);
         }
 
-        public override void RegisterAsRequiredBy(ISpecDependency specDependency)
+        public override void AddChild(ISpecDependency specDependency)
         {
-            base.RegisterAsRequiredBy(specDependency);
+            base.AddChild(specDependency);
         }
 
-        public override void RegisterDependency(ISpecDependency specDependency)
+        public override void AddParent(ISpecDependency specDependency)
         {
-            base.RegisterDependency(specDependency);
+            base.AddParent(specDependency);
         }
 
         public override string ToString()
@@ -49,11 +50,6 @@ namespace AssemblyAnalyser
         protected override CustomAttribute[] GetAttributes()
         {
             return base.GetAttributes();
-        }
-
-        protected override MethodSpec TryGetBaseSpec()
-        {
-            return base.TryGetBaseSpec();
         }
 
         protected override TypeSpec TryGetDeclaringType()

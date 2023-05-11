@@ -8,10 +8,11 @@ using System.Threading.Tasks;
 
 namespace AssemblyAnalyser
 {
-    public abstract class AbstractMemberSpec<TMemberSpec> : AbstractSpec, IAbstractMemberSpec, IImplementsSpec<TMemberSpec>
+    public abstract class AbstractMemberSpec<TMemberSpec> : AbstractSpec, 
+        IAbstractMemberSpec, IImplementsSpec<TMemberSpec>
         where TMemberSpec : AbstractSpec, IAbstractMemberSpec
     {
-        protected AbstractMemberSpec(TypeSpec declaringType, ISpecManager specManager) : base(specManager)
+        protected AbstractMemberSpec(TypeSpec declaringType, ISpecManager specManager, ISpecContext specContext) : base(specManager, specContext)
         {
             _declaringType = declaringType;
         }
@@ -52,14 +53,9 @@ namespace AssemblyAnalyser
 
         protected abstract TypeSpec TryGetDeclaringType();
 
-        TMemberSpec _baseSpec;
-        public TMemberSpec BaseSpec => _baseSpec ??= TryGetBaseSpec();
-
-        protected abstract TMemberSpec TryGetBaseSpec();
-
         protected override void BuildSpec()
         {
-            _baseSpec ??= TryGetBaseSpec();
+            
         }
 
         #region Parameters
@@ -74,7 +70,7 @@ namespace AssemblyAnalyser
         private ParameterSpec CreateParameterSpec(ParameterDefinition parameterDefinition)
         {
             //var typeSpecs = LoadTypeSpecs(parameterDefinition.CustomAttributes.Select(t => t.AttributeType));
-            return new ParameterSpec(parameterDefinition, this, _specManager);
+            return new ParameterSpec(parameterDefinition, this, _specManager, _specContext);
         }
 
         public ParameterSpec[] LoadParameterSpecs(ParameterDefinition[] parameterDefinitions)

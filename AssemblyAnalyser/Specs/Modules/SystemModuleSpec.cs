@@ -23,8 +23,8 @@ namespace AssemblyAnalyser
             "System.Private.Xml"
         };
 
-        public SystemModuleSpec(ModuleDefinition module, string filePath, AssemblySpec assemblySpec, ISpecManager specManager)
-            : base(module, filePath, assemblySpec, specManager)
+        public SystemModuleSpec(ModuleDefinition module, string filePath, AssemblySpec assemblySpec, ISpecManager specManager, ISpecContext specContext)
+            : base(module, filePath, assemblySpec, specManager, specContext)
         {
             ModuleShortName = SystemAssemblySpec.SYSTEM_MODULE_NAME;
         }

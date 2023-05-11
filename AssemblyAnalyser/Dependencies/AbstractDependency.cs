@@ -1,25 +1,25 @@
 ﻿namespace AssemblyAnalyser.Specs
 {
-    public abstract class AbstractDependency<TRequiredBy, TDependsOn> : ISpecDependency
-        where TRequiredBy : AbstractSpec
-        where TDependsOn : AbstractSpec
+    public abstract class AbstractDependency<TParent, TChild> : ISpecDependency
+        where TParent : AbstractSpec
+        where TChild : AbstractSpec
     {
-        public AbstractDependency(TRequiredBy requiredBy, TDependsOn dependsOn)
+        public AbstractDependency(TParent parent, TChild child)
         { 
-            RequiredBy = requiredBy;
-            DependsOn = dependsOn;
+            Parent = parent;
+            Child = child;
 
-            requiredBy.RegisterDependency(this);
-            dependsOn.RegisterAsRequiredBy(this);
+            parent.AddChild(this);
+            child.AddParent(this);
         }
 
-        public TRequiredBy RequiredBy { get; set; }
+        public TParent Parent { get; set; }
 
-        public TDependsOn DependsOn { get; set; }
+        public TChild Child { get; set; }
 
         public override string ToString()
         {
-            return $"{RequiredBy} --> {DependsOn}";
+            return $"{Child.Name} depends on {Parent.Name}";
         }
     }
 }

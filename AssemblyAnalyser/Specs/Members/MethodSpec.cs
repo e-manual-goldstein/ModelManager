@@ -8,12 +8,12 @@ using System.Linq;
 
 namespace AssemblyAnalyser
 {
-    public class MethodSpec : AbstractMemberSpec<MethodSpec>, IHasParameters
+    public class MethodSpec : AbstractMemberSpec<MethodSpec>, IHasParameters, IOverridableSpec<MethodSpec>
     {
         protected MethodDefinition _methodDefinition;
 
-        public MethodSpec(MethodDefinition methodDefinition, TypeSpec declaringType, ISpecManager specManager)
-            : base(declaringType, specManager)
+        public MethodSpec(MethodDefinition methodDefinition, TypeSpec declaringType, ISpecManager specManager, ISpecContext specContext)
+            : base(declaringType, specManager, specContext)
         {
             _methodDefinition = methodDefinition;
             Name = methodDefinition.Name;
@@ -24,7 +24,8 @@ namespace AssemblyAnalyser
             IsOverride = methodDefinition.HasOverrides;
         }
 
-        protected MethodSpec(TypeSpec declaringType, ISpecManager specManager) : base(declaringType, specManager)
+        protected MethodSpec(TypeSpec declaringType, ISpecManager specManager, ISpecContext specContext) 
+            : base(declaringType, specManager, specContext)
         {
 
         }
@@ -105,25 +106,25 @@ namespace AssemblyAnalyser
             _parameters = TryLoadParameterSpecs(() => _methodDefinition.Parameters.ToArray());
             if (_methodDefinition.Body is MethodBody body)
             {
-                //ProcessMethodBodyOperands(body);
-                ProcessLocalVariables(body);
-                ProcessExceptionClauseCatchTypes(body);
+                ProcessMethodBodyOperands(body);
+                //ProcessLocalVariables(body);
+                //ProcessExceptionClauseCatchTypes(body);
             }
-            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this, DeclaringType.Module.AssemblyLocator);
+            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this, _specContext);
             RegisterImplementations();
             base.BuildSpec();
         }
 
         private TypeSpec TryGetReturnType()
         {
-            var returnTypeSpec = _specManager.LoadTypeSpec(_methodDefinition.ReturnType, DeclaringType.Module.AssemblyLocator);
+            var returnTypeSpec = _specManager.LoadTypeSpec(_methodDefinition.ReturnType, _specContext);
             returnTypeSpec?.RegisterAsResultType(this);            
             return returnTypeSpec;
         }
 
         protected override TypeSpec TryGetDeclaringType()
         {
-            var typeSpec = _specManager.LoadTypeSpec(_methodDefinition.DeclaringType, DeclaringType.Module.AssemblyLocator);
+            var typeSpec = _specManager.LoadTypeSpec(_methodDefinition.DeclaringType, _specContext);
             if (typeSpec.IsNullSpec)
             {
                 _specManager.AddFault(this, FaultSeverity.Critical, "Failed to find Declaring Type for spec");
@@ -137,7 +138,7 @@ namespace AssemblyAnalyser
             {
 
             }
-            return _specManager.LoadSpecsForMethodReferences(_methodDefinition.Overrides, DeclaringType.Module.AssemblyLocator).ToArray();
+            return _specManager.LoadSpecsForMethodReferences(_methodDefinition.Overrides, _specContext).ToArray();
         }
 
         private IMemberSpec TryGetMemberForSpecialName()
@@ -158,7 +159,7 @@ namespace AssemblyAnalyser
 
         protected override TypeSpec[] TryLoadAttributeSpecs()
         {
-            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, DeclaringType.Module.AssemblyLocator);
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, _specContext);
         }
 
         private void ProcessMethodBodyOperands(MethodBody methodBody)
@@ -172,14 +173,14 @@ namespace AssemblyAnalyser
                     {
                         continue;
                     }
-                    _specManager.RegisterOperandDependency(instruction.Operand, this);
+                    _specManager.RegisterOperandDependency(instruction.Operand, this, _specContext);
                 }
             }
         }
 
         private void ProcessExceptionClauseCatchTypes(MethodBody body)
         {
-            var exceptionCatchTypes = _specManager.LoadTypeSpecs(body.ExceptionHandlers.Select(d => d.CatchType), DeclaringType.Module.AssemblyLocator);
+            var exceptionCatchTypes = _specManager.LoadTypeSpecs(body.ExceptionHandlers.Select(d => d.CatchType), _specContext);
             foreach (var catchType in exceptionCatchTypes.Where(t => !t.IsNullSpec))
             {
                 if (!_exceptionCatchTypes.Contains(catchType))
@@ -193,7 +194,7 @@ namespace AssemblyAnalyser
         private void ProcessLocalVariables(MethodBody body)
         {
             var localVariableTypes =_specManager
-                .LoadTypeSpecs(body.Variables.Select(d => d.VariableType), DeclaringType.Module.AssemblyLocator).ToArray();
+                .LoadTypeSpecs(body.Variables.Select(d => d.VariableType), _specContext).ToArray();
             
             foreach (var localVariableType in localVariableTypes)
             {
@@ -245,7 +246,10 @@ namespace AssemblyAnalyser
             return this.HasExactParameters(methodSpec.Parameters);
         }
 
-        protected override MethodSpec TryGetBaseSpec()
+        MethodSpec _baseSpec;
+        public MethodSpec BaseSpec => _baseSpec ??= TryGetBaseSpec();
+
+        protected MethodSpec TryGetBaseSpec()
         {                    
             if (IsHideBySig)
             {

@@ -2,10 +2,9 @@
 
 namespace AssemblyAnalyser
 {
-    public class MethodToTypeDependency : AbstractDependency<MethodSpec, TypeSpec>
+    public class MethodToTypeDependency : AbstractDependency<TypeSpec, MethodSpec>
     {
-        public MethodToTypeDependency(MethodSpec requiredBy, TypeSpec dependsOn)
-            : base(requiredBy, dependsOn)
+        public MethodToTypeDependency(TypeSpec parent, MethodSpec child) : base(parent, child)
         {
 
         }

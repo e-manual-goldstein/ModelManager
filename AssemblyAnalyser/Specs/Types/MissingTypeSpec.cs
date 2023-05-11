@@ -9,8 +9,8 @@ namespace AssemblyAnalyser.Specs
 {
     internal class MissingTypeSpec : TypeSpec
     {
-        public MissingTypeSpec(string fullTypeName, string uniqueTypeName, ModuleSpec moduleSpec, ISpecManager specManager) 
-            : base(fullTypeName, uniqueTypeName, moduleSpec, specManager)
+        public MissingTypeSpec(string fullTypeName, string uniqueTypeName, ModuleSpec moduleSpec, ISpecManager specManager, ISpecContext specContext) 
+            : base(fullTypeName, uniqueTypeName, moduleSpec, specManager, specContext)
         {
             specManager.AddFault(this, FaultSeverity.Error, $"Missing Type Spec for '{fullTypeName}'");            
         }

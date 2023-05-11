@@ -10,12 +10,13 @@ namespace AssemblyAnalyser
 {
     public class SystemTypeSpec : TypeSpec
     {
-        public SystemTypeSpec(TypeDefinition typeDefinition, ModuleSpec moduleSpec, ISpecManager specManager) 
-            : base(typeDefinition, moduleSpec, specManager)
+        public SystemTypeSpec(TypeDefinition typeDefinition, ModuleSpec moduleSpec, ISpecManager specManager, ISpecContext specContext) 
+            : base(typeDefinition, moduleSpec, specManager, specContext)
         {
         }
 
-        protected SystemTypeSpec(string fullTypeName, string uniqueTypeName, ModuleSpec moduleSpec, ISpecManager specManager) : base(fullTypeName, uniqueTypeName, moduleSpec, specManager)
+        protected SystemTypeSpec(string fullTypeName, string uniqueTypeName, ModuleSpec moduleSpec, ISpecManager specManager, ISpecContext specContext) 
+            : base(fullTypeName, uniqueTypeName, moduleSpec, specManager, specContext)
         {
         }
 

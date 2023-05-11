@@ -10,8 +10,8 @@ namespace AssemblyAnalyser
         private MethodDefinition _adder;
         private MethodDefinition _remover;
 
-        public EventSpec(EventDefinition eventInfo, TypeSpec declaringType, ISpecManager specManager) 
-            : base(specManager)
+        public EventSpec(EventDefinition eventInfo, TypeSpec declaringType, ISpecManager specManager, ISpecContext specContext) 
+            : base(specManager, specContext)
         {
             _eventDefinition = eventInfo;
             _adder = eventInfo.AddMethod;
@@ -46,11 +46,11 @@ namespace AssemblyAnalyser
 
         protected override void BuildSpec()
         {
-            Adder = _specManager.LoadMethodSpec(_adder, true, DeclaringType.Module.AssemblyLocator);
-            Remover = _specManager.LoadMethodSpec(_remover, true, DeclaringType.Module.AssemblyLocator);
-            EventType = _specManager.LoadTypeSpec(_eventDefinition.EventType, DeclaringType.Module.AssemblyLocator);
+            Adder = _specManager.LoadMethodSpec(_adder, true, _specContext);
+            Remover = _specManager.LoadMethodSpec(_remover, true, _specContext);
+            EventType = _specManager.LoadTypeSpec(_eventDefinition.EventType, _specContext);
             EventType.RegisterAsDelegateFor(this);            
-            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this, DeclaringType.Module.AssemblyLocator);
+            _attributes = _specManager.TryLoadAttributeSpecs(GetAttributes, this, _specContext);
         }
 
         protected override CustomAttribute[] GetAttributes()
@@ -60,7 +60,7 @@ namespace AssemblyAnalyser
 
         protected override TypeSpec[] TryLoadAttributeSpecs()
         {
-            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, DeclaringType.Module.AssemblyLocator);
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, _specContext);
         }
 
         public override string ToString()

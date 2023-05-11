@@ -13,8 +13,8 @@ namespace AssemblyAnalyser
         public IMemberSpec Member { get; }
         public bool IsOut { get; }
         
-        public ParameterSpec(ParameterDefinition parameterDefinition, IMemberSpec member, ISpecManager specManager)
-            : base(specManager)
+        public ParameterSpec(ParameterDefinition parameterDefinition, IMemberSpec member, ISpecManager specManager, ISpecContext specContext)
+            : base(specManager, specContext)
         {
             _parameterDefinition = parameterDefinition;
             Name = _parameterDefinition.Name;
@@ -35,7 +35,7 @@ namespace AssemblyAnalyser
 
         protected override TypeSpec[] TryLoadAttributeSpecs()
         {
-            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, Member.DeclaringType.Module.AssemblyLocator);
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, _specContext);
         }
 
         public bool IsParams => Attributes.Any(a => a.Name == "ParamArrayAttribute");
@@ -50,7 +50,7 @@ namespace AssemblyAnalyser
 
         private TypeSpec TryGetParameterType()
         {
-            var parameterTypeSpec = _specManager.LoadTypeSpec(_parameterDefinition.ParameterType, Member.DeclaringType.Module.AssemblyLocator);
+            var parameterTypeSpec = _specManager.LoadTypeSpec(_parameterDefinition.ParameterType, _specContext);
             parameterTypeSpec.RegisterAsDependentParameterSpec(this);            
             return parameterTypeSpec;
         }

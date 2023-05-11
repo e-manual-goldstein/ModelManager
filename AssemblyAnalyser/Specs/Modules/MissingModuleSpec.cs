@@ -8,8 +8,8 @@ namespace AssemblyAnalyser.Specs
     {
         AssemblyNameReference _missingAssembly;
 
-        public MissingModuleSpec(AssemblyNameReference missingAssembly, AssemblySpec assemblySpec, ISpecManager specManager) 
-            : base(missingAssembly.FullName, assemblySpec, specManager)
+        public MissingModuleSpec(AssemblyNameReference missingAssembly, AssemblySpec assemblySpec, ISpecManager specManager, ISpecContext specContext) 
+            : base(missingAssembly.FullName, assemblySpec, specManager, specContext)
         {
             _missingAssembly = missingAssembly;
             Versions = new();
@@ -22,14 +22,14 @@ namespace AssemblyAnalyser.Specs
 
         public override bool IsSystem { get => base.IsSystem; protected set => base.IsSystem = value; }
 
-        public override void RegisterAsRequiredBy(ISpecDependency specDependency)
+        public override void AddChild(ISpecDependency specDependency)
         {
-            base.RegisterAsRequiredBy(specDependency);
+            base.AddChild(specDependency);
         }
 
-        public override void RegisterDependency(ISpecDependency specDependency)
+        public override void AddParent(ISpecDependency specDependency)
         {
-            base.RegisterDependency(specDependency);
+            base.AddParent(specDependency);
         }
 
         protected override void BuildSpec()
@@ -50,7 +50,7 @@ namespace AssemblyAnalyser.Specs
         public override TypeSpec LoadTypeSpec(TypeReference type)
         {
             return _typeSpecs.GetOrAdd(type.CreateUniqueTypeSpecName(type.IsArray), 
-                (key) => new MissingTypeSpec($"{type.Namespace}.{type.Name}", type.FullName, this, _specManager));
+                (key) => new MissingTypeSpec($"{type.Namespace}.{type.Name}", type.FullName, this, _specManager, _specContext));
         }
     }
 }

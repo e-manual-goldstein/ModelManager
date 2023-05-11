@@ -10,8 +10,8 @@ namespace AssemblyAnalyser.Specs
 {
     public class GenericMethodSpec : MethodSpec, IHasGenericParameters
     {
-        public GenericMethodSpec(MethodDefinition methodDefinition, TypeSpec declaringType, ISpecManager specManager) 
-            : base(methodDefinition, declaringType, specManager)
+        public GenericMethodSpec(MethodDefinition methodDefinition, TypeSpec declaringType, ISpecManager specManager, ISpecContext specContext) 
+            : base(methodDefinition, declaringType, specManager, specContext)
         {
             ExplicitName = methodDefinition.CreateGenericMethodName();
         }
@@ -22,7 +22,7 @@ namespace AssemblyAnalyser.Specs
         private GenericParameterSpec[] TryGetGenericTypeParameters()
         {
             var genericArgumentSpecs = _specManager
-                .LoadTypeSpecs<GenericParameterSpec>(_methodDefinition.GenericParameters, DeclaringType.Module.AssemblyLocator).ToArray();
+                .LoadTypeSpecs<GenericParameterSpec>(_methodDefinition.GenericParameters, _specContext).ToArray();
             {
                 //TODO: Is this even needed?
                 //foreach (var genericArgSpec in genericArgumentSpecs)

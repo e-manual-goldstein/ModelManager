@@ -17,8 +17,8 @@ namespace AssemblyAnalyser
         protected ModuleDefinition _baseVersion;
         
         #region Constructors
-        public ModuleSpec(ModuleDefinition module, string filePath, AssemblySpec assemblySpec, ISpecManager specManager) 
-            : this(module.Assembly.FullName, assemblySpec, specManager)
+        public ModuleSpec(ModuleDefinition module, string filePath, AssemblySpec assemblySpec, ISpecManager specManager, ISpecContext specContext) 
+            : this(module.Assembly.FullName, assemblySpec, specManager, specContext)
         {
             Versions = new() { { module.Assembly.FullName, module.Assembly.Name } };
             _baseVersion = module;            
@@ -27,8 +27,8 @@ namespace AssemblyAnalyser
             IsSystem = _assembly.IsSystem;
         }
 
-        protected ModuleSpec(string assemblyFullName, AssemblySpec assemblySpec, ISpecManager specManager)
-            : base(specManager)
+        protected ModuleSpec(string assemblyFullName, AssemblySpec assemblySpec, ISpecManager specManager, ISpecContext specContext)
+            : base(specManager, specContext)
         {
             _assembly = assemblySpec;
             ModuleFullName = assemblyFullName;
@@ -46,8 +46,6 @@ namespace AssemblyAnalyser
 
         protected Dictionary<string, AssemblyNameReference> Versions { get; set; }
 
-        public IAssemblyLocator AssemblyLocator => _assembly.AssemblyLocator;
-
         #endregion
 
         #region Referenced Modules
@@ -57,7 +55,7 @@ namespace AssemblyAnalyser
 
         public ModuleSpec[] LoadReferencedModules(bool includeSystem = false)
         {
-            return (_referencedModules ??= _specManager.LoadReferencedModules(_baseVersion, _assembly.AssemblyLocator).ToArray())
+            return (_referencedModules ??= _specManager.LoadReferencedModules(_baseVersion, _specContext).ToArray())
                 .Where(r => !r.IsSystem || includeSystem).ToArray();
         }
         #endregion
@@ -69,7 +67,7 @@ namespace AssemblyAnalyser
 
         public AssemblySpec[] LoadReferencedAssemblies(bool includeSystem = false)
         {
-            return (_referencedAssemblies ??= _specManager.TryLoadReferencedAssemblies(_baseVersion, AssemblyLocator).ToArray())
+            return (_referencedAssemblies ??= _specManager.TryLoadReferencedAssemblies(_baseVersion, _specContext).ToArray())
                 .Where(r => !r.IsSystem || includeSystem).ToArray();
         }
         #endregion
@@ -93,7 +91,7 @@ namespace AssemblyAnalyser
         {
             if (type == null)
             {
-                return _specManager.GetNullTypeSpec();
+                return _specManager.GetNullTypeSpec(_specContext);
             }
             return LoadFullTypeSpec(type);
         }
@@ -130,34 +128,34 @@ namespace AssemblyAnalyser
             TryGetTypeDefinition(ref type); //Try this only ONCE per TypeReference
             if (type is TypeDefinition typeDefinition)
             {
-                var spec = new TypeSpec(typeDefinition, this, _specManager);
+                var spec = new TypeSpec(typeDefinition, this, _specManager, _specContext);
                 return spec;
             }
-            return new MissingTypeSpec($"{type.Namespace}.{type.Name}", type.FullName, this, _specManager);
+            return new MissingTypeSpec($"{type.Namespace}.{type.Name}", type.FullName, this, _specManager, _specContext);
         }
 
         private TypeSpec CreateGenericParameterSpec(GenericParameter type)
         {
-            var spec = new GenericParameterSpec(type, this, _specManager);
+            var spec = new GenericParameterSpec(type, this, _specManager, _specContext);
             return spec;
         }
 
         private TypeSpec CreateGenericTypeSpec(TypeDefinition typeDefinition)
         {
-            var spec = new GenericTypeSpec(typeDefinition, this, _specManager);
+            var spec = new GenericTypeSpec(typeDefinition, this, _specManager, _specContext);
             return spec;
         }
 
         private TypeSpec CreateGenericInstanceSpec(GenericInstanceType type, string fullTypeName)
         {
-            var spec = new GenericInstanceSpec(type, fullTypeName, this, _specManager);
+            var spec = new GenericInstanceSpec(type, fullTypeName, this, _specManager, _specContext);
             return spec;
         }
 
         private TypeSpec CreateArrayTypeSpec(ArrayType type, string fullTypeName)
         {
             var elementSpec = LoadTypeSpec(type.ElementType);
-            var spec = new ArrayTypeSpec(type, elementSpec, this, _specManager);
+            var spec = new ArrayTypeSpec(type, elementSpec, this, _specManager, _specContext);
             return spec;
         }
 
@@ -277,7 +275,7 @@ namespace AssemblyAnalyser
 
         protected override TypeSpec[] TryLoadAttributeSpecs()
         {
-            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, AssemblyLocator);
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, _specContext);
         }
 
         protected override void BuildSpec()

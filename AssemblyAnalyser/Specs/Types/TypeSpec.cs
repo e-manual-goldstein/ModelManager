@@ -16,8 +16,8 @@ namespace AssemblyAnalyser
     {
         TypeDefinition _typeDefinition;
         
-        public TypeSpec(TypeDefinition typeDefinition, ModuleSpec moduleSpec, ISpecManager specManager)
-            : this($"{typeDefinition.Namespace}.{typeDefinition.Name}", typeDefinition.FullName, moduleSpec, specManager)
+        public TypeSpec(TypeDefinition typeDefinition, ModuleSpec moduleSpec, ISpecManager specManager, ISpecContext specContext)
+            : this($"{typeDefinition.Namespace}.{typeDefinition.Name}", typeDefinition.FullName, moduleSpec, specManager, specContext)
         {
             _typeDefinition = typeDefinition;
             Name = typeDefinition.Name;
@@ -25,14 +25,10 @@ namespace AssemblyAnalyser
             IsClass = typeDefinition.IsClass;
         }
                 
-        protected TypeSpec(string fullTypeName, string uniqueTypeName, ModuleSpec moduleSpec, ISpecManager specManager) 
-            : base(specManager)
+        protected TypeSpec(string fullTypeName, string uniqueTypeName, ModuleSpec moduleSpec, ISpecManager specManager, ISpecContext specContext) 
+            : base(specManager, specContext)
         {
             _module = moduleSpec;
-            if (fullTypeName == "Sdm.Cluster.Customers.Api.ICustomer")
-            {
-
-            }
             UniqueTypeName = uniqueTypeName;
             FullTypeName = fullTypeName;
         }
@@ -97,7 +93,7 @@ namespace AssemblyAnalyser
 
         protected virtual TypeSpec[] CreateAttributSpecs()
         {
-            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, Module.AssemblyLocator);
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, _specContext);
         }
 
         protected override CustomAttribute[] GetAttributes()
@@ -107,7 +103,7 @@ namespace AssemblyAnalyser
 
         protected override TypeSpec[] TryLoadAttributeSpecs()
         {
-            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, Module.AssemblyLocator);
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, _specContext);
         }
 
         private void ProcessCompilerGenerated()
@@ -137,7 +133,7 @@ namespace AssemblyAnalyser
 
         protected virtual TypeSpec CreateBaseSpec()
         {
-            var typeSpec = _specManager.LoadTypeSpec(_typeDefinition.BaseType, Module.AssemblyLocator);
+            var typeSpec = _specManager.LoadTypeSpec(_typeDefinition.BaseType, _specContext);
             if (!typeSpec.IsNullSpec)
             {
                 typeSpec.AddSubType(this);
@@ -150,7 +146,7 @@ namespace AssemblyAnalyser
 
         protected virtual TypeSpec[] CreateInterfaceSpecs()
         {
-            var specs = _specManager.LoadTypeSpecs(_typeDefinition.Interfaces.Select(i => i.InterfaceType), Module.AssemblyLocator).ToArray();
+            var specs = _specManager.LoadTypeSpecs(_typeDefinition.Interfaces.Select(i => i.InterfaceType), _specContext).ToArray();
             foreach (var interfaceSpec in specs.Where(s => !s.IsNullSpec))
             {
                 if (interfaceSpec is GenericInstanceSpec genericInstanceSpec)
@@ -171,7 +167,7 @@ namespace AssemblyAnalyser
 
         protected virtual TypeSpec[] CreateNestedTypeSpecs()
         {
-            var specs = _specManager.LoadTypeSpecs(_typeDefinition.NestedTypes.Where(n => n.DeclaringType == _typeDefinition), Module.AssemblyLocator).ToArray();
+            var specs = _specManager.LoadTypeSpecs(_typeDefinition.NestedTypes.Where(n => n.DeclaringType == _typeDefinition), _specContext).ToArray();
             foreach (var nestedType in specs.Where(s => !s.IsNullSpec))
             {
                 nestedType.SetNestedIn(this);
@@ -270,7 +266,7 @@ namespace AssemblyAnalyser
         protected virtual GenericParameterSpec[] CreateGenericTypeParameters()
         {
             return _specManager
-                .LoadTypeSpecs<GenericParameterSpec>(_typeDefinition.GenericParameters, Module.AssemblyLocator).ToArray();
+                .LoadTypeSpecs<GenericParameterSpec>(_typeDefinition.GenericParameters, _specContext).ToArray();
         }
 
         #region Generic Type Flags
@@ -453,7 +449,7 @@ namespace AssemblyAnalyser
             {
                 return _methodSpecs.GetOrAdd(methodDefinition.CreateUniqueMethodName(), (key) => CreateMethodSpec(methodDefinition));
             }
-            return new MissingMethodSpec(method, this, _specManager);
+            return new MissingMethodSpec(method, this, _specManager, _specContext);
         }
 
         public virtual MethodDefinition TryGetMethodDefinition(MethodReference method)
@@ -507,8 +503,8 @@ namespace AssemblyAnalyser
         private MethodSpec CreateMethodSpec(MethodDefinition method)
         {
             var spec = method.HasGenericParameters 
-                ? new GenericMethodSpec(method, this, _specManager) 
-                : new MethodSpec(method, this, _specManager);
+                ? new GenericMethodSpec(method, this, _specManager, _specContext) 
+                : new MethodSpec(method, this, _specManager, _specContext);
             return spec;
         }
 
@@ -558,7 +554,7 @@ namespace AssemblyAnalyser
         private PropertySpec CreatePropertySpec(PropertyDefinition propertyInfo)
         {
             //TODO: Is it faster to flag the explicit implementations here?");
-            var spec = new PropertySpec(propertyInfo, this, _specManager);
+            var spec = new PropertySpec(propertyInfo, this, _specManager, _specContext);
             //RegisterImplementations(spec);
             return spec;
         }
@@ -638,15 +634,35 @@ namespace AssemblyAnalyser
 
         ConcurrentDictionary<string, FieldSpec> _fieldSpecs = new ConcurrentDictionary<string, FieldSpec>();
 
-        private FieldSpec LoadFieldSpec(FieldDefinition fieldDefinition)
+        public FieldSpec LoadFieldSpec(FieldDefinition fieldDefinition)
         {
             FieldSpec fieldSpec = _fieldSpecs.GetOrAdd(fieldDefinition.FullName, (spec) => CreateFieldSpec(fieldDefinition));
             return fieldSpec;
         }
 
-        private FieldSpec CreateFieldSpec(FieldDefinition fieldInfo)
+        public FieldDefinition TryGetFieldDefinition(FieldReference fieldReference)
         {
-            return new FieldSpec(fieldInfo, this, _specManager);
+            if (fieldReference is FieldDefinition fieldDefinition)
+            {
+                return fieldDefinition;
+            }
+            var fields = Definition.Fields
+                .Where(f => f.FullName == fieldReference.FullName).ToArray();
+            if (fields.Length > 1)
+            {
+                
+            }
+            return fields.SingleOrDefault();
+        }
+
+        private FieldSpec CreateFieldSpec(FieldReference fieldReference)
+        {
+            var fieldDefinition = TryGetFieldDefinition(fieldReference);
+            if (fieldDefinition != null)
+            {
+                return new FieldSpec(fieldDefinition, this, _specManager, _specContext);
+            }
+            return new MissingFieldSpec(fieldReference, this, _specManager, _specContext);
         }
 
         public FieldSpec[] LoadFieldSpecs(FieldDefinition[] fieldInfos)
@@ -679,7 +695,7 @@ namespace AssemblyAnalyser
 
         private EventSpec CreateEventSpec(EventDefinition eventInfo)
         {
-            return new EventSpec(eventInfo, this, _specManager);
+            return new EventSpec(eventInfo, this, _specManager, _specContext);
         }
 
         public EventSpec[] LoadEventSpecs(EventDefinition[] eventInfos)

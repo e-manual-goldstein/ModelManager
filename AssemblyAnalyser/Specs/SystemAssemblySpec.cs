@@ -14,9 +14,8 @@ namespace AssemblyAnalyser.Specs
         public const string SYSTEM_MODULE_NAME = "CoreSystemModule";
         Dictionary<string, IMetadataScope> _metadataScopes = new();
 
-        public SystemAssemblySpec(AssemblyDefinition assemblyDefinition, string filePath, 
-            IAssemblyLocator assemblyLocator, ISpecManager specManager) 
-            : base(assemblyDefinition, filePath, assemblyLocator, specManager)
+        public SystemAssemblySpec(AssemblyDefinition assemblyDefinition, string filePath, ISpecManager specManager, ISpecContext specContext) 
+            : base(assemblyDefinition, filePath, specManager, specContext)
         {
             AssemblyShortName = SYSTEM_ASSEMBLY_NAME;
         }
@@ -30,7 +29,7 @@ namespace AssemblyAnalyser.Specs
                 ?? _assemblyDefinition.Modules.SingleOrDefault();
             if (moduleDefinition != null)
             {
-                return new SystemModuleSpec(moduleDefinition, moduleDefinition.FileName, this, _specManager);
+                return new SystemModuleSpec(moduleDefinition, moduleDefinition.FileName, this, _specManager, _specContext);
             }
             _specManager.AddFault(this, FaultSeverity.Critical, "System Assembly has no Modules");
             return CreateMissingModuleSpec(scope as AssemblyNameReference);

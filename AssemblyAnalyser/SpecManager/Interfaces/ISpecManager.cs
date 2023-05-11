@@ -11,9 +11,9 @@ namespace AssemblyAnalyser
         void Reset();
         void ProcessAll(bool includeSystem = true, bool parallelProcessing = true);
         
-        ISpecDependency RegisterOperandDependency(object operand, MethodSpec methodSpec);
+        ISpecDependency RegisterOperandDependency(object operand, MethodSpec methodSpec, ISpecContext specContext);
 
-        TypeSpec GetNullTypeSpec();
+        TypeSpec GetNullTypeSpec(ISpecContext specContext);
 
         IRule[] SpecRules { get; }
     }

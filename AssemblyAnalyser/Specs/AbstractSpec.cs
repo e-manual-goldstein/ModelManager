@@ -1,5 +1,4 @@
 ﻿using AssemblyAnalyser.Specs;
-using Microsoft.Extensions.Logging;
 using Mono.Cecil;
 using System;
 using System.Collections.Generic;
@@ -14,10 +13,12 @@ namespace AssemblyAnalyser
         private bool? _included;
         protected bool Included => _included ??= !IsExcluded() && IsIncluded();
         protected readonly ISpecManager _specManager;
+        protected readonly ISpecContext _specContext;
 
-        public AbstractSpec(ISpecManager specManager)
+        public AbstractSpec(ISpecManager specManager, ISpecContext specContext)
         {
             _specManager = specManager;
+            _specContext = specContext;
             //if (specManager != null)
             //{
             //    SpecialInclusionRules.AddRange(specManager.SpecRules.OfType<InclusionRule>());
@@ -34,21 +35,21 @@ namespace AssemblyAnalyser
 
         protected abstract CustomAttribute[] GetAttributes();
 
-        List<ISpecDependency> _requiredBy = new List<ISpecDependency>();
-        public ISpecDependency[] RequiredBy => _requiredBy.ToArray();
+        List<ISpecDependency> _children = new List<ISpecDependency>();
+        public ISpecDependency[] Children => _children.ToArray();
 
-        public virtual void RegisterAsRequiredBy(ISpecDependency specDependency)
+        public virtual void AddChild(ISpecDependency child)
         {
-            _requiredBy.Add(specDependency);
+            _children.Add(child);
             //Module.RegisterAsRequiredBy(specDependency);
         }
 
-        List<ISpecDependency> _dependsOn = new List<ISpecDependency>();
-        public ISpecDependency[] DependsOn => _dependsOn.ToArray();
+        List<ISpecDependency> _parents = new List<ISpecDependency>();
+        public ISpecDependency[] Parents => _parents.ToArray();
 
-        public virtual void RegisterDependency(ISpecDependency specDependency)
+        public virtual void AddParent(ISpecDependency parent)
         {
-            _dependsOn.Add(specDependency);
+            _parents.Add(parent);
             //Module.RegisterAsRequiredBy(specDependency);
         }
 

@@ -9,8 +9,8 @@ namespace AssemblyAnalyser.Specs
 {
     public class NullTypeSpec : TypeSpec
     {
-        public NullTypeSpec(ISpecManager specManager)
-            : base("null", "nullspec", null, specManager)
+        public NullTypeSpec(ISpecManager specManager, ISpecContext specContext)
+            : base("null", "nullspec", null, specManager, specContext)
         {
             Exclude("Null Spec");
             SkipProcessing("Null Spec");
@@ -66,7 +66,7 @@ namespace AssemblyAnalyser.Specs
             _specManager.AddFault(this, FaultSeverity.Error, $"{parameterSpec} cannot use Null Type Spec as Parameter Type");
         }
 
-        public override void RegisterAsRequiredBy(ISpecDependency specDependency)
+        public override void AddChild(ISpecDependency specDependency)
         {
             _specManager.AddFault(this, FaultSeverity.Warning, $"Can {specDependency} 'Require' the Null Type Spec?");
             _specManager.AddFault(this, FaultSeverity.Error, $"See Warning");
@@ -77,7 +77,7 @@ namespace AssemblyAnalyser.Specs
             _specManager.AddFault(this, FaultSeverity.Error, $"Null Type Spec cannot be a Result Type for {memberSpec}");
         }
 
-        public override void RegisterDependency(ISpecDependency specDependency)
+        public override void AddParent(ISpecDependency specDependency)
         {
             _specManager.AddFault(this, FaultSeverity.Warning, $"Can Null Type Spec 'Require' {specDependency}?");
             _specManager.AddFault(this, FaultSeverity.Error, $"See Warning");

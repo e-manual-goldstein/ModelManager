@@ -14,12 +14,11 @@ namespace AssemblyAnalyser
     public class AssemblySpec : AbstractSpec
     {
         protected readonly AssemblyDefinition _assemblyDefinition;
-        private readonly IAssemblyLocator _assemblyLocator;
 
-        public AssemblySpec(AssemblyDefinition assemblyDefinition, string filePath, IAssemblyLocator assemblyLocator, ISpecManager specManager) : this(assemblyDefinition.FullName, specManager)
+        public AssemblySpec(AssemblyDefinition assemblyDefinition, string filePath, ISpecManager specManager, ISpecContext specContext) 
+            : this(assemblyDefinition.FullName, specManager, specContext)
         {
-            _assemblyDefinition = assemblyDefinition;
-            _assemblyLocator = assemblyLocator;
+            _assemblyDefinition = assemblyDefinition;            
             AssemblyShortName = assemblyDefinition.Name.GetScopeNameWithoutExtension();
             Versions.Add(assemblyDefinition.Name.GetUniqueNameFromScope());
             AssemblyFullName = assemblyDefinition.FullName;
@@ -27,8 +26,8 @@ namespace AssemblyAnalyser
             //IsSystem = StaticAssemblyLocator.IsSystemAssembly(filePath);//Should be no need for this eventually;
         }
 
-        protected AssemblySpec(string assemblyFullName, ISpecManager specManager)
-            : base(specManager)
+        protected AssemblySpec(string assemblyFullName, ISpecManager specManager, ISpecContext specContext)
+            : base(specManager, specContext)
         {
             AssemblyFullName = assemblyFullName;
         }
@@ -39,8 +38,6 @@ namespace AssemblyAnalyser
         public string AssemblyShortName { get; protected set; }
         public string FilePath { get; set; }
         
-        public IAssemblyLocator AssemblyLocator => _assemblyLocator;
-
         string _targetFrameworkVersion;
         public string TargetFrameworkVersion => _targetFrameworkVersion ??= TryGetTargetFrameworkVersion();
 
@@ -165,7 +162,7 @@ namespace AssemblyAnalyser
 
         private ModuleSpec LoadReferencedModule(AssemblyNameReference assemblyReference)
         {
-            var assemblyLocation = AssemblyLocator.LocateAssemblyByName(assemblyReference.FullName);
+            var assemblyLocation = _specContext.AssemblyLocator.LocateAssemblyByName(assemblyReference.FullName);
             if (string.IsNullOrEmpty(assemblyLocation))
             {
                 var missingModuleSpec = _moduleSpecs.GetOrAdd(assemblyReference.Name, (key) => CreateMissingModuleSpec(assemblyReference));
@@ -187,7 +184,7 @@ namespace AssemblyAnalyser
             var moduleDefinition = scope as ModuleDefinition ?? GetModuleForScope(scope);
             if (moduleDefinition != null)
             {
-                return new ModuleSpec(moduleDefinition, moduleDefinition.FileName, this, _specManager);
+                return new ModuleSpec(moduleDefinition, moduleDefinition.FileName, this, _specManager, _specContext);
             }
             return CreateMissingModuleSpec(scope as AssemblyNameReference);
         }
@@ -208,7 +205,7 @@ namespace AssemblyAnalyser
 
         protected MissingModuleSpec CreateMissingModuleSpec(AssemblyNameReference assemblyNameReference)
         {
-            var spec = new MissingModuleSpec(assemblyNameReference, this, _specManager);
+            var spec = new MissingModuleSpec(assemblyNameReference, this, _specManager, _specContext);
             return spec;
         }
 
@@ -245,7 +242,7 @@ namespace AssemblyAnalyser
 
         protected override TypeSpec[] TryLoadAttributeSpecs()
         {
-            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, AssemblyLocator);
+            return _specManager.TryLoadAttributeSpecs(() => GetAttributes(), this, _specContext);
         }
 
         public override string ToString()

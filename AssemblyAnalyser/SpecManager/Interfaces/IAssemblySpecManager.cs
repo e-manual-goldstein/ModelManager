@@ -8,7 +8,7 @@ namespace AssemblyAnalyser
         
 
         AssemblySpec LoadAssemblySpecFromPath(string assemblySpecPath);
-        IEnumerable<AssemblySpec> TryLoadReferencedAssemblies(ModuleDefinition moduleDefinition, IAssemblyLocator assemblyLocator);
+        IEnumerable<AssemblySpec> TryLoadReferencedAssemblies(ModuleDefinition moduleDefinition, ISpecContext specContext);
 
         IAssemblyResolver AssemblyResolver { get; }
 

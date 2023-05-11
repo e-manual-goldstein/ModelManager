@@ -12,8 +12,8 @@ namespace AssemblyAnalyser
     {
         GenericInstanceType _genericInstance;
 
-        public GenericInstanceSpec(GenericInstanceType genericInstance, string fullTypeName, ModuleSpec moduleSpec, ISpecManager specManager)
-            : base($"{genericInstance.Namespace}.{genericInstance.FullName}", fullTypeName, moduleSpec, specManager)
+        public GenericInstanceSpec(GenericInstanceType genericInstance, string fullTypeName, ModuleSpec moduleSpec, ISpecManager specManager, ISpecContext specContext)
+            : base($"{genericInstance.Namespace}.{genericInstance.FullName}", fullTypeName, moduleSpec, specManager, specContext)
         {
             _genericInstance = genericInstance;
             Name = _genericInstance.Name;
@@ -60,7 +60,7 @@ namespace AssemblyAnalyser
 
         private TypeSpec TryGetInstanceOfType()
         {
-            var typeSpec = _specManager.LoadTypeSpec(_genericInstance.ElementType, Module.AssemblyLocator);
+            var typeSpec = _specManager.LoadTypeSpec(_genericInstance.ElementType, _specContext);
             if (typeSpec == null || typeSpec.IsNullSpec)
             {
                 _specManager.AddFault(this, FaultSeverity.Error, $"Could not load Instance");
@@ -75,7 +75,7 @@ namespace AssemblyAnalyser
         //Is this really necessary?
         protected override TypeSpec CreateBaseSpec()
         {
-            var typeSpec = _specManager.LoadTypeSpec(_genericInstance.ElementType, Module.AssemblyLocator);            
+            var typeSpec = _specManager.LoadTypeSpec(_genericInstance.ElementType, _specContext);            
             if (!typeSpec.IsNullSpec)
             {
                 typeSpec.AddSubType(this);
@@ -123,12 +123,12 @@ namespace AssemblyAnalyser
 
         private TypeSpec[] TryGetGenericTypeArguments()
         {
-            return _specManager.LoadTypeSpecs(_genericInstance.GenericArguments, Module.AssemblyLocator).ToArray();            
+            return _specManager.LoadTypeSpecs(_genericInstance.GenericArguments, _specContext).ToArray();            
         }
 
         protected override GenericParameterSpec[] CreateGenericTypeParameters()
         {
-            return _specManager.LoadTypeSpecs<GenericParameterSpec>(_genericInstance.GenericParameters, Module.AssemblyLocator)
+            return _specManager.LoadTypeSpecs<GenericParameterSpec>(_genericInstance.GenericParameters, _specContext)
                 .ToArray();            
         }
 

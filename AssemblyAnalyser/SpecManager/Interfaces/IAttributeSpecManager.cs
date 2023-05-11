@@ -8,7 +8,7 @@ namespace AssemblyAnalyser
     {
         IReadOnlyDictionary<string, TypeSpec> Attributes { get; }
 
-        TypeSpec[] TryLoadAttributeSpecs(Func<CustomAttribute[]> value, AbstractSpec decoratedSpec, IAssemblyLocator assemblyLocator);
+        TypeSpec[] TryLoadAttributeSpecs(Func<CustomAttribute[]> value, AbstractSpec decoratedSpec, ISpecContext specContext);
 
         void ProcessLoadedAttributes(bool includeSystem = true);
     }
